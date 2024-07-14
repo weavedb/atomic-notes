@@ -1,8 +1,7 @@
-# React + Vite
+# Permanent CMS on Arweave/AO
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This is a permanent CMS deployed on Arweave and managed by AO.
 
-Currently, two official plugins are available:
+The SPA instance needs to be deployed once and articles will be updated by the assigned AO process.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+

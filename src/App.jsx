@@ -1,10 +1,29 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import dayjs from "dayjs"
 import "./App.css"
 import tomo from "/tomo.png"
 import { Image, Flex, Box } from "@chakra-ui/react"
 import { Link } from "react-router-dom"
+import { map } from "ramda"
+import { dryrun } from "@permaweb/aoconnect"
+const pid = "6Z6aOJ7N2IJsVd7yNJrdw5eH_Ccy06cc7lWtu3SvhSA"
 
 function App() {
+  const [articles, setArticles] = useState([])
+  useEffect(() => {
+    ;(async () => {
+      const result = await dryrun({
+        process: import.meta.env.VITE_PROCESS_ID,
+        tags: [{ name: "Action", value: "List" }],
+      })
+      try {
+        const _articles = JSON.parse(result.Messages[0].Tags[6].value)
+        setArticles(_articles)
+      } catch (e) {
+        console.log(e)
+      }
+    })()
+  }, [])
   const url = new URL(location.href)
   const image = url.origin + "/cover.png"
   return (
@@ -35,11 +54,20 @@ function App() {
           </Box>
         </Flex>
         <Box w="100%" flex={1} style={{ borderTop: "1px solid #333" }}>
-          <Box p={4} fontSize="20px">
-            <Link to="./a/1">
-              <Box as="u">Deploy PermaApp on Arweave</Box>
-            </Link>
-          </Box>
+          {map(v => {
+            return (
+              <>
+                <Box pt={4} px={6} fontSize="20px">
+                  <Link to={`./a/${v.id}`}>
+                    <Box as="u">{v.title}</Box>
+                  </Link>
+                  <Box ml={4} as="span" fontSize="14px">
+                    {dayjs(v.date).format("YYYY MM/DD mm:HH")}
+                  </Box>
+                </Box>
+              </>
+            )
+          })(articles)}
         </Box>
       </Flex>
     </Flex>
