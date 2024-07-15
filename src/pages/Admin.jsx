@@ -146,7 +146,7 @@ function Admin(a) {
                     signer: createDataItemSigner(window.arweaveWallet),
                     tags,
                   })
-                  let res = await result({
+                  const res = await result({
                     message: messageId,
                     process: import.meta.env.VITE_PROCESS_ID,
                   })

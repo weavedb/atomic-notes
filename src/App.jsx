@@ -6,7 +6,6 @@ import { Image, Flex, Box } from "@chakra-ui/react"
 import { Link } from "react-router-dom"
 import { map } from "ramda"
 import { dryrun } from "@permaweb/aoconnect"
-const pid = "6Z6aOJ7N2IJsVd7yNJrdw5eH_Ccy06cc7lWtu3SvhSA"
 
 function App() {
   const [articles, setArticles] = useState([])
@@ -62,7 +61,7 @@ function App() {
                     <Box as="u">{v.title}</Box>
                   </Link>
                   <Box ml={4} as="span" fontSize="14px">
-                    {dayjs(v.date).format("YYYY MM/DD mm:HH")}
+                    {dayjs(v.date).format("YYYY MM/DD HH:mm")}
                   </Box>
                 </Box>
               </>
