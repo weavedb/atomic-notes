@@ -7,6 +7,7 @@ Handlers.add(
    "Add",
    Handlers.utils.hasMatchingTag("Action", "Add"),
    function (msg)
+      assert(msg.From == Owner, 'only owner can execute!')
       assert(type(msg.title) == 'string', 'title is required!')
       assert(type(msg.id) == 'string', 'id is required!')
       assert(type(msg.txid) == 'string', 'txid is required!')
@@ -28,6 +29,7 @@ Handlers.add(
    "Update",
    Handlers.utils.hasMatchingTag("Action", "Update"),
    function (msg)
+      assert(msg.From == Owner, 'only owner can execute!')
       assert(type(msg.txid) == 'string', 'txid is required!')
       assert(type(msg.id) == 'string', 'id is required!')
       assert(Articles[msg.id], 'article does not exist!')
@@ -48,6 +50,7 @@ Handlers.add(
    "Delete",
    Handlers.utils.hasMatchingTag("Action", "Delete"),
    function (msg)
+      assert(msg.From == Owner, 'only owner can execute!')
       assert(type(msg.id) == 'string', 'id is required!')
       assert(Articles[msg.id], 'article doesn\'t exist!')
       Articles[msg.id] = nil

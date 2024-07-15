@@ -4,6 +4,7 @@ import { ChakraProvider } from "@chakra-ui/react"
 import ReactDOM from "react-dom/client"
 import App from "./App.jsx"
 import Article from "./pages/Article"
+import Admin from "./pages/Admin"
 
 const router = createHashRouter([
   {
@@ -13,6 +14,10 @@ const router = createHashRouter([
   {
     path: "/a/:id",
     element: <Article />,
+  },
+  {
+    path: "/admin",
+    element: <Admin />,
   },
 ])
 

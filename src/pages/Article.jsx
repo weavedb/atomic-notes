@@ -77,8 +77,8 @@ function Article(a) {
           maxW="830px"
           align="center"
           justify="center"
-          style={{ borderTop: "1px solid #ddd" }}
-          p={6}
+          sx={{ borderTop: "1px solid #ddd" }}
+          p={4}
           width="100%"
         >
           <Link to="/">

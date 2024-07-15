@@ -53,7 +53,7 @@ function App() {
             </Box>
           </Box>
         </Flex>
-        <Box w="100%" flex={1} style={{ borderTop: "1px solid #333" }}>
+        <Box w="100%" flex={1} sx={{ borderTop: "1px solid #333" }}>
           {map(v => {
             return (
               <>
