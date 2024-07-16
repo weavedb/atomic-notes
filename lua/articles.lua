@@ -2,6 +2,45 @@ local json = require("json")
 local ao = require('ao')
 
 Articles = Articles or {}
+Profile = Profile or nil
+
+Handlers.add(
+   "Set-Profile",
+   Handlers.utils.hasMatchingTag("Action", "Set-Profile"),
+   function (msg)
+      assert(msg.From == Owner, 'only owner can execute!')
+      assert(type(msg.name) == 'string', 'name is required!')
+      local profile = {	name = msg.name }
+      if msg.description then
+	 profile.description = msg.description
+      end
+      if msg.x then
+	 profile.x = msg.x
+      end
+      if msg.github then
+	 profile.github = msg.github
+      end
+      if msg.image then
+	 profile.image = msg.image
+      end
+      if msg.cover then
+	 profile.cover = msg.cover
+      end
+      Profile = profile
+      Handlers.utils.reply("profile updated!")(msg)
+   end
+)
+
+Handlers.add(
+   "Get-Profile",
+   Handlers.utils.hasMatchingTag("Action", "Get-Profile"),
+   function (msg)
+      ao.send({
+	    Target = msg.From,
+	    Article = json.encode(Profile)
+      })
+   end
+)
 
 Handlers.add(
    "Add",

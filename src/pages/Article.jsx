@@ -5,14 +5,26 @@ import markdownIt from "markdown-it"
 import { toHtml } from "hast-util-to-html"
 import "../github-markdown.css"
 import { common, createStarryNight } from "@wooorm/starry-night"
-import tomo from "/tomo.png"
 import { Link } from "react-router-dom"
 import { dryrun } from "@permaweb/aoconnect"
 
+import { defaultProfile, getProfile, getArticles } from "../lib/utils"
+
 function Article(a) {
   const { id } = useParams()
+  const [profile, setProfile] = useState(null)
   const [article, setArticle] = useState(null)
   const [md, setMD] = useState(null)
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const _profile = await getProfile()
+        setProfile(_profile)
+      } catch (e) {
+        console.log(e)
+      }
+    })()
+  }, [])
   useEffect(() => {
     ;(async () => {
       try {
@@ -62,6 +74,8 @@ function Article(a) {
       }
     })()
   }, [id])
+
+  const _profile = defaultProfile(profile)
   return (
     <>
       <Flex direction="column" align="center" p={[4, 6, 10]}>
@@ -84,10 +98,14 @@ function Article(a) {
           <Link to="/">
             <Flex>
               <Flex justify="center" mr={2}>
-                <Image src={tomo} boxSize="25px" />
+                <Image
+                  src={_profile.image}
+                  boxSize="25px"
+                  sx={{ borderRadius: "50%" }}
+                />
               </Flex>
               <Box>
-                <Box>TOMO</Box>
+                <Box>{_profile.name}</Box>
               </Box>
             </Flex>
           </Link>
