@@ -29,6 +29,24 @@ import {
 const allPlugins = diffMarkdown => [
   diffSourcePlugin({ viewMode: "source", diffMarkdown }),
 ]
+const getOwner = async () => {
+  const query = `query {
+    transactions(ids: ["${import.meta.env.VITE_PROCESS_ID}"]) {
+        edges {
+            node {
+                id
+                owner { address }
+            }
+        }
+    }
+}`
+  const res = await fetch("https://arweave.net/graphql", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query }),
+  }).then(r => r.json())
+  return res?.data?.transactions?.edges?.[0].node?.owner?.address ?? null
+}
 function Admin(a) {
   const ref = useRef(null)
   const [address, setAddress] = useState(null)
@@ -57,7 +75,10 @@ function Admin(a) {
   useEffect(() => {
     ;(async () => {
       const userAddress = await lf.getItem("address")
-      if (userAddress) setAddress(userAddress)
+      if (userAddress) {
+        const owner = await getOwner()
+        if (owner === userAddress) setAddress(userAddress)
+      }
     })()
   }, [])
   useEffect(() => {
@@ -220,8 +241,15 @@ function Admin(a) {
                 const userAddress =
                   await window.arweaveWallet.getActiveAddress()
                 if (userAddress) {
-                  setAddress(userAddress)
-                  await lf.setItem("address", userAddress)
+                  const owner = await getOwner()
+                  if (!owner) {
+                    alert("AO process not found.")
+                  } else if (owner === userAddress) {
+                    setAddress(userAddress)
+                    await lf.setItem("address", userAddress)
+                  } else {
+                    alert("You are not the owner of the AO process.")
+                  }
                 }
               }}
             >
@@ -230,543 +258,560 @@ function Admin(a) {
           )}
         </Flex>
       </Flex>
-
-      <Flex mb={4} justify="center">
-        <Flex maxW="830px" width="100%">
-          {map(v => {
-            return (
-              <Flex
-                fontSize="14px"
-                w="75px"
-                mr={4}
-                bg={tab === v ? "#f0f0f0" : "white"}
-                justify="center"
-                px={4}
-                py={1}
-                sx={{
-                  borderRadius: "3px",
-                  cursor: "pointer",
-                  ":hover": { opacity: 0.5 },
-                  border: "1px solid #999",
-                }}
-                onClick={() => setTab(v)}
-              >
-                {update !== null && v === "Add" ? "Update" : v}
-              </Flex>
-            )
-          })(tabs)}
-          <Flex flex={1} />
+      {!address ? (
+        <Flex mb={4} justify="center">
+          <Flex
+            maxW="830px"
+            width="100%"
+            justify="center"
+            align="center"
+            height="calc(100vh - 145px)"
+          >
+            <Box as="i" className="fas fa-exclamation" mr={2} />
+            Connect AO Process Owner Wallet
+          </Flex>
         </Flex>
-      </Flex>
-      {tab !== "Editor" ? null : (
+      ) : (
         <>
           <Flex mb={4} justify="center">
             <Flex maxW="830px" width="100%">
-              {map(v => (
-                <Flex
-                  fontSize="12px"
-                  ml={4}
-                  justify="center"
-                  sx={{
-                    borderRadius: "3px",
-                    cursor: "pointer",
-                    ":hover": { opacity: 0.5 },
-                    textDecoration: tab2 === v ? "underline" : "",
-                    fontWeight: tab2 === v ? "bold" : "",
-                  }}
-                  onClick={() => setTab2(v)}
-                >
-                  {v}
-                </Flex>
-              ))(tabs2)}
-              <Box flex={1} />
-              <Flex
-                fontSize="12px"
-                mr={4}
-                justify="center"
-                sx={{
-                  borderRadius: "3px",
-                  cursor: "pointer",
-                  ":hover": { opacity: 0.5 },
-                }}
-                onClick={async () => {
-                  const blob = new Blob([md], { type: "text/markdown" })
-                  const link = document.createElement("a")
-                  link.href = URL.createObjectURL(blob)
-                  link.download = `${Date.now()}.md`
-                  link.click()
-                  URL.revokeObjectURL(link.href)
-                }}
-              >
-                Download MD
-              </Flex>
-              <Flex
-                fontSize="12px"
-                mr={4}
-                justify="center"
-                sx={{
-                  borderRadius: "3px",
-                  cursor: "pointer",
-                  ":hover": { opacity: 0.5 },
-                }}
-                onClick={async () => {
-                  const arweave = Arweave.init({})
-                  const transaction = await arweave.createTransaction({
-                    data: md,
-                  })
-                  transaction.addTag("Content-Type", "text/markdown")
-                  await window.arweaveWallet.connect(["SIGN_TRANSACTION"])
-                  await arweave.transactions.sign(transaction)
-                  const response = await arweave.transactions.post(transaction)
-                  if (response.status === 200) {
-                    setEditTxid(transaction.id)
-                  } else {
-                    alert("File upload failed.")
-                  }
-                }}
-              >
-                Upload to Arweave
-              </Flex>
-              {!editTxid ? null : (
-                <Flex
-                  fontSize="12px"
-                  mr={4}
-                  justify="center"
-                  sx={{
-                    borderRadius: "3px",
-                    cursor: "pointer",
-                    ":hover": { opacity: 0.5 },
-                  }}
-                  onClick={async () => {
-                    setAddTxid(editTxid)
-                    setTxid(editTxid)
-                    setTitle(editTitle)
-                    setUpdate(editID)
-                    setId(editID)
-                    setTab("Add")
-                  }}
-                >
-                  Add to AO
-                </Flex>
-              )}
+              {map(v => {
+                return (
+                  <Flex
+                    fontSize="14px"
+                    w="75px"
+                    mr={4}
+                    bg={tab === v ? "#f0f0f0" : "white"}
+                    justify="center"
+                    px={4}
+                    py={1}
+                    sx={{
+                      borderRadius: "3px",
+                      cursor: "pointer",
+                      ":hover": { opacity: 0.5 },
+                      border: "1px solid #999",
+                    }}
+                    onClick={() => setTab(v)}
+                  >
+                    {update !== null && v === "Add" ? "Update" : v}
+                  </Flex>
+                )
+              })(tabs)}
+              <Flex flex={1} />
             </Flex>
           </Flex>
-          <Flex mb={4} justify="center">
-            <Flex
-              maxW="830px"
-              width="100%"
-              fontSize="12px"
-              bg="#f0f0f0"
-              py={2}
-              px={4}
-              sx={{ borderRadius: "3px" }}
-            >
-              {editTxid ? (
-                <Flex w="100%">
-                  {!editTitle ? null : (
-                    <Box as="b" mr={4}>
-                      {editTitle}
-                    </Box>
-                  )}
-                  {!editID ? null : (
-                    <Box as="span" mr={4}>
-                      Page ID: {editID}
-                    </Box>
-                  )}
+          {tab !== "Editor" ? null : (
+            <>
+              <Flex mb={4} justify="center">
+                <Flex maxW="830px" width="100%">
+                  {map(v => (
+                    <Flex
+                      fontSize="12px"
+                      ml={4}
+                      justify="center"
+                      sx={{
+                        borderRadius: "3px",
+                        cursor: "pointer",
+                        ":hover": { opacity: 0.5 },
+                        textDecoration: tab2 === v ? "underline" : "",
+                        fontWeight: tab2 === v ? "bold" : "",
+                      }}
+                      onClick={() => setTab2(v)}
+                    >
+                      {v}
+                    </Flex>
+                  ))(tabs2)}
                   <Box flex={1} />
-                  <Box
-                    as="a"
-                    target="_blank"
-                    href={`https://arweave.net/${editTxid}`}
-                    sx={{ textDecoration: "underline" }}
+                  <Flex
+                    fontSize="12px"
+                    mr={4}
+                    justify="center"
+                    sx={{
+                      borderRadius: "3px",
+                      cursor: "pointer",
+                      ":hover": { opacity: 0.5 },
+                    }}
+                    onClick={async () => {
+                      const blob = new Blob([md], { type: "text/markdown" })
+                      const link = document.createElement("a")
+                      link.href = URL.createObjectURL(blob)
+                      link.download = `${Date.now()}.md`
+                      link.click()
+                      URL.revokeObjectURL(link.href)
+                    }}
                   >
-                    {editTxid.slice(0, 5)}...{editTxid.slice(-5)}
-                  </Box>
+                    Download MD
+                  </Flex>
+                  <Flex
+                    fontSize="12px"
+                    mr={4}
+                    justify="center"
+                    sx={{
+                      borderRadius: "3px",
+                      cursor: "pointer",
+                      ":hover": { opacity: 0.5 },
+                    }}
+                    onClick={async () => {
+                      const arweave = Arweave.init({})
+                      const transaction = await arweave.createTransaction({
+                        data: md,
+                      })
+                      transaction.addTag("Content-Type", "text/markdown")
+                      await window.arweaveWallet.connect(["SIGN_TRANSACTION"])
+                      await arweave.transactions.sign(transaction)
+                      const response =
+                        await arweave.transactions.post(transaction)
+                      if (response.status === 200) {
+                        setEditTxid(transaction.id)
+                      } else {
+                        alert("File upload failed.")
+                      }
+                    }}
+                  >
+                    Upload to Arweave
+                  </Flex>
+                  {!editTxid ? null : (
+                    <Flex
+                      fontSize="12px"
+                      mr={4}
+                      justify="center"
+                      sx={{
+                        borderRadius: "3px",
+                        cursor: "pointer",
+                        ":hover": { opacity: 0.5 },
+                      }}
+                      onClick={async () => {
+                        setAddTxid(editTxid)
+                        setTxid(editTxid)
+                        setTitle(editTitle)
+                        setUpdate(editID)
+                        setId(editID)
+                        setTab("Add")
+                      }}
+                    >
+                      Add to AO
+                    </Flex>
+                  )}
                 </Flex>
-              ) : (
-                "Not Uploaded to Arweave Yet"
+              </Flex>
+              <Flex mb={4} justify="center">
+                <Flex
+                  maxW="830px"
+                  width="100%"
+                  fontSize="12px"
+                  bg="#f0f0f0"
+                  py={2}
+                  px={4}
+                  sx={{ borderRadius: "3px" }}
+                >
+                  {editTxid ? (
+                    <Flex w="100%">
+                      {!editTitle ? null : (
+                        <Box as="b" mr={4}>
+                          {editTitle}
+                        </Box>
+                      )}
+                      {!editID ? null : (
+                        <Box as="span" mr={4}>
+                          Page ID: {editID}
+                        </Box>
+                      )}
+                      <Box flex={1} />
+                      <Box
+                        as="a"
+                        target="_blank"
+                        href={`https://arweave.net/${editTxid}`}
+                        sx={{ textDecoration: "underline" }}
+                      >
+                        {editTxid.slice(0, 5)}...{editTxid.slice(-5)}
+                      </Box>
+                    </Flex>
+                  ) : (
+                    "Not Uploaded to Arweave Yet"
+                  )}
+                </Flex>
+              </Flex>
+            </>
+          )}
+          <Flex justify="center" flex={1}>
+            <Flex direction="column" h="100%" w="100%" maxW="830px">
+              {tab !== "Profile" ? null : (
+                <Box w="100%" flex={1}>
+                  <Box
+                    p={6}
+                    fontSize="12px"
+                    bg="#f0f0f0"
+                    sx={{ borderRadius: "10px" }}
+                  >
+                    <Box mb={4}>
+                      <Box mb={2}>Name</Box>
+                      <Input
+                        bg="white"
+                        value={name}
+                        sx={{ border: "1px solid #999" }}
+                        onChange={e => setName(e.target.value)}
+                      />
+                    </Box>
+                    <Box mb={4}>
+                      <Box mb={2}>Description</Box>
+                      <Input
+                        bg="white"
+                        value={description}
+                        sx={{ border: "1px solid #999" }}
+                        onChange={e => setDescription(e.target.value)}
+                      />
+                    </Box>
+                    <Box mb={4}>
+                      <Box mb={2}>Image</Box>
+                      <Input
+                        bg="white"
+                        value={image}
+                        sx={{ border: "1px solid #999" }}
+                        onChange={e => setImage(e.target.value)}
+                      />
+                    </Box>
+                    <Box mb={4}>
+                      <Box mb={2}>Cover</Box>
+                      <Input
+                        bg="white"
+                        value={cover}
+                        sx={{ border: "1px solid #999" }}
+                        onChange={e => setCover(e.target.value)}
+                      />
+                    </Box>
+                    <Flex>
+                      <Box mb={4} mr={2} flex={1}>
+                        <Box mb={2}>Twitter / X</Box>
+                        <Input
+                          value={x}
+                          bg="white"
+                          sx={{ border: "1px solid #999" }}
+                          onChange={e => setX(e.target.value)}
+                        />
+                      </Box>
+                      <Box mb={4} ml={2} flex={1}>
+                        <Box mb={2}>Github</Box>
+                        <Input
+                          value={github}
+                          bg="white"
+                          sx={{ border: "1px solid #999" }}
+                          onChange={e => setGithub(e.target.value)}
+                        />
+                      </Box>
+                    </Flex>
+                    <Flex
+                      fontSize="14px"
+                      justify="center"
+                      px={4}
+                      py={2}
+                      sx={{
+                        opacity: ok_profile ? 1 : 0.5,
+                        borderRadius: "3px",
+                        cursor: ok_profile ? "pointer" : "default",
+                        ":hover": { opacity: 0.75 },
+                        border: "1px solid #999",
+                        bg: "white",
+                      }}
+                      onClick={async () => {
+                        if (!ok_profile) return
+                        await window.arweaveWallet.connect([
+                          "ACCESS_ADDRESS",
+                          "SIGN_TRANSACTION",
+                        ])
+                        let tags = [
+                          { name: "Action", value: "Set-Profile" },
+                          { name: "name", value: name },
+                        ]
+                        if (!/^\s*$/.test(description)) {
+                          tags.push({ name: "description", value: description })
+                        }
+                        if (!/^\s*$/.test(image)) {
+                          tags.push({ name: "image", value: image })
+                        }
+                        if (!/^\s*$/.test(cover)) {
+                          tags.push({ name: "cover", value: cover })
+                        }
+                        if (!/^\s*$/.test(x)) {
+                          tags.push({ name: "x", value: x })
+                        }
+                        if (!/^\s*$/.test(github)) {
+                          tags.push({ name: "github", value: github })
+                        }
+                        const messageId = await message({
+                          process: import.meta.env.VITE_PROCESS_ID,
+                          signer: createDataItemSigner(window.arweaveWallet),
+                          tags,
+                        })
+                        const res = await result({
+                          message: messageId,
+                          process: import.meta.env.VITE_PROCESS_ID,
+                        })
+                        if (res.Messages[0]) {
+                          const _profile = await getProfile()
+                          setProfile(_profile)
+                        } else {
+                          console.log(res)
+                          alert("something went wrong!")
+                        }
+                      }}
+                    >
+                      Update Profile
+                    </Flex>
+                  </Box>
+                </Box>
+              )}
+              {tab !== "Editor" ? null : (
+                <Box
+                  mb={2}
+                  height={tab2 === "Preview" ? "" : "calc(100vh - 275px)"}
+                  sx={{ overflowY: "auto" }}
+                >
+                  {tab2 === "Preview" ? (
+                    <Box
+                      mb={4}
+                      className="markdown-body"
+                      width="100%"
+                      dangerouslySetInnerHTML={{ __html: preview }}
+                    />
+                  ) : (
+                    <MDXEditor
+                      markdown={md}
+                      contentEditableClassName="prose max-w-full font-sans"
+                      plugins={allPlugins("")}
+                      ref={ref}
+                      onChange={async v => {
+                        setMD(v)
+                        await lf.setItem("draft", {
+                          title: editTitle,
+                          txid: editTxid,
+                          id: editID,
+                          body: v,
+                        })
+                      }}
+                    />
+                  )}
+                </Box>
+              )}
+              {tab !== "Add" ? null : (
+                <Box w="100%" flex={1}>
+                  <Box
+                    p={6}
+                    fontSize="12px"
+                    bg="#f0f0f0"
+                    sx={{ borderRadius: "10px" }}
+                  >
+                    <Flex
+                      justify="flex-end"
+                      mt="-10px"
+                      sx={{
+                        cursor: "pointer",
+                        ":hover": { opacity: 0.75 },
+                      }}
+                      onClick={() => {
+                        setUpdate(null)
+                        setAddTxid(null)
+                        setTitle("")
+                        setId("")
+                        setTxid("")
+                      }}
+                    >
+                      Clear
+                    </Flex>
+                    <Box mb={4}>
+                      <Box mb={2}>Title</Box>
+                      <Input
+                        bg="white"
+                        value={title}
+                        sx={{ border: "1px solid #999" }}
+                        onChange={e => setTitle(e.target.value)}
+                      />
+                    </Box>
+                    <Flex>
+                      <Box mb={4} mr={2}>
+                        <Box mb={2}>Page ID</Box>
+                        <Input
+                          disabled={update === null ? "" : true}
+                          value={id}
+                          bg="white"
+                          sx={{ border: "1px solid #999" }}
+                          onChange={e => setId(e.target.value)}
+                        />
+                      </Box>
+                      <Box mb={4} flex={1} ml={2}>
+                        <Box mb={2}>Markdown Arweave TxID</Box>
+                        <Input
+                          disabled={addTxid === null ? "" : true}
+                          value={txid}
+                          bg="white"
+                          sx={{ border: "1px solid #999" }}
+                          onChange={e => setTxid(e.target.value)}
+                        />
+                      </Box>
+                    </Flex>
+                    <Flex
+                      fontSize="14px"
+                      justify="center"
+                      px={4}
+                      py={2}
+                      sx={{
+                        opacity: ok ? 1 : 0.5,
+                        borderRadius: "3px",
+                        cursor: ok ? "pointer" : "default",
+                        ":hover": { opacity: 0.75 },
+                        border: "1px solid #999",
+                        bg: "white",
+                      }}
+                      onClick={async () => {
+                        if (!ok) return
+                        let text = null
+                        try {
+                          const r = await fetch(`https://arweave.net/${txid}`)
+                          if (r.status === 200) text = await r.text()
+                        } catch (e) {
+                          console.log(e)
+                        }
+                        if (text === null) {
+                          alert("Markdown File coundn't be found")
+                          return
+                        }
+                        await window.arweaveWallet.connect([
+                          "ACCESS_ADDRESS",
+                          "SIGN_TRANSACTION",
+                        ])
+                        let tags = [
+                          {
+                            name: "Action",
+                            value: update === null ? "Add" : "Update",
+                          },
+                          { name: "title", value: title },
+                          { name: "id", value: id },
+                          { name: "txid", value: txid },
+                          { name: "date", value: Date.now().toString() },
+                        ]
+                        const messageId = await message({
+                          process: import.meta.env.VITE_PROCESS_ID,
+                          signer: createDataItemSigner(window.arweaveWallet),
+                          tags,
+                        })
+                        const res = await result({
+                          message: messageId,
+                          process: import.meta.env.VITE_PROCESS_ID,
+                        })
+                        if (res.Messages[0]) {
+                          const _articles = await getArticles()
+                          setArticles(_articles)
+                          setTitle("")
+                          setId("")
+                          setTxid("")
+                          setUpdate(null)
+                          setAddTxid(null)
+                        } else {
+                          console.log(res)
+                          alert("something went wrong!")
+                        }
+                      }}
+                    >
+                      {update === null ? "Add New Article" : "Update Article"}
+                    </Flex>
+                  </Box>
+                </Box>
+              )}
+              {tab !== "Articles" ? null : (
+                <Box w="100%" flex={1}>
+                  {map(v => {
+                    return (
+                      <>
+                        <Flex py={2} px={6} fontSize="20px" align="center">
+                          <Link to={`../a/${v.id}`}>
+                            <Box as="u">{v.title}</Box>
+                          </Link>
+                          <Box flex={1}></Box>
+                          <Box mx={3} as="span" fontSize="14px">
+                            {dayjs(v.date).format("YYYY MM/DD mm:HH")}
+                          </Box>
+                          <Box fontSize="12px" as="span">
+                            <Flex
+                              bg={editTxid === v.txid ? "#f0f0f0" : "white"}
+                              justify="center"
+                              px={2}
+                              py={1}
+                              sx={{
+                                borderRadius: "3px",
+                                cursor: "pointer",
+                                ":hover": { opacity: 0.5 },
+                                border: "1px solid #999",
+                              }}
+                              onClick={async () => {
+                                setEditTxid(v.txid)
+                                setEditTitle(v.title)
+                                setEditID(v.id)
+                                const text = await fetch(
+                                  `https://arweave.net/${v.txid}`,
+                                ).then(r => r.text())
+                                setMD(text)
+                                ref.current?.insertMarkdown(text)
+                                setTab("Editor")
+                              }}
+                            >
+                              Edit
+                            </Flex>
+                          </Box>
+                          <Box fontSize="12px" as="span" ml={3}>
+                            <Flex
+                              justify="center"
+                              px={2}
+                              py={1}
+                              sx={{
+                                borderRadius: "3px",
+                                cursor: "pointer",
+                                ":hover": { opacity: 0.5 },
+                                border: "1px solid #999",
+                              }}
+                              onClick={async () => {
+                                if (!confirm("Would you like to delete it?")) {
+                                  return
+                                }
+                                await window.arweaveWallet.connect([
+                                  "ACCESS_ADDRESS",
+                                  "SIGN_TRANSACTION",
+                                ])
+                                const tags = [
+                                  { name: "Action", value: "Delete" },
+                                  { name: "id", value: v.id },
+                                ]
+                                const messageId = await message({
+                                  process: import.meta.env.VITE_PROCESS_ID,
+                                  signer: createDataItemSigner(
+                                    window.arweaveWallet,
+                                  ),
+                                  tags,
+                                })
+                                let res = await result({
+                                  message: messageId,
+                                  process: import.meta.env.VITE_PROCESS_ID,
+                                })
+                                if (res.Messages[0]) {
+                                  const _articles = await getArticles()
+                                  setArticles(_articles)
+                                } else {
+                                  console.log(res)
+                                  alert("something went wrong!")
+                                }
+                              }}
+                            >
+                              Delete
+                            </Flex>
+                          </Box>
+                        </Flex>
+                      </>
+                    )
+                  })(articles)}
+                </Box>
               )}
             </Flex>
           </Flex>
         </>
       )}
-      <Flex justify="center" flex={1}>
-        <Flex direction="column" h="100%" w="100%" maxW="830px">
-          {tab !== "Profile" ? null : (
-            <Box w="100%" flex={1}>
-              <Box
-                p={6}
-                fontSize="12px"
-                bg="#f0f0f0"
-                sx={{ borderRadius: "10px" }}
-              >
-                <Box mb={4}>
-                  <Box mb={2}>Name</Box>
-                  <Input
-                    bg="white"
-                    value={name}
-                    sx={{ border: "1px solid #999" }}
-                    onChange={e => setName(e.target.value)}
-                  />
-                </Box>
-                <Box mb={4}>
-                  <Box mb={2}>Description</Box>
-                  <Input
-                    bg="white"
-                    value={description}
-                    sx={{ border: "1px solid #999" }}
-                    onChange={e => setDescription(e.target.value)}
-                  />
-                </Box>
-                <Box mb={4}>
-                  <Box mb={2}>Image</Box>
-                  <Input
-                    bg="white"
-                    value={image}
-                    sx={{ border: "1px solid #999" }}
-                    onChange={e => setImage(e.target.value)}
-                  />
-                </Box>
-                <Box mb={4}>
-                  <Box mb={2}>Cover</Box>
-                  <Input
-                    bg="white"
-                    value={cover}
-                    sx={{ border: "1px solid #999" }}
-                    onChange={e => setCover(e.target.value)}
-                  />
-                </Box>
-                <Flex>
-                  <Box mb={4} mr={2} flex={1}>
-                    <Box mb={2}>Twitter / X</Box>
-                    <Input
-                      value={x}
-                      bg="white"
-                      sx={{ border: "1px solid #999" }}
-                      onChange={e => setX(e.target.value)}
-                    />
-                  </Box>
-                  <Box mb={4} ml={2} flex={1}>
-                    <Box mb={2}>Github</Box>
-                    <Input
-                      value={github}
-                      bg="white"
-                      sx={{ border: "1px solid #999" }}
-                      onChange={e => setGithub(e.target.value)}
-                    />
-                  </Box>
-                </Flex>
-                <Flex
-                  fontSize="14px"
-                  justify="center"
-                  px={4}
-                  py={2}
-                  sx={{
-                    opacity: ok_profile ? 1 : 0.5,
-                    borderRadius: "3px",
-                    cursor: ok_profile ? "pointer" : "default",
-                    ":hover": { opacity: 0.75 },
-                    border: "1px solid #999",
-                    bg: "white",
-                  }}
-                  onClick={async () => {
-                    if (!ok_profile) return
-                    await window.arweaveWallet.connect([
-                      "ACCESS_ADDRESS",
-                      "SIGN_TRANSACTION",
-                    ])
-                    let tags = [
-                      { name: "Action", value: "Set-Profile" },
-                      { name: "name", value: name },
-                    ]
-                    if (!/^\s*$/.test(description)) {
-                      tags.push({ name: "description", value: description })
-                    }
-                    if (!/^\s*$/.test(image)) {
-                      tags.push({ name: "image", value: image })
-                    }
-                    if (!/^\s*$/.test(cover)) {
-                      tags.push({ name: "cover", value: cover })
-                    }
-                    if (!/^\s*$/.test(x)) {
-                      tags.push({ name: "x", value: x })
-                    }
-                    if (!/^\s*$/.test(github)) {
-                      tags.push({ name: "github", value: github })
-                    }
-                    const messageId = await message({
-                      process: import.meta.env.VITE_PROCESS_ID,
-                      signer: createDataItemSigner(window.arweaveWallet),
-                      tags,
-                    })
-                    const res = await result({
-                      message: messageId,
-                      process: import.meta.env.VITE_PROCESS_ID,
-                    })
-                    if (res.Messages[0]) {
-                      const _profile = await getProfile()
-                      setProfile(_profile)
-                    } else {
-                      console.log(res)
-                      alert("something went wrong!")
-                    }
-                  }}
-                >
-                  Update Profile
-                </Flex>
-              </Box>
-            </Box>
-          )}
-          {tab !== "Editor" ? null : (
-            <Box
-              mb={2}
-              height={tab2 === "Preview" ? "" : "calc(100vh - 275px)"}
-              sx={{ overflowY: "auto" }}
-            >
-              {tab2 === "Preview" ? (
-                <Box
-                  mb={4}
-                  className="markdown-body"
-                  width="100%"
-                  dangerouslySetInnerHTML={{ __html: preview }}
-                />
-              ) : (
-                <MDXEditor
-                  markdown={md}
-                  contentEditableClassName="prose max-w-full font-sans"
-                  plugins={allPlugins("")}
-                  ref={ref}
-                  onChange={async v => {
-                    setMD(v)
-                    await lf.setItem("draft", {
-                      title: editTitle,
-                      txid: editTxid,
-                      id: editID,
-                      body: v,
-                    })
-                  }}
-                />
-              )}
-            </Box>
-          )}
-          {tab !== "Add" ? null : (
-            <Box w="100%" flex={1}>
-              <Box
-                p={6}
-                fontSize="12px"
-                bg="#f0f0f0"
-                sx={{ borderRadius: "10px" }}
-              >
-                <Flex
-                  justify="flex-end"
-                  mt="-10px"
-                  sx={{
-                    cursor: "pointer",
-                    ":hover": { opacity: 0.75 },
-                  }}
-                  onClick={() => {
-                    setUpdate(null)
-                    setAddTxid(null)
-                    setTitle("")
-                    setId("")
-                    setTxid("")
-                  }}
-                >
-                  Clear
-                </Flex>
-                <Box mb={4}>
-                  <Box mb={2}>Title</Box>
-                  <Input
-                    bg="white"
-                    value={title}
-                    sx={{ border: "1px solid #999" }}
-                    onChange={e => setTitle(e.target.value)}
-                  />
-                </Box>
-                <Flex>
-                  <Box mb={4} mr={2}>
-                    <Box mb={2}>Page ID</Box>
-                    <Input
-                      disabled={update === null ? "" : true}
-                      value={id}
-                      bg="white"
-                      sx={{ border: "1px solid #999" }}
-                      onChange={e => setId(e.target.value)}
-                    />
-                  </Box>
-                  <Box mb={4} flex={1} ml={2}>
-                    <Box mb={2}>Markdown Arweave TxID</Box>
-                    <Input
-                      disabled={addTxid === null ? "" : true}
-                      value={txid}
-                      bg="white"
-                      sx={{ border: "1px solid #999" }}
-                      onChange={e => setTxid(e.target.value)}
-                    />
-                  </Box>
-                </Flex>
-                <Flex
-                  fontSize="14px"
-                  justify="center"
-                  px={4}
-                  py={2}
-                  sx={{
-                    opacity: ok ? 1 : 0.5,
-                    borderRadius: "3px",
-                    cursor: ok ? "pointer" : "default",
-                    ":hover": { opacity: 0.75 },
-                    border: "1px solid #999",
-                    bg: "white",
-                  }}
-                  onClick={async () => {
-                    if (!ok) return
-                    let text = null
-                    try {
-                      const r = await fetch(`https://arweave.net/${txid}`)
-                      if (r.status === 200) text = await r.text()
-                    } catch (e) {
-                      console.log(e)
-                    }
-                    if (text === null) {
-                      alert("Markdown File coundn't be found")
-                      return
-                    }
-                    await window.arweaveWallet.connect([
-                      "ACCESS_ADDRESS",
-                      "SIGN_TRANSACTION",
-                    ])
-                    let tags = [
-                      {
-                        name: "Action",
-                        value: update === null ? "Add" : "Update",
-                      },
-                      { name: "title", value: title },
-                      { name: "id", value: id },
-                      { name: "txid", value: txid },
-                      { name: "date", value: Date.now().toString() },
-                    ]
-                    const messageId = await message({
-                      process: import.meta.env.VITE_PROCESS_ID,
-                      signer: createDataItemSigner(window.arweaveWallet),
-                      tags,
-                    })
-                    const res = await result({
-                      message: messageId,
-                      process: import.meta.env.VITE_PROCESS_ID,
-                    })
-                    if (res.Messages[0]) {
-                      const _articles = await getArticles()
-                      setArticles(_articles)
-                      setTitle("")
-                      setId("")
-                      setTxid("")
-                      setUpdate(null)
-                      setAddTxid(null)
-                    } else {
-                      console.log(res)
-                      alert("something went wrong!")
-                    }
-                  }}
-                >
-                  {update === null ? "Add New Article" : "Update Article"}
-                </Flex>
-              </Box>
-            </Box>
-          )}
-          {tab !== "Articles" ? null : (
-            <Box w="100%" flex={1}>
-              {map(v => {
-                return (
-                  <>
-                    <Flex py={2} px={6} fontSize="20px" align="center">
-                      <Link to={`../a/${v.id}`}>
-                        <Box as="u">{v.title}</Box>
-                      </Link>
-                      <Box flex={1}></Box>
-                      <Box mx={3} as="span" fontSize="14px">
-                        {dayjs(v.date).format("YYYY MM/DD mm:HH")}
-                      </Box>
-                      <Box fontSize="12px" as="span">
-                        <Flex
-                          bg={editTxid === v.txid ? "#f0f0f0" : "white"}
-                          justify="center"
-                          px={2}
-                          py={1}
-                          sx={{
-                            borderRadius: "3px",
-                            cursor: "pointer",
-                            ":hover": { opacity: 0.5 },
-                            border: "1px solid #999",
-                          }}
-                          onClick={async () => {
-                            setEditTxid(v.txid)
-                            setEditTitle(v.title)
-                            setEditID(v.id)
-                            const text = await fetch(
-                              `https://arweave.net/${v.txid}`,
-                            ).then(r => r.text())
-                            setMD(text)
-                            ref.current?.insertMarkdown(text)
-                            setTab("Editor")
-                          }}
-                        >
-                          Edit
-                        </Flex>
-                      </Box>
-                      <Box fontSize="12px" as="span" ml={3}>
-                        <Flex
-                          justify="center"
-                          px={2}
-                          py={1}
-                          sx={{
-                            borderRadius: "3px",
-                            cursor: "pointer",
-                            ":hover": { opacity: 0.5 },
-                            border: "1px solid #999",
-                          }}
-                          onClick={async () => {
-                            if (!confirm("Would you like to delete it?")) {
-                              return
-                            }
-                            await window.arweaveWallet.connect([
-                              "ACCESS_ADDRESS",
-                              "SIGN_TRANSACTION",
-                            ])
-                            const tags = [
-                              { name: "Action", value: "Delete" },
-                              { name: "id", value: v.id },
-                            ]
-                            const messageId = await message({
-                              process: import.meta.env.VITE_PROCESS_ID,
-                              signer: createDataItemSigner(
-                                window.arweaveWallet,
-                              ),
-                              tags,
-                            })
-                            let res = await result({
-                              message: messageId,
-                              process: import.meta.env.VITE_PROCESS_ID,
-                            })
-                            if (res.Messages[0]) {
-                              const _articles = await getArticles()
-                              setArticles(_articles)
-                            } else {
-                              console.log(res)
-                              alert("something went wrong!")
-                            }
-                          }}
-                        >
-                          Delete
-                        </Flex>
-                      </Box>
-                    </Flex>
-                  </>
-                )
-              })(articles)}
-            </Box>
-          )}
-        </Flex>
-      </Flex>
       <Flex direction="column" align="center">
         <Flex
           maxW="830px"
