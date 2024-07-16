@@ -73,7 +73,13 @@ function Admin(a) {
   useEffect(() => {
     ;(async () => {
       const _draft = await lf.getItem("draft")
-      if (_draft) setMD(_draft)
+      if (_draft) {
+        setMD(_draft.body)
+        console.log(_draft)
+        if (_draft.txid) setEditTxid(_draft.txid)
+        if (_draft.id) setEditID(_draft.id)
+        if (_draft.title) setEditTitle(_draft.title)
+      }
     })()
   }, [])
   useEffect(() => {
@@ -164,7 +170,22 @@ function Admin(a) {
           </Flex>
           <Box flex={1} />
           {address ? (
-            <Link to="/admin">
+            <>
+              <Box
+                fontSize="12px"
+                mx={4}
+                my={1}
+                sx={{
+                  cursor: "pointer",
+                  ":hover": { opacity: 0.75 },
+                }}
+                onClick={async () => {
+                  setAddress(null)
+                  await lf.removeItem("address")
+                }}
+              >
+                Sign Out
+              </Box>
               <Box
                 fontSize="12px"
                 px={4}
@@ -178,7 +199,7 @@ function Admin(a) {
               >
                 {address.slice(0, 5)}...{address.slice(-5)}
               </Box>
-            </Link>
+            </>
           ) : (
             <Box
               fontSize="12px"
@@ -215,7 +236,8 @@ function Admin(a) {
           {map(v => {
             return (
               <Flex
-                w="85px"
+                fontSize="14px"
+                w="75px"
                 mr={4}
                 bg={tab === v ? "#f0f0f0" : "white"}
                 justify="center"
@@ -340,22 +362,27 @@ function Admin(a) {
               sx={{ borderRadius: "3px" }}
             >
               {editTxid ? (
-                <Box>
+                <Flex w="100%">
+                  {!editTitle ? null : (
+                    <Box as="b" mr={4}>
+                      {editTitle}
+                    </Box>
+                  )}
                   {!editID ? null : (
-                    <Box as="span" mr={6}>
+                    <Box as="span" mr={4}>
                       Page ID: {editID}
                     </Box>
                   )}
-                  ArweaveTxID:{" "}
+                  <Box flex={1} />
                   <Box
                     as="a"
                     target="_blank"
                     href={`https://arweave.net/${editTxid}`}
                     sx={{ textDecoration: "underline" }}
                   >
-                    {editTxid}
+                    {editTxid.slice(0, 5)}...{editTxid.slice(-5)}
                   </Box>
-                </Box>
+                </Flex>
               ) : (
                 "Not Uploaded to Arweave Yet"
               )}
@@ -491,12 +518,15 @@ function Admin(a) {
             </Box>
           )}
           {tab !== "Editor" ? null : (
-            <Box mb={2} height="calc(100vh - 275px)" sx={{ overflowY: "auto" }}>
+            <Box
+              mb={2}
+              height={tab2 === "Preview" ? "" : "calc(100vh - 275px)"}
+              sx={{ overflowY: "auto" }}
+            >
               {tab2 === "Preview" ? (
                 <Box
                   mb={4}
                   className="markdown-body"
-                  maxW="830px"
                   width="100%"
                   dangerouslySetInnerHTML={{ __html: preview }}
                 />
@@ -508,7 +538,12 @@ function Admin(a) {
                   ref={ref}
                   onChange={async v => {
                     setMD(v)
-                    await lf.setItem("draft", v)
+                    await lf.setItem("draft", {
+                      title: editTitle,
+                      txid: editTxid,
+                      id: editID,
+                      body: v,
+                    })
                   }}
                 />
               )}
@@ -522,6 +557,23 @@ function Admin(a) {
                 bg="#f0f0f0"
                 sx={{ borderRadius: "10px" }}
               >
+                <Flex
+                  justify="flex-end"
+                  mt="-10px"
+                  sx={{
+                    cursor: "pointer",
+                    ":hover": { opacity: 0.75 },
+                  }}
+                  onClick={() => {
+                    setUpdate(null)
+                    setAddTxid(null)
+                    setTitle("")
+                    setId("")
+                    setTxid("")
+                  }}
+                >
+                  Clear
+                </Flex>
                 <Box mb={4}>
                   <Box mb={2}>Title</Box>
                   <Input
@@ -650,8 +702,6 @@ function Admin(a) {
                             setEditTxid(v.txid)
                             setEditTitle(v.title)
                             setEditID(v.id)
-                            setTxid(v.txid)
-                            setUpdate(v.id)
                             const text = await fetch(
                               `https://arweave.net/${v.txid}`,
                             ).then(r => r.text())
