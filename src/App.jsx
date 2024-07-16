@@ -88,6 +88,7 @@ function App() {
             p={8}
             align="center"
             color="crimson"
+            fontSize="20px"
           >
             <Box as="i" className="fas fa-exclamation" mr={2} />
             something went wrong
@@ -100,6 +101,7 @@ function App() {
             justify="center"
             p={8}
             align="center"
+            fontSize="20px"
           >
             <Box as="i" className="fas fa-circle-notch fa-spin" mr={2} />
             fetching articles...
