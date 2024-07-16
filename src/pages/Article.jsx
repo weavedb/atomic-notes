@@ -43,7 +43,6 @@ function Article(a) {
           const text = await fetch(`https://arweave.net/${_article.txid}`).then(
             r => r.text(),
           )
-          const md = markdownIt()
           const starryNight = await createStarryNight(common)
           const markdownItInstance = markdownIt({
             highlight(value, lang) {
@@ -121,15 +120,30 @@ function Article(a) {
             dangerouslySetInnerHTML={{ __html: md }}
           />
         )}
-        <Flex direction="column" align="center" w="100%" mt={[4, 6, 10]}>
-          <Flex
+        {!article ? null : (
+          <Box
+            as="a"
+            display="flex"
+            mt={8}
             maxW="830px"
-            align="center"
-            justify="center"
-            sx={{ borderTop: "1px solid #ddd" }}
-            p={4}
             width="100%"
+            fontSize="12px"
+            justifyContent="center"
+            p={4}
+            target="_blank"
+            href={`https://arweave.net/${article.txid}`}
+            sx={{
+              borderRadius: "5px",
+              border: "1px solid #ddd",
+              cursor: "pointer",
+              ":hover": { opacity: 0.75 },
+            }}
           >
+            {article.txid}
+          </Box>
+        )}
+        <Flex direction="column" align="center" w="100%">
+          <Flex maxW="830px" align="center" justify="center" p={4} width="100%">
             <Link to="/">
               <Flex>
                 <Flex justify="center" mr={2}>

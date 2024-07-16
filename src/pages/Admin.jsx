@@ -1,4 +1,11 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
+import lf from "localforage"
+import Arweave from "arweave"
+import "@mdxeditor/editor/style.css"
+import "../github-markdown.css"
+import markdownIt from "markdown-it"
+import { toHtml } from "hast-util-to-html"
+import { common, createStarryNight } from "@wooorm/starry-night"
 import { Input, Flex, Box, Image } from "@chakra-ui/react"
 import { useParams } from "react-router-dom"
 import { Link } from "react-router-dom"
@@ -12,23 +19,47 @@ import {
   result,
 } from "@permaweb/aoconnect"
 
-import { defaultProfile, getProfile, getArticles } from "../lib/utils"
+import { defaultProfile, getProfile, getArticles, ao } from "../lib/utils"
+import {
+  diffSourcePlugin,
+  MDXEditor,
+  DiffSourceToggleWrapper,
+} from "@mdxeditor/editor"
 
+const allPlugins = diffMarkdown => [
+  diffSourcePlugin({ viewMode: "source", diffMarkdown }),
+]
 function Admin(a) {
+  const ref = useRef(null)
+  const [address, setAddress] = useState(null)
+  const [editTitle, setEditTitle] = useState(null)
+  const [editID, setEditID] = useState(null)
+  const [editTxid, setEditTxid] = useState(null)
+  const [addTxid, setAddTxid] = useState(null)
+  const [md, setMD] = useState("")
+  const [preview, setPreview] = useState("")
   const [articles, setArticles] = useState([])
   const [title, setTitle] = useState("")
   const [id, setId] = useState("")
   const [txid, setTxid] = useState("")
   const [profile, setProfile] = useState(null)
-  const [tab, setTab] = useState("New")
+  const [tab, setTab] = useState("Add")
+  const [tab2, setTab2] = useState("Markdown")
   const [update, setUpdate] = useState(null)
-  const tabs = ["New", "Articles", "Profile"]
+  const tabs = ["Add", "Articles", "Editor", "Profile"]
+  const tabs2 = ["Markdown", "Preview"]
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [image, setImage] = useState("")
   const [cover, setCover] = useState("")
   const [x, setX] = useState("")
   const [github, setGithub] = useState("")
+  useEffect(() => {
+    ;(async () => {
+      const userAddress = await lf.getItem("address")
+      if (userAddress) setAddress(userAddress)
+    })()
+  }, [])
   useEffect(() => {
     ;(async () => {
       try {
@@ -39,6 +70,49 @@ function Admin(a) {
       }
     })()
   }, [])
+  useEffect(() => {
+    ;(async () => {
+      const _draft = await lf.getItem("draft")
+      if (_draft) setMD(_draft)
+    })()
+  }, [])
+  useEffect(() => {
+    ;(async () => {
+      if (tab2 === "Preview") {
+        try {
+          const starryNight = await createStarryNight(common)
+          const markdownItInstance = markdownIt({
+            highlight(value, lang) {
+              const scope = starryNight.flagToScope(lang)
+              return toHtml({
+                type: "element",
+                tagName: "pre",
+                properties: {
+                  className: scope
+                    ? [
+                        "highlight",
+                        "highlight-" +
+                          scope.replace(/^source\./, "").replace(/\./g, "-"),
+                      ]
+                    : undefined,
+                },
+                children: scope
+                  ? /** @type {Array<ElementContent>} */ (
+                      starryNight.highlight(value, scope).children
+                    )
+                  : [{ type: "text", value }],
+              })
+            },
+          })
+          const html = markdownItInstance.render(md)
+          console.log(html)
+          setPreview(html)
+        } catch (e) {
+          console.log(e)
+        }
+      }
+    })()
+  }, [tab2])
   useEffect(() => {
     ;(async () => {
       try {
@@ -68,28 +142,74 @@ function Admin(a) {
   const _profile = defaultProfile(profile)
   return (
     <Flex minH="100%" direction="column">
-      <Flex justify="center">
+      <Flex justify="center" sx={{ borderBottom: "1px solid #ddd" }} mb={4}>
         <Flex
           maxW="830px"
           width="100%"
           align="center"
           height="50px"
           fontSize="14px"
-          justify="center"
         >
-          <Box>
-            AO Process ID:{" "}
+          <Flex align="center">
+            <Image src={ao} mr={2} />
             <Box
+              fontSize="12px"
               as="a"
               target="_blank"
               href={`https://www.ao.link/#/entity/${import.meta.env.VITE_PROCESS_ID}`}
-              sx={{ textDecoration: "underline" }}
             >
-              {import.meta.env.VITE_PROCESS_ID}
+              {import.meta.env.VITE_PROCESS_ID.slice(0, 10)}...
+              {import.meta.env.VITE_PROCESS_ID.slice(-10)}
             </Box>
-          </Box>
+          </Flex>
+          <Box flex={1} />
+          {address ? (
+            <Link to="/admin">
+              <Box
+                fontSize="12px"
+                px={4}
+                py={1}
+                sx={{
+                  cursor: "pointer",
+                  ":hover": { opacity: 0.75 },
+                  borderRadius: "3px",
+                  border: "1px solid #999",
+                }}
+              >
+                {address.slice(0, 5)}...{address.slice(-5)}
+              </Box>
+            </Link>
+          ) : (
+            <Box
+              fontSize="12px"
+              px={4}
+              py={1}
+              href={`https://www.ao.link/#/entity/${import.meta.env.VITE_PROCESS_ID}`}
+              sx={{
+                cursor: "pointer",
+                ":hover": { opacity: 0.75 },
+                borderRadius: "3px",
+                border: "1px solid #999",
+              }}
+              onClick={async () => {
+                await window.arweaveWallet.connect([
+                  "ACCESS_ADDRESS",
+                  "SIGN_TRANSACTION",
+                ])
+                const userAddress =
+                  await window.arweaveWallet.getActiveAddress()
+                if (userAddress) {
+                  setAddress(userAddress)
+                  await lf.setItem("address", userAddress)
+                }
+              }}
+            >
+              Connect Wallet
+            </Box>
+          )}
         </Flex>
       </Flex>
+
       <Flex mb={4} justify="center">
         <Flex maxW="830px" width="100%">
           {map(v => {
@@ -109,13 +229,140 @@ function Admin(a) {
                 }}
                 onClick={() => setTab(v)}
               >
-                {update !== null && v === "New" ? "Update" : v}
+                {update !== null && v === "Add" ? "Update" : v}
               </Flex>
             )
           })(tabs)}
           <Flex flex={1} />
         </Flex>
       </Flex>
+      {tab !== "Editor" ? null : (
+        <>
+          <Flex mb={4} justify="center">
+            <Flex maxW="830px" width="100%">
+              {map(v => (
+                <Flex
+                  fontSize="12px"
+                  ml={4}
+                  justify="center"
+                  sx={{
+                    borderRadius: "3px",
+                    cursor: "pointer",
+                    ":hover": { opacity: 0.5 },
+                    textDecoration: tab2 === v ? "underline" : "",
+                    fontWeight: tab2 === v ? "bold" : "",
+                  }}
+                  onClick={() => setTab2(v)}
+                >
+                  {v}
+                </Flex>
+              ))(tabs2)}
+              <Box flex={1} />
+              <Flex
+                fontSize="12px"
+                mr={4}
+                justify="center"
+                sx={{
+                  borderRadius: "3px",
+                  cursor: "pointer",
+                  ":hover": { opacity: 0.5 },
+                }}
+                onClick={async () => {
+                  const blob = new Blob([md], { type: "text/markdown" })
+                  const link = document.createElement("a")
+                  link.href = URL.createObjectURL(blob)
+                  link.download = `${Date.now()}.md`
+                  link.click()
+                  URL.revokeObjectURL(link.href)
+                }}
+              >
+                Download MD
+              </Flex>
+              <Flex
+                fontSize="12px"
+                mr={4}
+                justify="center"
+                sx={{
+                  borderRadius: "3px",
+                  cursor: "pointer",
+                  ":hover": { opacity: 0.5 },
+                }}
+                onClick={async () => {
+                  const arweave = Arweave.init({})
+                  const transaction = await arweave.createTransaction({
+                    data: md,
+                  })
+                  transaction.addTag("Content-Type", "text/markdown")
+                  await window.arweaveWallet.connect(["SIGN_TRANSACTION"])
+                  await arweave.transactions.sign(transaction)
+                  const response = await arweave.transactions.post(transaction)
+                  if (response.status === 200) {
+                    setEditTxid(transaction.id)
+                  } else {
+                    alert("File upload failed.")
+                  }
+                }}
+              >
+                Upload to Arweave
+              </Flex>
+              {!editTxid ? null : (
+                <Flex
+                  fontSize="12px"
+                  mr={4}
+                  justify="center"
+                  sx={{
+                    borderRadius: "3px",
+                    cursor: "pointer",
+                    ":hover": { opacity: 0.5 },
+                  }}
+                  onClick={async () => {
+                    setAddTxid(editTxid)
+                    setTxid(editTxid)
+                    setTitle(editTitle)
+                    setUpdate(editID)
+                    setId(editID)
+                    setTab("Add")
+                  }}
+                >
+                  Add to AO
+                </Flex>
+              )}
+            </Flex>
+          </Flex>
+          <Flex mb={4} justify="center">
+            <Flex
+              maxW="830px"
+              width="100%"
+              fontSize="12px"
+              bg="#f0f0f0"
+              py={2}
+              px={4}
+              sx={{ borderRadius: "3px" }}
+            >
+              {editTxid ? (
+                <Box>
+                  {!editID ? null : (
+                    <Box as="span" mr={6}>
+                      Page ID: {editID}
+                    </Box>
+                  )}
+                  ArweaveTxID:{" "}
+                  <Box
+                    as="a"
+                    target="_blank"
+                    href={`https://arweave.net/${editTxid}`}
+                    sx={{ textDecoration: "underline" }}
+                  >
+                    {editTxid}
+                  </Box>
+                </Box>
+              ) : (
+                "Not Uploaded to Arweave Yet"
+              )}
+            </Flex>
+          </Flex>
+        </>
+      )}
       <Flex justify="center" flex={1}>
         <Flex direction="column" h="100%" w="100%" maxW="830px">
           {tab !== "Profile" ? null : (
@@ -243,7 +490,31 @@ function Admin(a) {
               </Box>
             </Box>
           )}
-          {tab !== "New" ? null : (
+          {tab !== "Editor" ? null : (
+            <Box mb={2} height="calc(100vh - 275px)" sx={{ overflowY: "auto" }}>
+              {tab2 === "Preview" ? (
+                <Box
+                  mb={4}
+                  className="markdown-body"
+                  maxW="830px"
+                  width="100%"
+                  dangerouslySetInnerHTML={{ __html: preview }}
+                />
+              ) : (
+                <MDXEditor
+                  markdown={md}
+                  contentEditableClassName="prose max-w-full font-sans"
+                  plugins={allPlugins("")}
+                  ref={ref}
+                  onChange={async v => {
+                    setMD(v)
+                    await lf.setItem("draft", v)
+                  }}
+                />
+              )}
+            </Box>
+          )}
+          {tab !== "Add" ? null : (
             <Box w="100%" flex={1}>
               <Box
                 p={6}
@@ -274,6 +545,7 @@ function Admin(a) {
                   <Box mb={4} flex={1} ml={2}>
                     <Box mb={2}>Markdown Arweave TxID</Box>
                     <Input
+                      disabled={addTxid === null ? "" : true}
                       value={txid}
                       bg="white"
                       sx={{ border: "1px solid #999" }}
@@ -337,6 +609,7 @@ function Admin(a) {
                       setId("")
                       setTxid("")
                       setUpdate(null)
+                      setAddTxid(null)
                     } else {
                       console.log(res)
                       alert("something went wrong!")
@@ -363,7 +636,7 @@ function Admin(a) {
                       </Box>
                       <Box fontSize="12px" as="span">
                         <Flex
-                          bg={update === v.id ? "#f0f0f0" : "white"}
+                          bg={editTxid === v.txid ? "#f0f0f0" : "white"}
                           justify="center"
                           px={2}
                           py={1}
@@ -374,21 +647,20 @@ function Admin(a) {
                             border: "1px solid #999",
                           }}
                           onClick={async () => {
-                            if (update === v.id) {
-                              setUpdate(null)
-                              setTitle("")
-                              setId("")
-                              setTxid("")
-                            } else {
-                              setUpdate(v.id)
-                              setTitle(v.title)
-                              setId(v.id)
-                              setTxid(v.txid)
-                              setTab("New")
-                            }
+                            setEditTxid(v.txid)
+                            setEditTitle(v.title)
+                            setEditID(v.id)
+                            setTxid(v.txid)
+                            setUpdate(v.id)
+                            const text = await fetch(
+                              `https://arweave.net/${v.txid}`,
+                            ).then(r => r.text())
+                            setMD(text)
+                            ref.current?.insertMarkdown(text)
+                            setTab("Editor")
                           }}
                         >
-                          Update
+                          Edit
                         </Flex>
                       </Box>
                       <Box fontSize="12px" as="span" ml={3}>
