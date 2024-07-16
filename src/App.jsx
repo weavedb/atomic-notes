@@ -10,14 +10,19 @@ import { defaultProfile, getProfile, getArticles } from "./lib/utils"
 function App() {
   const [articles, setArticles] = useState([])
   const [profile, setProfile] = useState(null)
+  const [init, setInit] = useState(false)
+  const [error, setError] = useState(false)
   useEffect(() => {
     ;(async () => {
       try {
         const _articles = await getArticles()
         setArticles(_articles)
+        setError(false)
       } catch (e) {
         console.log(e)
+        setError(true)
       }
+      setInit(true)
     })()
   }, [])
   useEffect(() => {
@@ -74,22 +79,49 @@ function App() {
             )}
           </Box>
         </Flex>
-        <Box w="100%" flex={1} sx={{ borderTop: "1px solid #333" }}>
-          {map(v => {
-            return (
-              <>
-                <Box pt={4} px={6} fontSize="20px">
-                  <Link to={`./a/${v.id}`}>
-                    <Box as="u">{v.title}</Box>
-                  </Link>
-                  <Box ml={4} as="span" fontSize="14px">
-                    {dayjs(v.date).format("YYYY MM/DD HH:mm")}
+        {error ? (
+          <Flex
+            w="100%"
+            flex={1}
+            sx={{ borderTop: "1px solid #333" }}
+            justify="center"
+            p={8}
+            align="center"
+            color="crimson"
+          >
+            <Box as="i" className="fas fa-exclamation" mr={2} />
+            something went wrong
+          </Flex>
+        ) : !init ? (
+          <Flex
+            w="100%"
+            flex={1}
+            sx={{ borderTop: "1px solid #333" }}
+            justify="center"
+            p={8}
+            align="center"
+          >
+            <Box as="i" className="fas fa-circle-notch fa-spin" mr={2} />
+            fetching articles...
+          </Flex>
+        ) : (
+          <Box w="100%" flex={1} sx={{ borderTop: "1px solid #333" }}>
+            {map(v => {
+              return (
+                <>
+                  <Box pt={4} px={6} fontSize="20px">
+                    <Link to={`./a/${v.id}`}>
+                      <Box as="u">{v.title}</Box>
+                    </Link>
+                    <Box ml={4} as="span" fontSize="14px">
+                      {dayjs(v.date).format("YYYY MM/DD HH:mm")}
+                    </Box>
                   </Box>
-                </Box>
-              </>
-            )
-          })(articles)}
-        </Box>
+                </>
+              )
+            })(articles)}
+          </Box>
+        )}
       </Flex>
     </Flex>
   )

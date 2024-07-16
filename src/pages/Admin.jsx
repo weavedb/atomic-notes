@@ -21,6 +21,7 @@ function Admin(a) {
   const [txid, setTxid] = useState("")
   const [profile, setProfile] = useState(null)
   const [tab, setTab] = useState("New")
+  const [update, setUpdate] = useState(null)
   const tabs = ["New", "Articles", "Profile"]
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
@@ -108,7 +109,7 @@ function Admin(a) {
                 }}
                 onClick={() => setTab(v)}
               >
-                {v}
+                {update !== null && v === "New" ? "Update" : v}
               </Flex>
             )
           })(tabs)}
@@ -263,6 +264,7 @@ function Admin(a) {
                   <Box mb={4} mr={2}>
                     <Box mb={2}>Page ID</Box>
                     <Input
+                      disabled={update === null ? "" : true}
                       value={id}
                       bg="white"
                       sx={{ border: "1px solid #999" }}
@@ -309,8 +311,11 @@ function Admin(a) {
                       "ACCESS_ADDRESS",
                       "SIGN_TRANSACTION",
                     ])
-                    const tags = [
-                      { name: "Action", value: "Add" },
+                    let tags = [
+                      {
+                        name: "Action",
+                        value: update === null ? "Add" : "Update",
+                      },
                       { name: "title", value: title },
                       { name: "id", value: id },
                       { name: "txid", value: txid },
@@ -331,13 +336,14 @@ function Admin(a) {
                       setTitle("")
                       setId("")
                       setTxid("")
+                      setUpdate(null)
                     } else {
                       console.log(res)
                       alert("something went wrong!")
                     }
                   }}
                 >
-                  Add New Article
+                  {update === null ? "Add New Article" : "Update Article"}
                 </Flex>
               </Box>
             </Box>
@@ -352,13 +358,43 @@ function Admin(a) {
                         <Box as="u">{v.title}</Box>
                       </Link>
                       <Box flex={1}></Box>
-                      <Box mx={4} as="span" fontSize="14px">
+                      <Box mx={3} as="span" fontSize="14px">
                         {dayjs(v.date).format("YYYY MM/DD mm:HH")}
                       </Box>
                       <Box fontSize="12px" as="span">
                         <Flex
+                          bg={update === v.id ? "#f0f0f0" : "white"}
                           justify="center"
-                          px={4}
+                          px={2}
+                          py={1}
+                          sx={{
+                            borderRadius: "3px",
+                            cursor: "pointer",
+                            ":hover": { opacity: 0.5 },
+                            border: "1px solid #999",
+                          }}
+                          onClick={async () => {
+                            if (update === v.id) {
+                              setUpdate(null)
+                              setTitle("")
+                              setId("")
+                              setTxid("")
+                            } else {
+                              setUpdate(v.id)
+                              setTitle(v.title)
+                              setId(v.id)
+                              setTxid(v.txid)
+                              setTab("New")
+                            }
+                          }}
+                        >
+                          Update
+                        </Flex>
+                      </Box>
+                      <Box fontSize="12px" as="span" ml={3}>
+                        <Flex
+                          justify="center"
+                          px={2}
                           py={1}
                           sx={{
                             borderRadius: "3px",
