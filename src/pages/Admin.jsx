@@ -748,22 +748,24 @@ function Admin(a) {
                     bg="#f0f0f0"
                     sx={{ borderRadius: "10px" }}
                   >
-                    <Flex
-                      justify="flex-end"
-                      mt="-10px"
-                      sx={{
-                        cursor: "pointer",
-                        ":hover": { opacity: 0.75 },
-                      }}
-                      onClick={() => {
-                        setUpdate(null)
-                        setAddTxid(null)
-                        setTitle("")
-                        setId("")
-                        setTxid("")
-                      }}
-                    >
-                      Clear
+                    <Flex justify="flex-end">
+                      <Box
+                        as="span"
+                        mt="-10px"
+                        sx={{
+                          cursor: "pointer",
+                          ":hover": { opacity: 0.75 },
+                        }}
+                        onClick={() => {
+                          setUpdate(null)
+                          setAddTxid(null)
+                          setTitle("")
+                          setId("")
+                          setTxid("")
+                        }}
+                      >
+                        Clear
+                      </Box>
                     </Flex>
                     <Box mb={4}>
                       <Box mb={2}>Title</Box>
@@ -918,7 +920,9 @@ function Admin(a) {
                     return (
                       <>
                         <Flex py={2} px={6} fontSize="16px" align="center">
-                          <Box as="u">{v.title}</Box>
+                          <Link to={`/a/${v.id}`}>
+                            <Box as="u">{v.title}</Box>
+                          </Link>
                           <Box flex={1}></Box>
                           <Box mx={3} as="span" fontSize="14px">
                             {dayjs(v.date).format("YYYY MM/DD HH:mm")}
