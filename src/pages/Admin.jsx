@@ -505,7 +505,7 @@ function Admin(a) {
                         </Box>
                       )}
                       <Box as="span" mr={4}>
-                        Draft ID: {draftID}
+                        Draft ID: #{draftID}
                       </Box>
                       {!editID ? null : (
                         <Box as="span" mr={4}>
@@ -539,7 +539,7 @@ function Admin(a) {
                   ) : (
                     <Flex w="100%" align="center">
                       <Box as="span" mr={4}>
-                        Draft ID: {draftID}
+                        Draft ID: #{draftID}
                       </Box>
                       <Box flex={1}></Box>
                       {uploadingArweave ? (

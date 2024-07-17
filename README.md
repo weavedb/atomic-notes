@@ -1,4 +1,4 @@
-# Permanent CMS on Arweave/AO
+# PermaCMS on Arweave/AO
 
 This is a permanent CMS deployed on Arweave and managed by AO.
 
@@ -7,8 +7,8 @@ The SPA instance needs to be deployed once and articles will be updated by the a
 ## Clone the Repo
 
 ```bash
-git clone https://github.com/ocrybit/tomo.git
-cd tomo
+git clone https://github.com/ocrybit/perma-cms.git
+cd perma-cms
 npm install
 ```
 
@@ -24,7 +24,7 @@ aos cms
 Then load the lua script to add handlers to your process.
 
 ```bash
-.load articles.lua
+.load cms.lua
 ```
 You need to take note of the `ao process` txid and you need to make the same Arweave owner account available in your browser. The keyfile should be located at `.aos.json` in your home directory. You can import this to the [Arconnect](https://www.arconnect.io/) browser extension.
 
@@ -55,7 +55,7 @@ Check if everything works.
 yarn dev
 ```
 
-You could update articles at [http://localhost:5173/#/admin](http://localhost:5173/#/admin), or you can do that later.
+You could create and update articles at [http://localhost:5173/#/admin](http://localhost:5173/#/admin), or you can do that later.
 
 If everything is fine, build and deploy the app on Arweave.
 
@@ -66,19 +66,34 @@ arkb deploy dist -w path_to_keyfile --auto-confirm
 
 Now you get the app URL like [https://arweave.net/3W4l7Q_w7r7bYlXH9MXAu2lascJm5YsPoCXn6BXGJ6U](https://arweave.net/3W4l7Q_w7r7bYlXH9MXAu2lascJm5YsPoCXn6BXGJ6U).
 
-## Manage Articles
+## Manage Articles with Built-in Editor
 
-The current flow to add articles to the CMS is first to upload a mrkdown file to Arweave and then add it to AO via the admin page ([https://arweave.net/3W4...6U/#/admin](https://arweave.net/3W4l7Q_w7r7bYlXH9MXAu2lascJm5YsPoCXn6BXGJ6U/#/admin)).
+You can go to the admin page at [https://your.app/#/admin](https://your.app/#/admin), and connect the owner wallet, and start writing articles with the simple built-in editor. You can perform the following actions.
 
-You can use `arkb` to upload the md file.
+- Download the MD file
+- Upload articles to Arweave
+- Add articles to AO (CMS)
+- [bonus] Update your profile
+
+![](./assets/editor.png)
+
+## Upload Markdown Files to Arewave
+
+In case of using the built-in editor, just hit the `Upload to Arweave` button.
+
+You could also import markdown files created with external editors like [HackMD](https://hackmd.io), and upload them to Arweave.
+
+You can use `arkb` to do so.
 
 ```bash
 arkb deploy doc.md -w path_to_keyfile --auto-confirm
 ```
 
-Then go to the admin page and add the `TxID` to your AO process with a `Title` and an arbitrary `Page ID`.
+## Add Articles to AO
 
-Note only the AO process owner can update, so you need to use the same account that deployed the process.
+Then go to the admin page at [https://your.app/#/admin](https://your.app/#/admin) and add the `TxID` to your AO process with a `Title` and an arbitrary `Page ID`.
+
+Note that only the AO process owner can update, so you need to connect the same account that deployed the process.
 
 ![](./assets/add-article-form.png)
 
