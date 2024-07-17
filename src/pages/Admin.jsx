@@ -77,7 +77,7 @@ function Admin(a) {
   const [next, setNext] = useState(false)
   const [count, setCount] = useState(0)
   const [skip, setSkip] = useState(0)
-
+  const [changed, setChanged] = useState(false)
   useEffect(() => {
     ;(async () => {
       const userAddress = await lf.getItem("address")
@@ -374,6 +374,14 @@ function Admin(a) {
                         await arweave.transactions.post(transaction)
                       if (response.status === 200) {
                         setEditTxid(transaction.id)
+                        setChanged(false)
+                        await lf.setItem("draft", {
+                          title: editTitle,
+                          txid: editTxid,
+                          id: editID,
+                          body: md,
+                          changed: false,
+                        })
                       } else {
                         alert("File upload failed.")
                       }
@@ -451,6 +459,9 @@ function Admin(a) {
                         </Box>
                       )}
                       <Box flex={1} />
+                      <Box color="crimson" mr={1}>
+                        {changed ? "*draft changed" : ""}
+                      </Box>
                       <Box
                         as="a"
                         target="_blank"
@@ -615,11 +626,13 @@ function Admin(a) {
                       ref={ref}
                       onChange={async v => {
                         setMD(v)
+                        if (md !== "" && md !== v) setChanged(true)
                         await lf.setItem("draft", {
                           title: editTitle,
                           txid: editTxid,
                           id: editID,
                           body: v,
+                          changed: md !== "",
                         })
                       }}
                     />
@@ -737,6 +750,17 @@ function Admin(a) {
                           if (update === null) {
                             setSkip(skip + 1)
                             setArticles([article, ...articles])
+                            if (txid === editTxid) {
+                              if (editID === "") setEditID(id)
+                              setEditTitle(title)
+                              const draft = {
+                                title,
+                                txid,
+                                id,
+                                body: md,
+                              }
+                              await lf.setItem("draft", draft)
+                            }
                           } else {
                             let _articles = clone(articles)
                             let i = 0
