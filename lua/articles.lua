@@ -105,12 +105,33 @@ Handlers.add(
       for _, article in pairs(Articles) do
 	 table.insert(arr, article)
       end
+
+      local order = msg.order or "desc"
+      local limit = msg.limit or #arr
+      local skip = msg.skip or 0
+
       table.sort(arr, function(a, b)
-		    return a.date > b.date
+         if order == "asc" then
+            return a.date < b.date
+         else
+            return a.date > b.date
+         end
       end)
+
+      local start = skip + 1
+      local finish = start + limit - 1
+      finish = math.min(finish, #arr)
+
+      local slicedArr = {}
+      for i = start, finish do
+         table.insert(slicedArr, arr[i])
+      end
+      local isNext = (finish < #arr) and "true" or "false"
       ao.send({
 	    Target = msg.From,
-	    Articles = json.encode(arr)
+	    Articles = json.encode(slicedArr),
+	    Count = tostring(#arr),
+	    Next  = isNext
       })
    end
 )
@@ -126,3 +147,4 @@ Handlers.add(
       })
    end
 )
+

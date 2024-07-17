@@ -6,18 +6,28 @@ import { Link } from "react-router-dom"
 import { map } from "ramda"
 import { dryrun } from "@permaweb/aoconnect"
 import { defaultProfile, getProfile, getArticles } from "./lib/utils"
-
+const limit = 10
 function App() {
   const [articles, setArticles] = useState([])
   const [profile, setProfile] = useState(null)
   const [init, setInit] = useState(false)
   const [error, setError] = useState(false)
   const [address, setAddress] = useState(null)
+  const [next, setNext] = useState(false)
+  const [count, setCount] = useState(0)
+  const [skip, setSkip] = useState(0)
   useEffect(() => {
     ;(async () => {
       try {
-        const _articles = await getArticles()
+        const {
+          count: _count,
+          next: _next,
+          articles: _articles,
+        } = await getArticles({ limit, skip })
         setArticles(_articles)
+        setCount(_count)
+        setNext(_next)
+        setSkip(skip + _articles.length)
         setError(false)
       } catch (e) {
         console.log(e)
@@ -123,6 +133,39 @@ function App() {
                   </>
                 )
               })(articles)}
+              {!next ? null : (
+                <Flex justify="center" mt={6}>
+                  <Flex
+                    px={4}
+                    py={2}
+                    w="200px"
+                    sx={{
+                      border: "1px solid #999",
+                      borderRadius: "5px",
+                      cursor: "pointer",
+                      ":hover": { opacity: 0.5 },
+                    }}
+                    justify="center"
+                    onClick={async () => {
+                      try {
+                        const {
+                          count: _count,
+                          next: _next,
+                          articles: _articles,
+                        } = await getArticles({ limit, skip })
+                        setArticles([...articles, ..._articles])
+                        setCount(_count)
+                        setNext(_next)
+                        setSkip(skip + _articles.length)
+                      } catch (e) {
+                        console.log(e)
+                      }
+                    }}
+                  >
+                    Load More ( {count - skip} )
+                  </Flex>
+                </Flex>
+              )}
             </Box>
           )}
         </Flex>

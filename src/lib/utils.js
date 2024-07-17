@@ -1,11 +1,18 @@
 import { dryrun } from "@permaweb/aoconnect"
 
-const getArticles = async () => {
+const getArticles = async ({ limit, skip } = {}) => {
+  let tags = [{ name: "Action", value: "List" }]
+  if (limit) tags.push({ name: "limit", value: limit.toString() })
+  if (skip) tags.push({ name: "skip", value: skip.toString() })
   const result = await dryrun({
     process: import.meta.env.VITE_PROCESS_ID,
-    tags: [{ name: "Action", value: "List" }],
+    tags,
   })
-  return JSON.parse(result.Messages[0].Tags[6].value)
+  return {
+    articles: JSON.parse(result.Messages[0].Tags[6].value),
+    next: JSON.parse(result.Messages[0].Tags[7].value),
+    count: JSON.parse(result.Messages[0].Tags[8].value),
+  }
 }
 const getProfile = async () => {
   const result = await dryrun({

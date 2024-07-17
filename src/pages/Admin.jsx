@@ -9,7 +9,7 @@ import { common, createStarryNight } from "@wooorm/starry-night"
 import { Input, Flex, Box, Image } from "@chakra-ui/react"
 import { useParams } from "react-router-dom"
 import { Link } from "react-router-dom"
-import { map } from "ramda"
+import { map, clone } from "ramda"
 import dayjs from "dayjs"
 import tomo from "/tomo.png"
 import {
@@ -47,6 +47,8 @@ const getOwner = async () => {
   }).then(r => r.json())
   return res?.data?.transactions?.edges?.[0].node?.owner?.address ?? null
 }
+const limit = 10
+
 function Admin(a) {
   const ref = useRef(null)
   const [address, setAddress] = useState(null)
@@ -72,6 +74,10 @@ function Admin(a) {
   const [cover, setCover] = useState("")
   const [x, setX] = useState("")
   const [github, setGithub] = useState("")
+  const [next, setNext] = useState(false)
+  const [count, setCount] = useState(0)
+  const [skip, setSkip] = useState(0)
+
   useEffect(() => {
     ;(async () => {
       const userAddress = await lf.getItem("address")
@@ -84,8 +90,15 @@ function Admin(a) {
   useEffect(() => {
     ;(async () => {
       try {
-        const _articles = await getArticles()
+        const {
+          count: _count,
+          next: _next,
+          articles: _articles,
+        } = await getArticles({ limit, skip })
         setArticles(_articles)
+        setCount(_count)
+        setNext(_next)
+        setSkip(skip + _articles.length)
       } catch (e) {
         console.log(e)
       }
@@ -96,7 +109,6 @@ function Admin(a) {
       const _draft = await lf.getItem("draft")
       if (_draft) {
         setMD(_draft.body)
-        console.log(_draft)
         if (_draft.txid) setEditTxid(_draft.txid)
         if (_draft.id) setEditID(_draft.id)
         if (_draft.title) setEditTitle(_draft.title)
@@ -132,7 +144,6 @@ function Admin(a) {
             },
           })
           const html = markdownItInstance.render(md)
-          console.log(html)
           setPreview(html)
         } catch (e) {
           console.log(e)
@@ -384,14 +395,37 @@ function Admin(a) {
                         setAddTxid(editTxid)
                         setTxid(editTxid)
                         setTitle(editTitle)
-                        setUpdate(editID)
-                        setId(editID)
+                        if (editID !== "") {
+                          setUpdate(editID)
+                          setId(editID)
+                        }
                         setTab("Add")
                       }}
                     >
                       Add to AO
                     </Flex>
                   )}
+                  <Flex
+                    fontSize="12px"
+                    mr={4}
+                    justify="center"
+                    sx={{
+                      borderRadius: "3px",
+                      cursor: "pointer",
+                      ":hover": { opacity: 0.5 },
+                    }}
+                    onClick={async () => {
+                      if (confirm("Would you like to reset the editor?")) {
+                        ref.current?.setMarkdown("")
+                        setMD("")
+                        setEditTitle("")
+                        setEditID("")
+                        setEditTxid("")
+                      }
+                    }}
+                  >
+                    Reset
+                  </Flex>
                 </Flex>
               </Flex>
               <Flex mb={4} justify="center">
@@ -678,6 +712,7 @@ function Admin(a) {
                           "ACCESS_ADDRESS",
                           "SIGN_TRANSACTION",
                         ])
+                        const date = Date.now().toString()
                         let tags = [
                           {
                             name: "Action",
@@ -686,7 +721,7 @@ function Admin(a) {
                           { name: "title", value: title },
                           { name: "id", value: id },
                           { name: "txid", value: txid },
-                          { name: "date", value: Date.now().toString() },
+                          { name: "date", value: date },
                         ]
                         const messageId = await message({
                           process: import.meta.env.VITE_PROCESS_ID,
@@ -698,13 +733,29 @@ function Admin(a) {
                           process: import.meta.env.VITE_PROCESS_ID,
                         })
                         if (res.Messages[0]) {
-                          const _articles = await getArticles()
-                          setArticles(_articles)
+                          const article = { id, txid, title, date }
+                          if (update === null) {
+                            setSkip(skip + 1)
+                            setArticles([article, ...articles])
+                          } else {
+                            let _articles = clone(articles)
+                            let i = 0
+                            for (let v of _articles) {
+                              if (v.id === id) {
+                                _articles[i] = article
+                                break
+                              }
+                              i++
+                            }
+                            setArticles(_articles)
+                          }
+
                           setTitle("")
                           setId("")
                           setTxid("")
                           setUpdate(null)
                           setAddTxid(null)
+                          setTab("Articles")
                         } else {
                           console.log(res)
                           alert("something went wrong!")
@@ -749,7 +800,7 @@ function Admin(a) {
                                   `https://arweave.net/${v.txid}`,
                                 ).then(r => r.text())
                                 setMD(text)
-                                ref.current?.insertMarkdown(text)
+                                ref.current?.setMarkdown(text)
                                 setTab("Editor")
                               }}
                             >
@@ -791,7 +842,11 @@ function Admin(a) {
                                   process: import.meta.env.VITE_PROCESS_ID,
                                 })
                                 if (res.Messages[0]) {
-                                  const _articles = await getArticles()
+                                  let _articles = []
+                                  for (let v2 of articles) {
+                                    if (v.id !== v2.id) _articles.push(v2)
+                                  }
+                                  setSkip(skip - 1)
                                   setArticles(_articles)
                                 } else {
                                   console.log(res)
@@ -806,6 +861,39 @@ function Admin(a) {
                       </>
                     )
                   })(articles)}
+                  {!next ? null : (
+                    <Flex justify="center" mt={6}>
+                      <Flex
+                        px={4}
+                        py={2}
+                        w="200px"
+                        sx={{
+                          border: "1px solid #999",
+                          borderRadius: "5px",
+                          cursor: "pointer",
+                          ":hover": { opacity: 0.5 },
+                        }}
+                        justify="center"
+                        onClick={async () => {
+                          try {
+                            const {
+                              count: _count,
+                              next: _next,
+                              articles: _articles,
+                            } = await getArticles({ limit, skip })
+                            setArticles([...articles, ..._articles])
+                            setCount(_count)
+                            setNext(_next)
+                            setSkip(skip + _articles.length)
+                          } catch (e) {
+                            console.log(e)
+                          }
+                        }}
+                      >
+                        Load More ( {count - skip} )
+                      </Flex>
+                    </Flex>
+                  )}
                 </Box>
               )}
             </Flex>
