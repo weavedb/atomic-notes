@@ -1,11 +1,19 @@
 import { useEffect, useState } from "react"
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import { faTwitter, faGithub } from "@fortawesome/free-brands-svg-icons"
 import dayjs from "dayjs"
 import "./App.css"
 import { Image, Flex, Box } from "@chakra-ui/react"
 import { Link } from "react-router-dom"
 import { map } from "ramda"
 import { dryrun } from "@permaweb/aoconnect"
-import { defaultProfile, getProfile, getArticles } from "./lib/utils"
+import {
+  defaultProfile,
+  getProfile,
+  getArticles,
+  arweave_logo,
+} from "./lib/utils"
+import { circleNotch } from "./lib/svgs.jsx"
 const limit = 10
 function App() {
   const [articles, setArticles] = useState([])
@@ -56,7 +64,7 @@ function App() {
           <Flex align="center" p={6}>
             <Flex justify="center" mr={4}>
               <Image
-                src={_profile.image ?? "https://picsum.photos/200"}
+                src={_profile.image ?? arweave_logo}
                 boxSize="100px"
                 sx={{ borderRadius: "50%" }}
               />
@@ -75,18 +83,20 @@ function App() {
                   target="_blank"
                   href={`https://x.com/${_profile.x}`}
                 >
-                  <Box fontSize="25px" as="i" className="fab fa-twitter" />
+                  <FontAwesomeIcon icon={faTwitter} fontSize="25px" />
                 </Box>
               )}
               {!_profile.github ? null : (
-                <Box
-                  mr={2}
-                  as="a"
-                  target="_blank"
-                  href={`https://github.com/${_profile.github}`}
-                >
-                  <Box fontSize="25px" as="i" className="fab fa-github" />
-                </Box>
+                <>
+                  <Box
+                    mr={2}
+                    as="a"
+                    target="_blank"
+                    href={`https://github.com/${_profile.github}`}
+                  >
+                    <FontAwesomeIcon icon={faGithub} fontSize="25px" />
+                  </Box>
+                </>
               )}
             </Box>
           </Flex>
@@ -114,7 +124,7 @@ function App() {
               align="center"
               fontSize="20px"
             >
-              <Box as="i" className="fas fa-circle-notch fa-spin" mr={2} />
+              <Box mr={2}>{circleNotch}</Box>
               fetching articles...
             </Flex>
           ) : (

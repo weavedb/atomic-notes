@@ -7,6 +7,7 @@ import "../github-markdown.css"
 import { common, createStarryNight } from "@wooorm/starry-night"
 import { Link } from "react-router-dom"
 import { dryrun } from "@permaweb/aoconnect"
+import { circleNotch } from "../lib/svgs.jsx"
 
 import { defaultProfile, getProfile, getArticles } from "../lib/utils"
 
@@ -109,7 +110,7 @@ function Article(a) {
             align="center"
             fontSize="20px"
           >
-            <Box as="i" className="fas fa-circle-notch fa-spin" mr={2} />
+            <Box mr={2}>{circleNotch}</Box>
             fetching article...
           </Flex>
         ) : (

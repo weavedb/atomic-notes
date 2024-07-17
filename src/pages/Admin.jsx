@@ -11,7 +11,6 @@ import { useParams } from "react-router-dom"
 import { Link } from "react-router-dom"
 import { map, clone, sortBy, o, reverse } from "ramda"
 import dayjs from "dayjs"
-import tomo from "/tomo.png"
 import {
   createDataItemSigner,
   message,
@@ -20,6 +19,7 @@ import {
 } from "@permaweb/aoconnect"
 
 import { defaultProfile, getProfile, getArticles, ao } from "../lib/utils"
+import { circleNotch } from "../lib/svgs.jsx"
 import {
   diffSourcePlugin,
   MDXEditor,
@@ -518,11 +518,7 @@ function Admin(a) {
                       </Box>
                       {uploadingArweave ? (
                         <>
-                          <Box
-                            as="i"
-                            className={"fas fa-circle-notch fa-spin"}
-                            mr={2}
-                          />
+                          <Box mr={2}>{circleNotch}</Box>
                           uploading to Arweave...
                         </>
                       ) : (
@@ -544,11 +540,7 @@ function Admin(a) {
                       <Box flex={1}></Box>
                       {uploadingArweave ? (
                         <>
-                          <Box
-                            as="i"
-                            className={"fas fa-circle-notch fa-spin"}
-                            mr={2}
-                          />
+                          <Box mr={2}>{circleNotch}</Box>
                           uploading to Arweave...
                         </>
                       ) : (
@@ -691,11 +683,7 @@ function Admin(a) {
                         setUpdatingProf(false)
                       }}
                     >
-                      {updatingProf ? (
-                        <Box as="i" className={"fas fa-circle-notch fa-spin"} />
-                      ) : (
-                        "Update Profile"
-                      )}
+                      {updatingProf ? circleNotch : "Update Profile"}
                     </Flex>
                   </Box>
                 </Box>
@@ -913,13 +901,11 @@ function Admin(a) {
                         setUpdatingArticle(false)
                       }}
                     >
-                      {updatingArticle ? (
-                        <Box as="i" className={"fas fa-circle-notch fa-spin"} />
-                      ) : update === null ? (
-                        "Add New Article"
-                      ) : (
-                        "Update Article"
-                      )}
+                      {updatingArticle
+                        ? circleNotch
+                        : update === null
+                          ? "Add New Article"
+                          : "Update Article"}
                     </Flex>
                   </Box>
                 </Box>
