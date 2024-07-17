@@ -121,16 +121,15 @@ function App() {
             <Box w="100%" flex={1} sx={{ borderTop: "1px solid #333" }}>
               {map(v => {
                 return (
-                  <>
-                    <Box pt={4} px={6} fontSize="20px">
-                      <Link to={`./a/${v.id}`}>
-                        <Box as="u">{v.title}</Box>
-                      </Link>
-                      <Box ml={4} as="span" fontSize="14px">
-                        {dayjs(v.date).format("YYYY MM/DD HH:mm")}
-                      </Box>
+                  <Flex w="100%" pt={4} px={6} fontSize="20px" align="center">
+                    <Link to={`./a/${v.id}`}>
+                      <Box as="u">{v.title}</Box>
+                    </Link>
+                    <Box flex={1} />
+                    <Box ml={4} as="span" fontSize="12px">
+                      {dayjs(v.date).format("YYYY MM/DD HH:mm")}
                     </Box>
-                  </>
+                  </Flex>
                 )
               })(articles)}
               {!next ? null : (

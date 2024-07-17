@@ -51,6 +51,9 @@ const limit = 10
 
 function Admin(a) {
   const ref = useRef(null)
+  const [uploadingArweave, setUploadingArweave] = useState(false)
+  const [updatingArticle, setUpdatingArticle] = useState(false)
+  const [updatingProf, setUpdatingProf] = useState(false)
   const [editorInit, setEditorInit] = useState(false)
   const [address, setAddress] = useState(null)
   const [editTitle, setEditTitle] = useState(null)
@@ -395,36 +398,41 @@ function Admin(a) {
                       ":hover": { opacity: 0.5 },
                     }}
                     onClick={async () => {
-                      const arweave = Arweave.init({})
-                      const transaction = await arweave.createTransaction({
-                        data: md,
-                      })
-                      transaction.addTag("Content-Type", "text/markdown")
-                      await window.arweaveWallet.connect(["SIGN_TRANSACTION"])
-                      await arweave.transactions.sign(transaction)
-                      const response =
-                        await arweave.transactions.post(transaction)
-                      if (response.status === 200) {
-                        setEditTxid(transaction.id)
-                        setChanged(false)
-                        const _draft = {
-                          title: editTitle,
-                          txid: transaction.id,
-                          id: editID,
-                          body: md,
-                          changed: false,
-                          draftID,
+                      if (uploadingArweave) return
+                      setUploadingArweave(true)
+                      try {
+                        const arweave = Arweave.init({})
+                        const transaction = await arweave.createTransaction({
+                          data: md,
+                        })
+                        transaction.addTag("Content-Type", "text/markdown")
+                        await window.arweaveWallet.connect(["SIGN_TRANSACTION"])
+                        await arweave.transactions.sign(transaction)
+                        const response =
+                          await arweave.transactions.post(transaction)
+                        if (response.status === 200) {
+                          setEditTxid(transaction.id)
+                          setChanged(false)
+                          const _draft = {
+                            title: editTitle,
+                            txid: transaction.id,
+                            id: editID,
+                            body: md,
+                            changed: false,
+                            draftID,
+                          }
+                          await lf.setItem("draft", _draft)
+                          await lf.setItem("draft-" + draftID, _draft)
+                          let _drafts = []
+                          for (let v of drafts) {
+                            if (v.draftID !== draftID) _drafts.push(v)
+                          }
+                          await lf.setItem("drafts", _drafts)
+                        } else {
+                          alert("File upload failed.")
                         }
-                        await lf.setItem("draft", _draft)
-                        await lf.setItem("draft-" + draftID, _draft)
-                        let _drafts = []
-                        for (let v of drafts) {
-                          if (v.draftID !== draftID) _drafts.push(v)
-                        }
-                        await lf.setItem("drafts", _drafts)
-                      } else {
-                        alert("File upload failed.")
-                      }
+                      } catch (e) {}
+                      setUploadingArweave(false)
                     }}
                   >
                     Upload to Arweave
@@ -480,6 +488,7 @@ function Admin(a) {
               </Flex>
               <Flex mb={4} justify="center">
                 <Flex
+                  align="center"
                   maxW="830px"
                   width="100%"
                   fontSize="12px"
@@ -489,7 +498,7 @@ function Admin(a) {
                   sx={{ borderRadius: "3px" }}
                 >
                   {editTxid ? (
-                    <Flex w="100%">
+                    <Flex w="100%" align="center">
                       {!editTitle ? null : (
                         <Box as="b" mr={4}>
                           {editTitle}
@@ -507,22 +516,44 @@ function Admin(a) {
                       <Box color="crimson" mr={1}>
                         {changed ? "*draft changed" : ""}
                       </Box>
-                      <Box
-                        as="a"
-                        target="_blank"
-                        href={`https://arweave.net/${editTxid}`}
-                        sx={{ textDecoration: "underline" }}
-                      >
-                        {editTxid.slice(0, 5)}...{editTxid.slice(-5)}
-                      </Box>
+                      {uploadingArweave ? (
+                        <>
+                          <Box
+                            as="i"
+                            className={"fas fa-circle-notch fa-spin"}
+                            mr={2}
+                          />
+                          uploading to Arweave...
+                        </>
+                      ) : (
+                        <Box
+                          as="a"
+                          target="_blank"
+                          href={`https://arweave.net/${editTxid}`}
+                          sx={{ textDecoration: "underline" }}
+                        >
+                          {editTxid.slice(0, 5)}...{editTxid.slice(-5)}
+                        </Box>
+                      )}
                     </Flex>
                   ) : (
-                    <Flex w="100%">
+                    <Flex w="100%" align="center">
                       <Box as="span" mr={4}>
                         Draft ID: {draftID}
                       </Box>
                       <Box flex={1}></Box>
-                      <Box>Not Uploaded to Arweave Yet</Box>
+                      {uploadingArweave ? (
+                        <>
+                          <Box
+                            as="i"
+                            className={"fas fa-circle-notch fa-spin"}
+                            mr={2}
+                          />
+                          uploading to Arweave...
+                        </>
+                      ) : (
+                        <Box>Not Uploaded to Arweave Yet</Box>
+                      )}
                     </Flex>
                   )}
                 </Flex>
@@ -596,6 +627,8 @@ function Admin(a) {
                       </Box>
                     </Flex>
                     <Flex
+                      align="center"
+                      height="35px"
                       fontSize="14px"
                       justify="center"
                       px={4}
@@ -609,49 +642,60 @@ function Admin(a) {
                         bg: "white",
                       }}
                       onClick={async () => {
-                        if (!ok_profile) return
-                        await window.arweaveWallet.connect([
-                          "ACCESS_ADDRESS",
-                          "SIGN_TRANSACTION",
-                        ])
-                        let tags = [
-                          { name: "Action", value: "Set-Profile" },
-                          { name: "name", value: name },
-                        ]
-                        if (!/^\s*$/.test(description)) {
-                          tags.push({ name: "description", value: description })
-                        }
-                        if (!/^\s*$/.test(image)) {
-                          tags.push({ name: "image", value: image })
-                        }
-                        if (!/^\s*$/.test(cover)) {
-                          tags.push({ name: "cover", value: cover })
-                        }
-                        if (!/^\s*$/.test(x)) {
-                          tags.push({ name: "x", value: x })
-                        }
-                        if (!/^\s*$/.test(github)) {
-                          tags.push({ name: "github", value: github })
-                        }
-                        const messageId = await message({
-                          process: import.meta.env.VITE_PROCESS_ID,
-                          signer: createDataItemSigner(window.arweaveWallet),
-                          tags,
-                        })
-                        const res = await result({
-                          message: messageId,
-                          process: import.meta.env.VITE_PROCESS_ID,
-                        })
-                        if (res.Messages[0]) {
-                          const _profile = await getProfile()
-                          setProfile(_profile)
-                        } else {
-                          console.log(res)
-                          alert("something went wrong!")
-                        }
+                        if (!ok_profile || updatingProf) return
+                        try {
+                          setUpdatingProf(true)
+                          await window.arweaveWallet.connect([
+                            "ACCESS_ADDRESS",
+                            "SIGN_TRANSACTION",
+                          ])
+                          let tags = [
+                            { name: "Action", value: "Set-Profile" },
+                            { name: "name", value: name },
+                          ]
+                          if (!/^\s*$/.test(description)) {
+                            tags.push({
+                              name: "description",
+                              value: description,
+                            })
+                          }
+                          if (!/^\s*$/.test(image)) {
+                            tags.push({ name: "image", value: image })
+                          }
+                          if (!/^\s*$/.test(cover)) {
+                            tags.push({ name: "cover", value: cover })
+                          }
+                          if (!/^\s*$/.test(x)) {
+                            tags.push({ name: "x", value: x })
+                          }
+                          if (!/^\s*$/.test(github)) {
+                            tags.push({ name: "github", value: github })
+                          }
+                          const messageId = await message({
+                            process: import.meta.env.VITE_PROCESS_ID,
+                            signer: createDataItemSigner(window.arweaveWallet),
+                            tags,
+                          })
+                          const res = await result({
+                            message: messageId,
+                            process: import.meta.env.VITE_PROCESS_ID,
+                          })
+                          if (res.Messages[0]) {
+                            const _profile = await getProfile()
+                            setProfile(_profile)
+                          } else {
+                            console.log(res)
+                            alert("something went wrong!")
+                          }
+                        } catch (e) {}
+                        setUpdatingProf(false)
                       }}
                     >
-                      Update Profile
+                      {updatingProf ? (
+                        <Box as="i" className={"fas fa-circle-notch fa-spin"} />
+                      ) : (
+                        "Update Profile"
+                      )}
                     </Flex>
                   </Box>
                 </Box>
@@ -676,7 +720,7 @@ function Admin(a) {
                       plugins={allPlugins("")}
                       ref={ref}
                       onChange={async v => {
-                        let change = false
+                        let change = changed
                         if (editorInit && v !== "" && md !== "" && md !== v) {
                           change = true
                           setChanged(true)
@@ -764,6 +808,8 @@ function Admin(a) {
                     </Flex>
                     <Flex
                       fontSize="14px"
+                      height="35px"
+                      align="center"
                       justify="center"
                       px={4}
                       py={2}
@@ -776,94 +822,104 @@ function Admin(a) {
                         bg: "white",
                       }}
                       onClick={async () => {
-                        if (!ok) return
-                        let text = null
+                        if (!ok || updatingArticle) return
+                        setUpdatingArticle(true)
                         try {
-                          const r = await fetch(`https://arweave.net/${txid}`)
-                          if (r.status === 200) text = await r.text()
-                        } catch (e) {
-                          console.log(e)
-                        }
-                        if (text === null) {
-                          alert("Markdown File coundn't be found")
-                          return
-                        }
-                        await window.arweaveWallet.connect([
-                          "ACCESS_ADDRESS",
-                          "SIGN_TRANSACTION",
-                        ])
-                        const date = Date.now().toString()
-                        let tags = [
-                          {
-                            name: "Action",
-                            value: update === null ? "Add" : "Update",
-                          },
-                          { name: "title", value: title },
-                          { name: "id", value: id },
-                          { name: "txid", value: txid },
-                          { name: "date", value: date },
-                        ]
-                        const messageId = await message({
-                          process: import.meta.env.VITE_PROCESS_ID,
-                          signer: createDataItemSigner(window.arweaveWallet),
-                          tags,
-                        })
-                        const res = await result({
-                          message: messageId,
-                          process: import.meta.env.VITE_PROCESS_ID,
-                        })
-                        if (res.Messages[0]) {
-                          const article = { id, txid, title, date }
-                          if (update === null) {
-                            setSkip(skip + 1)
-                            setArticles([article, ...articles])
-                            if (txid === editTxid) {
-                              if (editID === "") setEditID(id)
-                              setEditTitle(title)
-                              const draft = {
-                                title,
-                                txid,
-                                id,
-                                body: md,
-                                draftID,
-                                update: Date.now(),
-                              }
-                              await lf.setItem("draft", draft)
-                              await lf.setItem("draft-" + draftID, draft)
-                              let _drafts = []
-                              for (let v of drafts) {
-                                if (v.draftID === draftID) v.title = title
-                                _drafts.push(v)
-                              }
-                              await setDrafts(_drafts)
-                              await lf.setItem("drafts", _drafts)
-                            }
-                          } else {
-                            let _articles = clone(articles)
-                            let i = 0
-                            for (let v of _articles) {
-                              if (v.id === id) {
-                                _articles[i] = article
-                                break
-                              }
-                              i++
-                            }
-                            setArticles(_articles)
+                          let text = null
+                          try {
+                            const r = await fetch(`https://arweave.net/${txid}`)
+                            if (r.status === 200) text = await r.text()
+                          } catch (e) {
+                            console.log(e)
                           }
+                          if (text === null) {
+                            alert("Markdown File coundn't be found")
+                            return
+                          }
+                          await window.arweaveWallet.connect([
+                            "ACCESS_ADDRESS",
+                            "SIGN_TRANSACTION",
+                          ])
+                          const date = Date.now().toString()
+                          let tags = [
+                            {
+                              name: "Action",
+                              value: update === null ? "Add" : "Update",
+                            },
+                            { name: "title", value: title },
+                            { name: "id", value: id },
+                            { name: "txid", value: txid },
+                            { name: "date", value: date },
+                          ]
+                          const messageId = await message({
+                            process: import.meta.env.VITE_PROCESS_ID,
+                            signer: createDataItemSigner(window.arweaveWallet),
+                            tags,
+                          })
+                          const res = await result({
+                            message: messageId,
+                            process: import.meta.env.VITE_PROCESS_ID,
+                          })
+                          if (res.Messages[0]) {
+                            const article = { id, txid, title, date }
+                            if (update === null) {
+                              setSkip(skip + 1)
+                              setArticles([article, ...articles])
+                              if (txid === editTxid) {
+                                if (editID === "") setEditID(id)
+                                setEditTitle(title)
+                                const draft = {
+                                  title,
+                                  txid,
+                                  id,
+                                  body: md,
+                                  draftID,
+                                  update: Date.now(),
+                                }
+                                await lf.setItem("draft", draft)
+                                await lf.setItem("draft-" + draftID, draft)
+                                let _drafts = []
+                                for (let v of drafts) {
+                                  if (v.draftID === draftID) v.title = title
+                                  _drafts.push(v)
+                                }
+                                await setDrafts(_drafts)
+                                await lf.setItem("drafts", _drafts)
+                              }
+                            } else {
+                              let _articles = clone(articles)
+                              let i = 0
+                              for (let v of _articles) {
+                                if (v.id === id) {
+                                  _articles[i] = article
+                                  break
+                                }
+                                i++
+                              }
+                              setArticles(_articles)
+                            }
 
-                          setTitle("")
-                          setId("")
-                          setTxid("")
-                          setUpdate(null)
-                          setAddTxid(null)
-                          setTab("Articles")
-                        } else {
-                          console.log(res)
-                          alert("something went wrong!")
-                        }
+                            setTitle("")
+                            setId("")
+                            setTxid("")
+                            setUpdate(null)
+                            setAddTxid(null)
+                            setTab("Articles")
+                          } else {
+                            console.log(res)
+                            alert("something went wrong!")
+                          }
+                        } catch (e) {}
+                        setUpdatingArticle(false)
                       }}
                     >
-                      {update === null ? "Add New Article" : "Update Article"}
+                      {updatingArticle ? (
+                        <Box as="i" className={"fas fa-circle-notch fa-spin"} />
+                      ) : update === null ? (
+                        "Add New Article"
+                      ) : (
+                        "Update Article"
+                      )}
                     </Flex>
                   </Box>
                 </Box>
@@ -873,7 +929,7 @@ function Admin(a) {
                   {map(v => {
                     return (
                       <>
-                        <Flex py={2} px={6} fontSize="20px" align="center">
+                        <Flex py={2} px={6} fontSize="16px" align="center">
                           <Box as="u">{v.title}</Box>
                           <Box flex={1}></Box>
                           <Box mx={3} as="span" fontSize="14px">
@@ -1012,14 +1068,13 @@ function Admin(a) {
                   {map(v => {
                     return (
                       <>
-                        <Flex py={2} px={6} fontSize="20px" align="center">
+                        <Flex py={2} px={6} fontSize="16px" align="center">
                           <Box as="u">
                             {v.title ?? ""}#{v.draftID}
                           </Box>
                           <Box flex={1}></Box>
                           <Box mx={3} as="span" fontSize="14px">
-                            updated at{" "}
-                            {dayjs(v.update).format("YYYY MM/DD HH:mm")}
+                            updated {dayjs(v.update).format("MM/DD HH:mm")}
                           </Box>
                           <Box fontSize="12px" as="span">
                             <Flex
