@@ -79,7 +79,7 @@ You can go to the admin page at [https://your.app/#/admin](https://your.app/#/ad
 
 ![](./assets/editor.png)
 
-## Upload Markdown Files to Arewave
+## Upload Markdown Files to Arweave
 
 In case of using the built-in editor, just hit the `Upload to Arweave` button.
 
@@ -104,3 +104,7 @@ Now you can access your article like [https://arweave.net/3W4...6U/#/a/3](https:
 Also, it will be listed on the top page like [https://arweave.net/3W4...6U](https://arweave.net/3W4l7Q_w7r7bYlXH9MXAu2lascJm5YsPoCXn6BXGJ6U).
 
 ![](./assets/home-page.png)
+
+## Contributions
+
+I intend to make this the best publishing dapp ever. Feedback is extremely welcome at [0xTomo](https://x.com/0xTomo).
