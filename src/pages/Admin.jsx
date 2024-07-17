@@ -9,7 +9,7 @@ import { common, createStarryNight } from "@wooorm/starry-night"
 import { Input, Flex, Box, Image } from "@chakra-ui/react"
 import { useParams } from "react-router-dom"
 import { Link } from "react-router-dom"
-import { map, clone } from "ramda"
+import { map, clone, sortBy, o, reverse } from "ramda"
 import dayjs from "dayjs"
 import tomo from "/tomo.png"
 import {
@@ -51,6 +51,7 @@ const limit = 10
 
 function Admin(a) {
   const ref = useRef(null)
+  const [editorInit, setEditorInit] = useState(false)
   const [address, setAddress] = useState(null)
   const [editTitle, setEditTitle] = useState(null)
   const [editID, setEditID] = useState(null)
@@ -66,7 +67,7 @@ function Admin(a) {
   const [tab, setTab] = useState("Add")
   const [tab2, setTab2] = useState("Markdown")
   const [update, setUpdate] = useState(null)
-  const tabs = ["Add", "Articles", "Editor", "Profile"]
+  const tabs = ["Add", "Articles", "Drafts", "Editor", "Profile"]
   const tabs2 = ["Markdown", "Preview"]
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
@@ -78,6 +79,16 @@ function Admin(a) {
   const [count, setCount] = useState(0)
   const [skip, setSkip] = useState(0)
   const [changed, setChanged] = useState(false)
+  const [draftID, setDraftID] = useState(null)
+  const [drafts, setDrafts] = useState([])
+
+  useEffect(() => {
+    ;(async () => {
+      const _drafts = (await lf.getItem("drafts")) ?? []
+      setDrafts(_drafts)
+    })()
+  }, [])
+
   useEffect(() => {
     ;(async () => {
       const userAddress = await lf.getItem("address")
@@ -87,6 +98,7 @@ function Admin(a) {
       }
     })()
   }, [])
+
   useEffect(() => {
     ;(async () => {
       try {
@@ -104,6 +116,7 @@ function Admin(a) {
       }
     })()
   }, [])
+
   useEffect(() => {
     ;(async () => {
       const _draft = await lf.getItem("draft")
@@ -112,9 +125,17 @@ function Admin(a) {
         if (_draft.txid) setEditTxid(_draft.txid)
         if (_draft.id) setEditID(_draft.id)
         if (_draft.title) setEditTitle(_draft.title)
+        if (_draft.draftID) {
+          setDraftID(_draft.draftID)
+        } else {
+          setDraftID(Date.now())
+        }
+      } else {
+        setDraftID(Date.now())
       }
     })()
   }, [])
+
   useEffect(() => {
     ;(async () => {
       if (tab2 === "Preview") {
@@ -151,6 +172,7 @@ function Admin(a) {
       }
     })()
   }, [tab2])
+
   useEffect(() => {
     ;(async () => {
       try {
@@ -302,7 +324,17 @@ function Admin(a) {
                       ":hover": { opacity: 0.5 },
                       border: "1px solid #999",
                     }}
-                    onClick={() => setTab(v)}
+                    onClick={() => {
+                      if (v === "Drafts") {
+                        setDrafts(
+                          o(
+                            reverse,
+                            sortBy(v => v.update),
+                          )(drafts),
+                        )
+                      }
+                      setTab(v)
+                    }}
                   >
                     {update !== null && v === "Add" ? "Update" : v}
                   </Flex>
@@ -375,13 +407,21 @@ function Admin(a) {
                       if (response.status === 200) {
                         setEditTxid(transaction.id)
                         setChanged(false)
-                        await lf.setItem("draft", {
+                        const _draft = {
                           title: editTitle,
-                          txid: editTxid,
+                          txid: transaction.id,
                           id: editID,
                           body: md,
                           changed: false,
-                        })
+                          draftID,
+                        }
+                        await lf.setItem("draft", _draft)
+                        await lf.setItem("draft-" + draftID, _draft)
+                        let _drafts = []
+                        for (let v of drafts) {
+                          if (v.draftID !== draftID) _drafts.push(v)
+                        }
+                        await lf.setItem("drafts", _drafts)
                       } else {
                         alert("File upload failed.")
                       }
@@ -424,11 +464,13 @@ function Admin(a) {
                     }}
                     onClick={async () => {
                       if (confirm("Would you like to reset the editor?")) {
+                        setTab2("Markdown")
                         ref.current?.setMarkdown("")
                         setMD("")
                         setEditTitle("")
                         setEditID("")
                         setEditTxid("")
+                        setDraftID(Date.now())
                       }
                     }}
                   >
@@ -453,6 +495,9 @@ function Admin(a) {
                           {editTitle}
                         </Box>
                       )}
+                      <Box as="span" mr={4}>
+                        Draft ID: {draftID}
+                      </Box>
                       {!editID ? null : (
                         <Box as="span" mr={4}>
                           Page ID: {editID}
@@ -472,7 +517,13 @@ function Admin(a) {
                       </Box>
                     </Flex>
                   ) : (
-                    "Not Uploaded to Arweave Yet"
+                    <Flex w="100%">
+                      <Box as="span" mr={4}>
+                        Draft ID: {draftID}
+                      </Box>
+                      <Box flex={1}></Box>
+                      <Box>Not Uploaded to Arweave Yet</Box>
+                    </Flex>
                   )}
                 </Flex>
               </Flex>
@@ -625,15 +676,31 @@ function Admin(a) {
                       plugins={allPlugins("")}
                       ref={ref}
                       onChange={async v => {
+                        let change = false
+                        if (editorInit && v !== "" && md !== "" && md !== v) {
+                          change = true
+                          setChanged(true)
+                        }
                         setMD(v)
-                        if (md !== "" && md !== v) setChanged(true)
-                        await lf.setItem("draft", {
+                        setEditorInit(true)
+                        const _draft = {
                           title: editTitle,
                           txid: editTxid,
                           id: editID,
                           body: v,
-                          changed: md !== "",
-                        })
+                          changed: change,
+                          draftID,
+                        }
+                        await lf.setItem("draft", _draft)
+                        await lf.setItem("draft-" + draftID, _draft)
+                        let _drafts = [
+                          { draftID, update: Date.now(), title: editTitle },
+                        ]
+                        for (let v of drafts) {
+                          if (v.draftID !== draftID) _drafts.push(v)
+                        }
+                        setDrafts(_drafts)
+                        await lf.setItem("drafts", _drafts)
                       }}
                     />
                   )}
@@ -758,8 +825,18 @@ function Admin(a) {
                                 txid,
                                 id,
                                 body: md,
+                                draftID,
+                                update: Date.now(),
                               }
                               await lf.setItem("draft", draft)
+                              await lf.setItem("draft-" + draftID, draft)
+                              let _drafts = []
+                              for (let v of drafts) {
+                                if (v.draftID === draftID) v.title = title
+                                _drafts.push(v)
+                              }
+                              await setDrafts(_drafts)
+                              await lf.setItem("drafts", _drafts)
                             }
                           } else {
                             let _articles = clone(articles)
@@ -797,12 +874,10 @@ function Admin(a) {
                     return (
                       <>
                         <Flex py={2} px={6} fontSize="20px" align="center">
-                          <Link to={`../a/${v.id}`}>
-                            <Box as="u">{v.title}</Box>
-                          </Link>
+                          <Box as="u">{v.title}</Box>
                           <Box flex={1}></Box>
                           <Box mx={3} as="span" fontSize="14px">
-                            {dayjs(v.date).format("YYYY MM/DD mm:HH")}
+                            {dayjs(v.date).format("YYYY MM/DD HH:mm")}
                           </Box>
                           <Box fontSize="12px" as="span">
                             <Flex
@@ -820,11 +895,17 @@ function Admin(a) {
                                 setEditTxid(v.txid)
                                 setEditTitle(v.title)
                                 setEditID(v.id)
+                                setTab2("Markdown")
+                                setMD("")
+                                ref.current?.setMarkdown("")
+                                setChanged(false)
+                                setEditorInit(false)
                                 const text = await fetch(
                                   `https://arweave.net/${v.txid}`,
                                 ).then(r => r.text())
-                                setMD(text)
                                 ref.current?.setMarkdown(text)
+                                setDraftID(Date.now())
+                                setMD(text)
                                 setTab("Editor")
                               }}
                             >
@@ -918,6 +999,96 @@ function Admin(a) {
                       </Flex>
                     </Flex>
                   )}
+                </Box>
+              )}
+              {tab !== "Drafts" ? null : (
+                <Box w="100%" flex={1}>
+                  <Flex justify="center" fontSize="12px">
+                    <i>
+                      Drafts are only stored on your local computer. Download MD
+                      files if you need access from other environments.
+                    </i>
+                  </Flex>
+                  {map(v => {
+                    return (
+                      <>
+                        <Flex py={2} px={6} fontSize="20px" align="center">
+                          <Box as="u">
+                            {v.title ?? ""}#{v.draftID}
+                          </Box>
+                          <Box flex={1}></Box>
+                          <Box mx={3} as="span" fontSize="14px">
+                            updated at{" "}
+                            {dayjs(v.update).format("YYYY MM/DD HH:mm")}
+                          </Box>
+                          <Box fontSize="12px" as="span">
+                            <Flex
+                              bg={editTxid === v.txid ? "#f0f0f0" : "white"}
+                              justify="center"
+                              px={2}
+                              py={1}
+                              sx={{
+                                borderRadius: "3px",
+                                cursor: "pointer",
+                                ":hover": { opacity: 0.5 },
+                                border: "1px solid #999",
+                              }}
+                              onClick={async () => {
+                                const _draft = await lf.getItem(
+                                  "draft-" + v.draftID,
+                                )
+                                if (_draft) {
+                                  if (_draft.txid) setEditTxid(_draft.txid)
+                                  if (_draft.title) setEditTitle(_draft.title)
+                                  if (_draft.id) setEditID(_draft.id)
+                                  setMD("")
+                                  ref.current?.setMarkdown("")
+                                  setChanged(_draft.changed)
+                                  setEditorInit(false)
+                                  setTab2("Markdown")
+                                  setTimeout(() => {
+                                    ref.current?.setMarkdown(_draft.body)
+                                    setDraftID(_draft.draftID)
+                                    setMD(_draft.body)
+                                    setTab("Editor")
+                                  }, 0)
+                                }
+                              }}
+                            >
+                              Edit
+                            </Flex>
+                          </Box>
+                          <Box fontSize="12px" as="span" ml={3}>
+                            <Flex
+                              justify="center"
+                              px={2}
+                              py={1}
+                              sx={{
+                                borderRadius: "3px",
+                                cursor: "pointer",
+                                ":hover": { opacity: 0.5 },
+                                border: "1px solid #999",
+                              }}
+                              onClick={async () => {
+                                if (!confirm("Would you like to delete it?")) {
+                                  return
+                                }
+                                let _drafts = []
+                                for (let v2 of drafts) {
+                                  if (v.draftID !== v2.draftID) _drafts.push(v2)
+                                }
+                                setDrafts(_drafts)
+                                await lf.setItem("drafts", _drafts)
+                                await lf.removeItem("draft-" + v.draftID)
+                              }}
+                            >
+                              Delete
+                            </Flex>
+                          </Box>
+                        </Flex>
+                      </>
+                    )
+                  })(drafts)}
                 </Box>
               )}
             </Flex>

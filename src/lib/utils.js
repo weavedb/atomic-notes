@@ -14,6 +14,7 @@ const getArticles = async ({ limit, skip } = {}) => {
     count: JSON.parse(result.Messages[0].Tags[8].value),
   }
 }
+
 const getProfile = async () => {
   const result = await dryrun({
     process: import.meta.env.VITE_PROCESS_ID,
