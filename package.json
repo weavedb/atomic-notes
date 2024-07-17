@@ -13,6 +13,8 @@
     "@chakra-ui/react": "^2.8.2",
     "@emotion/react": "^11.11.4",
     "@emotion/styled": "^11.11.5",
+    "@fortawesome/free-brands-svg-icons": "^6.6.0",
+    "@fortawesome/react-fontawesome": "^0.2.2",
     "@mdxeditor/editor": "^3.8.0",
     "@permaweb/aoconnect": "^0.0.56",
     "@wooorm/starry-night": "^3.4.0",

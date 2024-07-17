@@ -4,6 +4,8 @@ This is a permanent CMS deployed on Arweave and managed by AO.
 
 The SPA instance needs to be deployed once and articles will be updated by the assigned AO process.
 
+***This is the very first alpha release, please expect bugs and use it with caution and discretion.***
+
 ## Clone the Repo
 
 ```bash
@@ -28,7 +30,7 @@ Then load the lua script to add handlers to your process.
 ```
 You need to take note of the `ao process` txid and you need to make the same Arweave owner account available in your browser. The keyfile should be located at `.aos.json` in your home directory. You can import this to the [Arconnect](https://www.arconnect.io/) browser extension.
 
-you can quit the process with `Ctrl-C`. Now you are all set to run the CMS.
+You can quit the process with `Ctrl-C`. Now you are all set to run the CMS.
 
 ## `.env`
 
@@ -97,8 +99,8 @@ Note that only the AO process owner can update, so you need to connect the same 
 
 ![](./assets/add-article-form.png)
 
-Now you can access your article at [https://arweave.net/3W4...6U/#/a/3](https://arweave.net/3W4l7Q_w7r7bYlXH9MXAu2lascJm5YsPoCXn6BXGJ6U/#/a/3).
+Now you can access your article like [https://arweave.net/3W4...6U/#/a/3](https://arweave.net/3W4l7Q_w7r7bYlXH9MXAu2lascJm5YsPoCXn6BXGJ6U/#/a/3).
 
-Also, it will be listed on the top page at [https://arweave.net/3W4...6U](https://arweave.net/3W4l7Q_w7r7bYlXH9MXAu2lascJm5YsPoCXn6BXGJ6U).
+Also, it will be listed on the top page like [https://arweave.net/3W4...6U](https://arweave.net/3W4l7Q_w7r7bYlXH9MXAu2lascJm5YsPoCXn6BXGJ6U).
 
 ![](./assets/home-page.png)
