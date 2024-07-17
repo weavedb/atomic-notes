@@ -602,6 +602,7 @@ function Admin(a) {
                       <Box mb={4} mr={2} flex={1}>
                         <Box mb={2}>Twitter / X</Box>
                         <Input
+                          placeholder="0xTomo"
                           value={x}
                           bg="white"
                           sx={{ border: "1px solid #999" }}
@@ -611,6 +612,7 @@ function Admin(a) {
                       <Box mb={4} ml={2} flex={1}>
                         <Box mb={2}>Github</Box>
                         <Input
+                          placeholder="ocrybit"
                           value={github}
                           bg="white"
                           sx={{ border: "1px solid #999" }}
