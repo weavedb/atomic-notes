@@ -5,6 +5,7 @@ import ReactDOM from "react-dom/client"
 import App from "./App.jsx"
 import Article from "./pages/Article"
 import Admin from "./pages/Admin"
+import AtomicNote from "./pages/AtomicNote"
 
 const router = createHashRouter([
   {
@@ -18,6 +19,10 @@ const router = createHashRouter([
   {
     path: "/admin",
     element: <Admin />,
+  },
+  {
+    path: "/atomic-note/:pid",
+    element: <AtomicNote />,
   },
 ])
 
