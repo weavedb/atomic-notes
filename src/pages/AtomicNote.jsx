@@ -479,11 +479,45 @@ function AtomicNote(a) {
             </Box>
           </Flex>
           <Box flex={1} />
+          <>
+            <Box
+              fontSize="12px"
+              mx={3}
+              my={1}
+              fontWeight={pid === "new" ? "bold" : "normal"}
+              sx={{
+                textDecoration: pid === "new" ? "underline" : "",
+                cursor: "pointer",
+                ":hover": { opacity: 0.75 },
+              }}
+              onClick={() => {
+                navigate("/atomic-note/new")
+                setTab("Editor")
+              }}
+            >
+              Create New
+            </Box>
+            <Box
+              fontSize="12px"
+              mx={3}
+              my={1}
+              fontWeight={tab === "Notes" ? "bold" : "normal"}
+              sx={{
+                textDecoration: tab === "Notes" ? "underline" : "",
+                cursor: "pointer",
+                ":hover": { opacity: 0.75 },
+              }}
+              onClick={() => setTab("Notes")}
+            >
+              My Notes
+            </Box>
+          </>
           {address ? (
             <>
               <Box
                 fontSize="12px"
-                mx={4}
+                mr={4}
+                ml={3}
                 my={1}
                 sx={{
                   cursor: "pointer",
@@ -537,6 +571,7 @@ function AtomicNote(a) {
           ) : (
             <Box
               fontSize="12px"
+              ml={4}
               px={4}
               py={1}
               href={`https://www.ao.link/#/entity/${import.meta.env.VITE_PROCESS_ID}`}
@@ -600,45 +635,6 @@ function AtomicNote(a) {
               )
             })(tabs)}
             <Flex flex={1} />
-            {pid === "new" ? null : (
-              <Flex
-                fontSize="14px"
-                w="75px"
-                justify="center"
-                px={4}
-                py={1}
-                sx={{
-                  borderRadius: "3px",
-                  cursor: "pointer",
-                  ":hover": { opacity: 0.5 },
-                  border: "1px solid #999",
-                }}
-                onClick={() => {
-                  navigate("/atomic-note/new")
-                  setTab("Editor")
-                }}
-              >
-                New
-              </Flex>
-            )}
-            <Flex
-              fontSize="14px"
-              w="75px"
-              justify="center"
-              bg={tab === "Notes" ? "#f0f0f0" : "white"}
-              ml={4}
-              px={4}
-              py={1}
-              sx={{
-                borderRadius: "3px",
-                cursor: "pointer",
-                ":hover": { opacity: 0.5 },
-                border: "1px solid #999",
-              }}
-              onClick={() => setTab("Notes")}
-            >
-              Notes
-            </Flex>
           </Flex>
         </Flex>
         {tab !== "Editor" ? null : (
