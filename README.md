@@ -4,7 +4,7 @@ This is a permanent CMS deployed on Arweave and managed by AO.
 
 The SPA instance needs to be deployed once and articles will be updated by the assigned AO process.
 
-***This is the very first alpha release, please expect bugs and use it with caution and discretion.***
+***This is the very first alpha release, please expect bugs and use it with caution and managed.****
 
 ## Clone the Repo
 
@@ -30,7 +30,7 @@ Then load the lua script to add handlers to your process.
 ```
 You need to take note of the `ao process` txid and you need to make the same Arweave owner account available in your browser. The keyfile should be located at `.aos.json` in your home directory. You can import this to the [Arconnect](https://www.arconnect.io/) browser extension.
 
-You can quit the process with `Ctrl-C`. Now you are all set to run the CMS.
+you can quit the process with `Ctrl-C`. Now you are all set to run the CMS.
 
 ## `.env`
 
@@ -79,7 +79,7 @@ You can go to the admin page at [https://your.app/#/admin](https://your.app/#/ad
 
 ![](./assets/editor.png)
 
-## Upload Markdown Files to Arweave
+## Upload Markdown Files to Arewave
 
 In case of using the built-in editor, just hit the `Upload to Arweave` button.
 
@@ -99,12 +99,8 @@ Note that only the AO process owner can update, so you need to connect the same 
 
 ![](./assets/add-article-form.png)
 
-Now you can access your article like [https://arweave.net/3W4...6U/#/a/3](https://arweave.net/3W4l7Q_w7r7bYlXH9MXAu2lascJm5YsPoCXn6BXGJ6U/#/a/3).
+Now you can access your article at [https://arweave.net/3W4...6U/#/a/3](https://arweave.net/3W4l7Q_w7r7bYlXH9MXAu2lascJm5YsPoCXn6BXGJ6U/#/a/3).
 
-Also, it will be listed on the top page like [https://arweave.net/3W4...6U](https://arweave.net/3W4l7Q_w7r7bYlXH9MXAu2lascJm5YsPoCXn6BXGJ6U).
+Also, it will be listed on the top page at [https://arweave.net/3W4...6U](https://arweave.net/3W4l7Q_w7r7bYlXH9MXAu2lascJm5YsPoCXn6BXGJ6U).
 
 ![](./assets/home-page.png)
-
-## Contributions
-
-I intend to make this the best publishing dapp ever. Feedback is extremely welcome at [0xTomo](https://x.com/0xTomo).
