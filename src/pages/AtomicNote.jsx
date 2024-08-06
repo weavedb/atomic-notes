@@ -298,6 +298,7 @@ function AtomicNote(a) {
       }
     })()
   }, [editors])
+
   useEffect(() => {
     ;(async () => {
       setSelectedMD(null)
@@ -305,6 +306,7 @@ function AtomicNote(a) {
       if (pid !== "new") await getInfo()
     })()
   }, [pid])
+
   useEffect(() => {
     ;(async () => {
       const _drafts = (await lf.getItem(`drafts-${pid}`)) ?? []
@@ -330,24 +332,6 @@ function AtomicNote(a) {
 
   useEffect(() => {
     ;(async () => {
-      try {
-        const {
-          count: _count,
-          next: _next,
-          articles: _articles,
-        } = await getArticles({ limit, skip })
-        setArticles(_articles)
-        setCount(_count)
-        setNext(_next)
-        setSkip(skip + _articles.length)
-      } catch (e) {
-        console.log(e)
-      }
-    })()
-  }, [])
-
-  useEffect(() => {
-    ;(async () => {
       const _draft = await lf.getItem(`draft-${pid}`)
       if (_draft) {
         setMD(_draft.body)
@@ -364,6 +348,7 @@ function AtomicNote(a) {
       }
     })()
   }, [pid])
+
   useEffect(() => {
     ;(async () => {
       if (tab2 === "Preview") {
@@ -373,24 +358,6 @@ function AtomicNote(a) {
     })()
   }, [tab2])
 
-  useEffect(() => {
-    ;(async () => {
-      try {
-        const _profile = await getProfile()
-        setProfile(_profile)
-        if (_profile) {
-          if (_profile.name) setName(_profile.name)
-          if (_profile.description) setDescription(_profile.description)
-          if (_profile.image) setImage(_profile.image)
-          if (_profile.cover) setCover(_profile.cover)
-          if (_profile.x) setX(_profile.x)
-          if (_profile.github) setGithub(_profile.github)
-        }
-      } catch (e) {
-        console.log(e)
-      }
-    })()
-  }, [])
   const isEditor = address && includes(address, editors)
   const isOwner = (address && metadata && metadata.Owner === address) ?? false
   const tabs =
@@ -1706,6 +1673,12 @@ function AtomicNote(a) {
                         _training += `-${ttMap[trainingTerm].split(" ").join("-")}-${trainingFee}`
                       }
                       tags.push(tag("Data-Model-Training", _training))
+                      tags.push(
+                        tag(
+                          "Render-With",
+                          "yXXAop3Yxm8QlZRzP46oRxZjCBp88YTpoSTPlTr4TcQ",
+                        ),
+                      )
                       const { error, pid } = await note.spawn(md, tags)
                       if (error) {
                         alert("something went wrong")
@@ -1734,6 +1707,11 @@ function AtomicNote(a) {
                               await lf.setItem("notes", _notes)
                               setNotes(_notes)
                               to = true
+                              if (prid) {
+                                const { error: error3, res: res3 } =
+                                  await note.add(prid)
+                                console.log(res3, error3)
+                              }
                               setTimeout(() => {
                                 navigate(`/atomic-note/${pid}`)
                                 setTab("Info")

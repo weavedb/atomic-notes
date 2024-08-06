@@ -188,6 +188,26 @@ class Note {
     return { error, mid, res }
   }
 
+  async add(creator) {
+    let error = null
+    let mid = null
+    let res = null
+    try {
+      mid = await message({
+        process: this.pid,
+        tags: [action("Add-Asset-To-Profile"), tag("ProfileProcess", creator)],
+        signer: this.signer,
+      })
+      const _res = await result({ message: mid, process: this.pid })
+      console.log(_res)
+      res = _res.Messages[0]
+      if (!res) error = "something went wrong"
+    } catch (e) {
+      error = e
+    }
+    return { error, mid, res }
+  }
+
   async editors() {
     let error = null
     let res = null

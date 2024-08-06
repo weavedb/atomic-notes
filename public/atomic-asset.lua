@@ -214,27 +214,23 @@ Handlers.add('Balances', Handlers.utils.hasMatchingTag('Action', 'Balances'),
 
 -- Initialize a request to add the uploaded asset to a profile
 Handlers.add('Add-Asset-To-Profile', Handlers.utils.hasMatchingTag('Action', 'Add-Asset-To-Profile'), function(msg)
-	if msg.From ~= Owner and msg.From ~= Creator and msg.From ~= ao.id then
+	if checkValidAddress(msg.Tags.ProfileProcess) then
+		-- ao.assign({ Processes = { msg.Tags.ProfileProcess }, Message = ao.id })
 		ao.send({
-			Target = msg.From,
-			Action = 'Authorization-Error',
-			Tags = {
-				Status = 'Error',
-				Message = 'Unauthorized to access this handler'
-			}
+			Target = msg.Tags.ProfileProcess,
+			Action = 'Add-Uploaded-Asset',
+			Data = json.encode({
+				Id = ao.id,
+				Quantity = msg.Tags.Quantity or '0'
+			})
 		})
-		return
-	end
-
-	if checkValidAddress(Creator) then
-		ao.assign({ Processes = { Creator }, Message = ao.id, Exclude = { 'Data','Anchor' }})
 	else
 		ao.send({
 			Target = msg.From,
 			Action = 'Input-Error',
 			Tags = {
 				Status = 'Error',
-				Message = 'Creator tag not specified on asset spawn or not a valid Profile Process ID'
+				Message = 'ProfileProcess tag not specified or not a valid Process ID'
 			}
 		})
 	end
