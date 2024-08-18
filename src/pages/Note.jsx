@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react"
+import { useNavigate, useParams } from "react-router-dom"
 import { Flex, Box, Image, Spinner } from "@chakra-ui/react"
-import { useParams } from "react-router-dom"
 import markdownIt from "markdown-it"
+import Note from "../lib/note"
 import { toHtml } from "hast-util-to-html"
 import "../github-markdown.css"
 import { common, createStarryNight } from "@wooorm/starry-night"
@@ -9,16 +10,18 @@ import { Link } from "react-router-dom"
 import { dryrun } from "@permaweb/aoconnect"
 import { circleNotch } from "../lib/svgs.jsx"
 import Header from "../components/Header"
+import NoteCard from "../components/NoteCard"
 import { getAoProf, getNotes, tags, getAddr, getProf } from "../lib/utils"
 
 function Article(a) {
   const { id } = useParams()
-
+  const navigate = useNavigate()
   const [address, setAddress] = useState(null)
   const [profile, setProfile] = useState(null)
   const [init, setInit] = useState(false)
   const [error, setError] = useState(false)
   const [md, setMD] = useState(null)
+  const [note, setNote] = useState(null)
   const [user, setuser] = useState(null)
   const [initNote, setInitNote] = useState(false)
 
@@ -27,7 +30,20 @@ function Article(a) {
     () => getProf({ address, setProfile, setInit, setAddress }),
     [address],
   )
-
+  useEffect(() => {
+    ;(async () => {
+      const _note = new Note({ pid: id })
+      const { error, res } = await _note.info()
+      if (!error) {
+        setNote({
+          id: id,
+          title: res.Name,
+          description: res.Description,
+          thumbnail: res.Thumbnail,
+        })
+      }
+    })()
+  }, [md])
   useEffect(() => {
     ;(async () => {
       try {
@@ -77,7 +93,7 @@ function Article(a) {
       setInitNote(true)
     })()
   }, [id])
-
+  const isCreator = user && user?.ProfileId === profile?.ProfileId
   return (
     <>
       <Header
@@ -91,7 +107,7 @@ function Article(a) {
         pt="60px"
         h="100%"
       >
-        <Box pt={6} width="100%" maxW="854px" px={4} h="100%">
+        <Box pt={6} width="100%" maxW="854px" px={4} h="calc(100% - 60px)">
           {error ? (
             <Flex
               w="100%"
@@ -125,53 +141,16 @@ function Article(a) {
               dangerouslySetInnerHTML={{ __html: md }}
             />
           )}
-          {!md ? null : (
-            <Box
-              as="a"
-              display="flex"
-              mt={8}
-              maxW="830px"
-              width="100%"
-              fontSize="12px"
-              justifyContent="center"
-              p={4}
-              target="_blank"
-              href={`https://ao-bazar.arweave.net/#/asset/${id}`}
-              sx={{
-                borderRadius: "5px",
-                border: "1px solid #ddd",
-                cursor: "pointer",
-                ":hover": { opacity: 0.75 },
-              }}
-            >
-              {id}
+          {!note || !user ? null : (
+            <Box py={4}>
+              <NoteCard
+                bazar={true}
+                profile={user}
+                note={note}
+                navigate={navigate}
+                isCreator={isCreator}
+              />
             </Box>
-          )}
-          {!user ? null : (
-            <Flex direction="column" align="center" w="100%">
-              <Flex
-                maxW="830px"
-                align="center"
-                justify="center"
-                p={4}
-                width="100%"
-              >
-                <Link to={`/u/${user.ProfileId}`}>
-                  <Flex>
-                    <Flex justify="center" mr={2}>
-                      <Image
-                        src={`https://arweave.net/${user.ProfileImage}`}
-                        boxSize="25px"
-                        sx={{ borderRadius: "50%" }}
-                      />
-                    </Flex>
-                    <Box>
-                      <Box>{user.DisplayName}</Box>
-                    </Box>
-                  </Flex>
-                </Link>
-              </Flex>
-            </Flex>
           )}
         </Box>
       </Flex>

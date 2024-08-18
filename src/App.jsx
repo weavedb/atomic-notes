@@ -27,10 +27,6 @@ function App() {
       <Header
         {...{ address, setAddress, profile, setProfile, init, setInit }}
       />
-      <style>{`
-body, html, #root{
-  height: 100%;
-}`}</style>
       <Flex justify="center" pt="60px" h="100%">
         <Flex w="100%" maxW="854px" px={3} pt={4} h="100%" direction="column">
           <Flex mt={16} sx={{ ...roboto }}>

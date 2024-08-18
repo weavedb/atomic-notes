@@ -1,9 +1,10 @@
-import { useParams } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
 import { EditIcon, DeleteIcon } from "@chakra-ui/icons"
 import { Link } from "react-router-dom"
 import { useState, useEffect } from "react"
 import Notebook from "../lib/notebook"
 import Header from "../components/Header"
+import NoteCard from "../components/NoteCard"
 import {
   getBooks,
   getNotes,
@@ -34,13 +35,14 @@ import {
 import { o, sortBy, map, pluck, fromPairs, clone, reject } from "ramda"
 function User({}) {
   const { id } = useParams()
-
+  const navigate = useNavigate()
   const [address, setAddress] = useState(null)
   const [profile, setProfile] = useState(null)
   const [init, setInit] = useState(false)
   const [user, setUser] = useState(null)
   const [notes, setNotes] = useState([])
   const [book, setBook] = useState(null)
+  const [assetmap, setAssetMap] = useState({})
 
   useEffect(() => getAddr({ setAddress, setInit }), [])
   useEffect(
@@ -48,6 +50,17 @@ function User({}) {
     [address],
   )
 
+  /*
+  useEffect(() => {
+    ;(async () => {
+      let assetmap = {}
+      for (let v of notes) {
+        assetmap[v.id] = await getInfo(v.id)
+        setAssetMap(assetmap)
+      }
+    })()
+  }, [notes])
+*/
   useEffect(() => {
     ;(async () => {
       const info = await getInfo(id)
@@ -92,26 +105,30 @@ function User({}) {
                   <Flex spacing="4">
                     <Flex flex="1" gap="4" alignItems="center" flexWrap="wrap">
                       <Avatar
+                        mr={2}
                         name={book.Name}
                         src={`https://arweave.net/${book.Thumbnail}`}
                         size="xl"
                       />
                       <Box>
                         <Heading size="lg">{book.Name}</Heading>
+                        <Text mb={2} mt={1}>
+                          {book.Description}
+                        </Text>
                         {!user ? null : (
                           <Link to={`/u/${user.id}`}>
                             <Flex align="center" mt={1}>
+                              <Text mr={4} fontSize="xs" color="#999">
+                                {dayjs(book["DateCreated"] * 1).format(
+                                  "MMM DD",
+                                )}
+                              </Text>
                               <Image
                                 mr={2}
                                 src={`https://arweave.net/${user.ProfileImage}`}
                                 boxSize="24px"
                               />
                               <Text>{user.DisplayName}</Text>
-                              <Text ml={4} fontSize="xs" color="#999">
-                                {dayjs(book["DateCreated"] * 1).format(
-                                  "MMM DD",
-                                )}
-                              </Text>
                             </Flex>
                           </Link>
                         )}
@@ -123,114 +140,45 @@ function User({}) {
               <Tabs my={4} colorScheme="gray">
                 <TabList>
                   <Tab>Notes</Tab>
-                  <Tab>About</Tab>
                 </TabList>
                 <TabPanels>
                   <TabPanel>
                     {map(v => {
+                      let _note = v
+                      if (assetmap[v.id]) {
+                        _note.thumbnail = assetmap[v.id].Thumbnail
+                      }
+
+                      const deleteFromNotebook = v => async e => {
+                        e.preventDefault()
+                        if (await badWallet(address)) return
+                        if (
+                          confirm(
+                            "Would you like to remove the note from this notebook?",
+                          )
+                        ) {
+                          const book = new Notebook({
+                            wallet: window.arweaveWallet,
+                            pid: id,
+                          })
+                          const { res, error } = await book.update(v.id, true)
+                          const status = tags(res?.Tags || []).Status
+                          if (status === "Success") {
+                            let _notes = clone(notes)
+                            setNotes(reject(v2 => v2.id === v.id)(_notes))
+                          } else {
+                            alert("something went wrong")
+                          }
+                        }
+                      }
                       return (
-                        <Link to={`/n/${v.id}`}>
-                          <Flex
-                            p={4}
-                            sx={{
-                              borderBottom: "1px solid rgb(226,232,240)",
-                              ":hover": { opacity: 0.75 },
-                              cursor: "pointer",
-                            }}
-                          >
-                            <Card variant="unstyled">
-                              <CardHeader>
-                                <Flex spacing="4">
-                                  <Flex
-                                    flex="1"
-                                    gap="4"
-                                    alignItems="center"
-                                    flexWrap="wrap"
-                                  >
-                                    <Box>
-                                      <Heading mb={1} size="md">
-                                        {v.title}
-                                      </Heading>
-                                      <Text mb={1}>{v.description}</Text>
-                                      <Text color="#999" fontSize="xs">
-                                        {dayjs(v["date-created"] * 1).format(
-                                          "MMM DD",
-                                        )}
-                                      </Text>
-                                    </Box>
-                                  </Flex>
-                                </Flex>
-                              </CardHeader>
-                            </Card>
-                            <Box flex={1} />
-                            {!isCreator ? null : (
-                              <Box>
-                                <Link to={`/n/${v.id}/edit`}>
-                                  <Button
-                                    title="Edit"
-                                    size="xs"
-                                    colorScheme="gray"
-                                    variant="outline"
-                                    sx={{
-                                      border: "1px solid #222326",
-                                      ":hover": {
-                                        bg: "white",
-                                        opacity: 0.75,
-                                      },
-                                    }}
-                                  >
-                                    <EditIcon />
-                                  </Button>
-                                </Link>
-                                <Button
-                                  ml={3}
-                                  size="xs"
-                                  title="Remove"
-                                  colorScheme="gray"
-                                  variant="outline"
-                                  sx={{
-                                    border: "1px solid #222326",
-                                    ":hover": {
-                                      bg: "white",
-                                      opacity: 0.75,
-                                    },
-                                  }}
-                                  onClick={async e => {
-                                    e.preventDefault()
-                                    if (await badWallet(address)) return
-                                    if (
-                                      confirm(
-                                        "Would you like to remove the note from this notebook?",
-                                      )
-                                    ) {
-                                      const book = new Notebook({
-                                        wallet: window.arweaveWallet,
-                                        pid: id,
-                                      })
-                                      const { res, error } = await book.update(
-                                        v.id,
-                                        true,
-                                      )
-                                      const status = tags(
-                                        res?.Tags || [],
-                                      ).Status
-                                      if (status === "Success") {
-                                        let _notes = clone(notes)
-                                        setNotes(
-                                          reject(v2 => v2.id === v.id)(_notes),
-                                        )
-                                      } else {
-                                        alert("something went wrong")
-                                      }
-                                    }
-                                  }}
-                                >
-                                  <DeleteIcon />
-                                </Button>
-                              </Box>
-                            )}
-                          </Flex>
-                        </Link>
+                        <NoteCard
+                          navigate={navigate}
+                          deleteFromNotebook={deleteFromNotebook}
+                          note={_note}
+                          profile={profile}
+                          variant="line"
+                        />
                       )
                     })(notes)}
                   </TabPanel>

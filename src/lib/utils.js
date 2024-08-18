@@ -186,7 +186,9 @@ const badWallet = async addr => {
   if (!isValid) alert(`The wrong wallet: use ${addr} or reconnect the wallet.`)
   return !isValid
 }
+const validAddress = addr => /^[a-zA-Z0-9_-]{43}$/.test(addr)
 export {
+  validAddress,
   badWallet,
   getBooks,
   ltags,

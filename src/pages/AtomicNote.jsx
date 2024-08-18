@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import Header from "../components/Header"
+import NoteCard from "../components/NoteCard"
 import lf from "localforage"
 import Arweave from "arweave"
 import "@mdxeditor/editor/style.css"
@@ -8,8 +9,25 @@ import "../github-markdown.css"
 import markdownIt from "markdown-it"
 import { toHtml } from "hast-util-to-html"
 import { common, createStarryNight } from "@wooorm/starry-night"
+import { AddIcon, EditIcon } from "@chakra-ui/icons"
 import {
+  AbsoluteCenter,
+  Divider,
+  Table,
+  Thead,
+  Tbody,
+  Tfoot,
+  Tr,
+  Th,
+  Td,
+  TableCaption,
+  TableContainer,
+  Tag,
+  Text,
+  Card,
+  CardHeader,
   Button,
+  Heading,
   Step,
   StepDescription,
   StepIcon,
@@ -38,7 +56,6 @@ import Note from "../lib/note"
 import Notebook from "../lib/notebook"
 const action = value => tag("Action", value)
 const tag = (name, value) => ({ name, value })
-const validAddress = addr => /^[a-zA-Z0-9_-]{43}$/.test(addr)
 import {
   last,
   map,
@@ -52,6 +69,8 @@ import {
   filter,
   pluck,
   indexOf,
+  indexBy,
+  prop,
 } from "ramda"
 import dayjs from "dayjs"
 import {
@@ -72,6 +91,7 @@ import {
   ltags,
   getInfo as getInfo2,
   badWallet,
+  validAddress,
 } from "../lib/utils"
 import { circleNotch } from "../lib/svgs.jsx"
 import {
@@ -216,7 +236,7 @@ function AtomicNote(a) {
   })
 
   const ref = useRef(null)
-  const [pub, setPub] = useState(null)
+  const [pub, setPub] = useState("None")
   const [metadata, setMetadata] = useState(null)
   const [uploadingArweave, setUploadingArweave] = useState(false)
   const [updatingArticle, setUpdatingArticle] = useState(false)
@@ -237,6 +257,9 @@ function AtomicNote(a) {
   const [articles, setArticles] = useState([])
   const [title, setTitle] = useState("")
   const [desc, setDesc] = useState("")
+  const [thumbnail, setThumbnail] = useState(
+    "eXCtpVbcd_jZ0dmU2PZ8focaKxBGECBQ8wMib7sIVPo",
+  )
   const [id, setId] = useState("")
   const [txid, setTxid] = useState("")
   const first = pid === "new" ? "Editor" : "Info"
@@ -246,7 +269,6 @@ function AtomicNote(a) {
   const [tab4, setTab4] = useState("Main")
   const [update, setUpdate] = useState(null)
   const [name, setName] = useState("")
-  const [description, setDescription] = useState("")
   const [image, setImage] = useState("")
   const [cover, setCover] = useState("")
   const [x, setX] = useState("")
@@ -280,6 +302,8 @@ function AtomicNote(a) {
   const [payment, setPayment] = useState("single")
   const [recipient, setRecipient] = useState("")
   const [books, setBooks] = useState([])
+  const [date, setDate] = useState(null)
+
   const fractionals = [
     { key: "yes", val: "YES" },
     { key: "no", val: "NO" },
@@ -331,6 +355,13 @@ function AtomicNote(a) {
       const { res: _editors } = await note.editors()
       setEditors(_editors)
       setMetadata(await getProcess(pid))
+      const { erro: error3, res: info } = await note.info()
+      if (!error3) {
+        setThumbnail(info.Thumbnail ?? "")
+        setDesc(info.Description ?? "")
+        setTitle(info.Name ?? "")
+        setDate((info.dateCraeted ?? Date.now()) * 1)
+      }
     }
   }
   useEffect(() => {
@@ -433,6 +464,10 @@ function AtomicNote(a) {
       }
     })()
   }, [tab2])
+  const pubmap = map(v => {
+    v.Name = v.title
+    return v
+  })(indexBy(prop("id"))(books))
 
   const isEditor = address && includes(address, editors)
   const isOwner = (address && metadata && metadata.Owner === address) ?? false
@@ -445,7 +480,8 @@ function AtomicNote(a) {
   const tabs2 = ["Markdown", "Preview"]
   const tabs3 = ["Note", "Tokens", "License"]
 
-  const ok = !/^\s*$/.test(title)
+  const ok =
+    !/^\s*$/.test(title) && (thumbnail === "" || validAddress(thumbnail))
   const ok_editor = validAddress(newEditor)
   const ok_profile = !/^\s*$/.test(name)
   const _profile = defaultProfile(profile)
@@ -505,7 +541,8 @@ function AtomicNote(a) {
     }
     if (metadata["Payment-Mode"]) payment_text = metadata["Payment-Mode"]
   }
-  let oks = [ok, true]
+  let ok3 = ok && (payment !== "single" || validAddress(recipient))
+  let oks = [ok, true, ok3]
   return (
     <>
       <Header {...{ address, setAddress, profile, setProfile, init, setInit }}>
@@ -685,14 +722,14 @@ function AtomicNote(a) {
               </Flex>
               <Flex mb={4} justify="center">
                 <Flex
+                  h="40px"
                   align="center"
                   maxW="830px"
                   width="100%"
                   fontSize="12px"
-                  bg="#f0f0f0"
                   py={2}
                   px={4}
-                  sx={{ borderRadius: "3px" }}
+                  sx={{ borderRadius: "3px", border: "1px solid #4A5568" }}
                 >
                   {editTxid ? (
                     <Flex w="100%" align="center">
@@ -734,7 +771,12 @@ function AtomicNote(a) {
                     <Flex maxW="830px" width="100%">
                       <Tabs
                         size="xs"
-                        index={indexOf(tab4, ["Main", "License", "Editors"])}
+                        index={indexOf(tab4, [
+                          "Main",
+                          "License",
+                          "Info",
+                          "Editors",
+                        ])}
                         onChange={index => {
                           const v = tabs2[index]
                           setTab2(v)
@@ -751,22 +793,16 @@ function AtomicNote(a) {
                           >
                             v {selectedVersion ?? currentVersion}
                           </Tab>
-                          <Tab
-                            fontSize="12px"
-                            px={3}
-                            ml={4}
-                            onClick={() => setTab4("License")}
-                          >
-                            License
-                          </Tab>
-                          <Tab
-                            fontSize="12px"
-                            ml={4}
-                            px={3}
-                            onClick={() => setTab4("Editors")}
-                          >
-                            Editors
-                          </Tab>
+                          {map(v => (
+                            <Tab
+                              fontSize="12px"
+                              px={3}
+                              ml={4}
+                              onClick={() => setTab4(v)}
+                            >
+                              {v}
+                            </Tab>
+                          ))(["License", "Info", "Editors"])}
                         </TabList>
                       </Tabs>
                       <Box flex={1} />
@@ -911,7 +947,7 @@ function AtomicNote(a) {
                                       mr={3}
                                       as="a"
                                       target="_blank"
-                                      href={`https://ao-bazar.arweave.net/#/profile/${aoProfiles[v].Username}`}
+                                      href={`https://ao-bazar.arweave.net/#/profile/${aoProfiles[v].ProfileId}`}
                                     >
                                       {aoProfiles[v].Username}
                                     </Box>
@@ -991,158 +1027,99 @@ function AtomicNote(a) {
                   ) : tab4 === "License" ? (
                     !metadata ? null : (
                       <>
-                        <Box
-                          mb={4}
-                          sx={{ borderBottom: "1px solid #ddd" }}
-                          pb={4}
+                        <TableContainer
+                          sx={{ borderTop: "1px solid rgb(237, 242, 247)" }}
                         >
-                          <Box fontWeight="bold" fontSize="20px" mb={2}>
-                            {metadata?.Title}
-                          </Box>
-                          <Box fontSize="14px">{metadata.Description}</Box>
-                        </Box>
-                        <Box mb={4}>
-                          <Box fontSize="12px">Date Created</Box>
-                          <Box fontSize="14px" fontWeight="bold">
-                            {dayjs(+metadata["Date-Created"]).format(
-                              "YYYY MM/DD HH:mm",
-                            )}
-                          </Box>
-                          <Box>
-                            <Box fontSize="12px" mt={2}>
-                              License
-                            </Box>
-                            <Box fontSize="14px" fontWeight="bold">
-                              <Box
-                                as="a"
-                                target="_blank"
-                                sx={{ textDecoration: "underline" }}
-                                href={`https://arweave.net/${metadata["License"]}`}
-                              >
-                                Universal Data License
-                              </Box>
-                            </Box>
-                          </Box>
-                          <Box>
-                            <Box fontSize="12px" mt={2}>
-                              Access
-                            </Box>
-                            <Box fontSize="14px" fontWeight="bold">
-                              {access_text}
-                            </Box>
-                          </Box>
-                          <Box>
-                            <Box fontSize="12px" mt={2}>
-                              Derivations
-                            </Box>
-                            <Box fontSize="14px" fontWeight="bold">
-                              {derivations_text}
-                            </Box>
-                          </Box>
-                          <Box>
-                            <Box fontSize="12px" mt={2}>
-                              Commercial Use
-                            </Box>
-                            <Box fontSize="14px" fontWeight="bold">
-                              {commercial_text}
-                            </Box>
-                          </Box>
-                          <Box>
-                            <Box fontSize="12px" mt={2}>
-                              Data Model Training
-                            </Box>
-                            <Box fontSize="14px" fontWeight="bold">
-                              {training_text}
-                            </Box>
-                          </Box>
-                          <Box>
-                            <Box fontSize="12px" mt={2}>
-                              Payment Mode
-                            </Box>
-                            <Box fontSize="14px" fontWeight="bold">
-                              {payment_text}
-                            </Box>
-                          </Box>
-                          <Box>
-                            <Box fontSize="12px" mt={2}>
-                              Payment Address
-                            </Box>
-                            <Box fontSize="14px" fontWeight="bold">
-                              {metadata?.["Payment-Address"] ? (
-                                <Box
-                                  as="a"
-                                  target="_blank"
-                                  sx={{ textDecoration: "underline" }}
-                                  href={`https://ao.link/#/entity/${metadata["Payment-Address"]}`}
-                                >
-                                  {metadata["Payment-Address"]}
-                                </Box>
-                              ) : (
-                                ""
-                              )}
-                            </Box>
-                          </Box>
-                          <Box>
-                            <Box fontSize="12px" mt={2}>
-                              Currency
-                            </Box>
-                            <Box fontSize="14px" fontWeight="bold">
-                              {metadata?.["Currency"] ? (
-                                <Box
-                                  as="a"
-                                  target="_blank"
-                                  sx={{ textDecoration: "underline" }}
-                                  href={`https://ao.link/#/token/${metadata["Currency"]}`}
-                                >
-                                  {metadata["Currency"]}
-                                </Box>
-                              ) : (
-                                ""
-                              )}
-                            </Box>
-                          </Box>
-                        </Box>
+                          <Table variant="simple">
+                            <Tbody>
+                              {map(v => (
+                                <Tr>
+                                  <Th>{v.key}</Th>
+                                  <Td>{v.val}</Td>
+                                </Tr>
+                              ))([
+                                {
+                                  key: "License",
+                                  val: (
+                                    <Box
+                                      as="a"
+                                      target="_blank"
+                                      sx={{ textDecoration: "underline" }}
+                                      href={`https://arweave.net/${metadata["License"]}`}
+                                    >
+                                      Universal Data License
+                                    </Box>
+                                  ),
+                                },
+                                {
+                                  key: "Access Fee",
+                                  val: access_text,
+                                },
+                                {
+                                  key: "Derivations",
+                                  val: derivations_text,
+                                },
+                                {
+                                  key: "Commercial Use",
+                                  val: commercial_text,
+                                },
+                                {
+                                  key: "Data Model Training",
+                                  val: training_text,
+                                },
+                                {
+                                  key: "Payment Mode",
+                                  val: payment_text,
+                                },
+                                {
+                                  key: "Payment Address",
+                                  val: metadata?.["Payment-Address"] ? (
+                                    <Box
+                                      as="a"
+                                      target="_blank"
+                                      sx={{ textDecoration: "underline" }}
+                                      href={`https://ao.link/#/entity/${metadata["Payment-Address"]}`}
+                                    >
+                                      {metadata["Payment-Address"]}
+                                    </Box>
+                                  ) : (
+                                    ""
+                                  ),
+                                },
+                                {
+                                  key: "Currency",
+                                  val: metadata?.["Currency"] ? (
+                                    <Box
+                                      as="a"
+                                      target="_blank"
+                                      sx={{ textDecoration: "underline" }}
+                                      href={`https://ao.link/#/token/${metadata["Currency"]}`}
+                                    >
+                                      {metadata["Currency"]}
+                                    </Box>
+                                  ) : (
+                                    ""
+                                  ),
+                                },
+                              ])}
+                            </Tbody>
+                          </Table>
+                        </TableContainer>
                       </>
                     )
-                  ) : (
+                  ) : tab4 === "Main" ? (
                     <>
-                      <Flex mb={4} justify="center">
-                        <Flex
-                          align="center"
-                          maxW="830px"
-                          width="100%"
-                          fontSize="12px"
-                          bg="#f0f0f0"
-                          py={2}
-                          px={4}
-                          sx={{ borderRadius: "5px" }}
+                      <Box position="relative" mb={4}>
+                        <Divider />
+                        <AbsoluteCenter
+                          bg="white"
+                          px="4"
+                          fontSize="14px"
+                          color="#aaa"
                         >
-                          <Flex w="100%" align="center">
-                            <Box as="b" mr={4}>
-                              {metadata?.Title ? metadata.Title : pid}
-                            </Box>
-                            <Box flex={1} />
-                            <Box
-                              as="a"
-                              target="_blank"
-                              href={`https://ao-bazar.arweave.net/#/asset/${pid}`}
-                              ml={4}
-                              sx={{ textDecoration: "underline" }}
-                            >
-                              BazAR Asset
-                            </Box>
-                            <Box
-                              as="a"
-                              target="_blank"
-                              href={`https://www.ao.link/#/entity/${pid}`}
-                              ml={4}
-                              sx={{ textDecoration: "underline" }}
-                            >
-                              AO Process
-                            </Box>
-                          </Flex>
-                        </Flex>
-                      </Flex>
+                          Note Preview
+                        </AbsoluteCenter>
+                      </Box>
                       <Box mb={2} sx={{ overflowY: "auto" }}>
                         <Box
                           mb={4}
@@ -1154,13 +1131,113 @@ function AtomicNote(a) {
                         />
                       </Box>
                     </>
+                  ) : (
+                    <>
+                      <Box
+                        p={6}
+                        fontSize="12px"
+                        bg="#f0f0f0"
+                        sx={{ borderRadius: "10px" }}
+                      >
+                        <>
+                          <Box mb={4}>
+                            <Box mb={2}>Title</Box>
+                            <Input
+                              bg="white"
+                              value={title}
+                              sx={{ border: "1px solid #999" }}
+                              onChange={e => setTitle(e.target.value)}
+                            />
+                          </Box>
+                          <Box mb={4}>
+                            <Box mb={2}>Description</Box>
+                            <Textarea
+                              bg="white"
+                              rows="2"
+                              value={desc}
+                              sx={{ border: "1px solid #999" }}
+                              onChange={e => setDesc(e.target.value)}
+                            />
+                          </Box>
+                          <Box mb={4}>
+                            <Box mb={2}>Thumbnail (Arweave TxID)</Box>
+                            <Input
+                              bg="white"
+                              value={thumbnail}
+                              color={
+                                thumbnail === "" || validAddress(thumbnail)
+                                  ? ""
+                                  : "crimson"
+                              }
+                              sx={{
+                                border: `1px solid ${thumbnail === "" || validAddress(thumbnail) ? "#999" : "crimson"}`,
+                              }}
+                              onChange={e => setThumbnail(e.target.value)}
+                            />
+                          </Box>
+                        </>
+                      </Box>
+                      <NoteCard
+                        nolinks={true}
+                        note={{ date, title, description: desc, thumbnail }}
+                        notebooks={pubmap[pub] ? [pubmap[pub]] : []}
+                        profile={profile}
+                      />
+                      <Button
+                        mt={5}
+                        w="100%"
+                        sx={{
+                          opacity: ok ? 1 : 0.5,
+                          borderRadius: "3px",
+                          cursor: ok ? "pointer" : "default",
+                          border: "1px solid #222326",
+                          ":hover": { bg: "#f6f6f7" },
+                          bg: "white",
+                        }}
+                        onClick={async () => {
+                          const wait = ms =>
+                            new Promise(res => setTimeout(() => res(), ms))
+                          if (!ok || updatingArticle) return
+                          if (await badWallet(address)) return
+                          setUpdatingArticle(true)
+                          let to = false
+                          try {
+                            let tokens = [
+                              `Name = '${title.replace(/'/g, "\\'")}'`,
+                              `Description = '${desc.replace(/'/g, "\\'")}'`,
+                              `Thumbnail = '${thumbnail}'`,
+                            ]
+                            const note = new Note({
+                              wallet: window.arweaveWallet,
+                              pid,
+                            })
+                            const { error, res } = await note.eval(
+                              tokens.join("\n"),
+                            )
+                            if (error) {
+                              alert("something went wrong")
+                            } else {
+                              setTimeout(async () => {
+                                console.log(await note.info("Info"))
+                              }, 2000)
+                            }
+                          } catch (e) {
+                            console.log(e)
+                            alert("something went wrong")
+                          }
+                          setUpdatingArticle(to)
+                        }}
+                      >
+                        {updatingArticle ? circleNotch : "Update Note Info"}
+                      </Button>
+                    </>
                   )}
                 </>
               )}
               {tab !== "Editor" ? null : (
                 <Box
                   mb={2}
-                  height={tab2 === "Preview" ? "" : "calc(100vh - 165px)"}
+                  height={tab2 === "Preview" ? "" : "calc(100vh - 175px)"}
                   sx={{ overflowY: "auto" }}
                 >
                   {tab2 === "Preview" ? (
@@ -1279,14 +1356,32 @@ function AtomicNote(a) {
                             onChange={e => setDesc(e.target.value)}
                           />
                         </Box>
+                        <Box mb={4}>
+                          <Box mb={2}>Thumbnail (Arweave TxID)</Box>
+                          <Input
+                            color={
+                              thumbnail === "" || validAddress(thumbnail)
+                                ? ""
+                                : "crimson"
+                            }
+                            bg="white"
+                            value={thumbnail}
+                            sx={{
+                              border: `1px solid ${thumbnail === "" || validAddress(thumbnail) ? "#999" : "crimson"}`,
+                            }}
+                            onChange={e => setThumbnail(e.target.value)}
+                          />
+                        </Box>
+
                         <Box>
                           <Box mb={2}>Notebook</Box>
                           <Select
+                            value={pub}
                             bg="white"
                             sx={{ border: "1px solid #999" }}
                             onChange={e => setPub(e.target.value)}
                           >
-                            <option value={null}>None</option>
+                            <option value="None">None</option>
                             {map(v => <option value={v.id}>{v.title}</option>)(
                               books,
                             )}
@@ -1553,7 +1648,10 @@ function AtomicNote(a) {
                               placeholder=""
                               bg="white"
                               value={recipient}
-                              sx={{ border: "1px solid #999" }}
+                              color={validAddress(recipient) ? "" : "crimson"}
+                              sx={{
+                                border: `1px solid ${validAddress(recipient) ? "#999" : "crimson"}`,
+                              }}
                               onChange={e => setRecipient(e.target.value)}
                             />
                           </Box>
@@ -1561,188 +1659,232 @@ function AtomicNote(a) {
                       </>
                     )}
                   </Box>
-                  {tab3 !== "License" ? (
-                    <Button
-                      mt={5}
-                      w="100%"
-                      sx={{
-                        opacity: oks[activeStep] ? 1 : 0.5,
-                        borderRadius: "3px",
-                        cursor: oks[activeStep] ? "pointer" : "default",
-                        ":hover": { opacity: 0.75 },
-                        border: "1px solid #999",
-                        bg: "white",
-                      }}
-                      onClick={async () => {
-                        if (oks[activeStep]) {
-                          setActiveStep(activeStep + 1)
-                          setTab3(tabs3[activeStep + 1])
-                        }
-                      }}
-                    >
-                      Next Step
-                    </Button>
-                  ) : (
-                    <Button
-                      mt={5}
-                      w="100%"
-                      sx={{
-                        opacity: ok ? 1 : 0.5,
-                        borderRadius: "3px",
-                        cursor: ok ? "pointer" : "default",
-                        ":hover": { opacity: 0.75 },
-                        border: "1px solid #999",
-                        bg: "white",
-                      }}
-                      onClick={async () => {
-                        const wait = ms =>
-                          new Promise(res => setTimeout(() => res(), ms))
-                        if (!ok || updatingArticle) return
-                        if (await badWallet(address)) return
-                        setUpdatingArticle(true)
-                        let to = false
-                        try {
-                          let token = await fetch("./atomic-asset.lua").then(
-                            r => r.text(),
-                          )
-                          token = token.replace(
-                            /\<NAME\>/g,
-                            title.replace(/'/g, "\\'"),
-                          )
-                          token = token.replace(/\<TICKER\>/g, "ATOMIC")
-                          token = token.replace(/\<DENOMINATION\>/g, "1")
-                          const prid = await getProfileId(address)
-                          token = token.replace(/\<CREATOR\>/g, prid ?? address)
-                          const note = new Note({
-                            wallet: window.arweaveWallet,
-                          })
-                          const date = Date.now()
-                          let tags = [
-                            tag("Title", title),
-                            tag("Description", desc),
-                            tag("Date-Created", Number(date).toString()),
-                            tag("Implements", "ANS-110"),
-                            tag(
-                              "License",
-                              "dE0rmDfl9_OWjkDznNEXHaSO_JohJkRolvMzaCroUdw",
-                            ),
-                            tag(
-                              "Currency",
-                              "xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10",
-                            ),
-                            tag("Asset-Type", "Atomic-Note"),
-                          ]
-                          if (prid) tags.push(tag("Creator", prid))
-                          tags.push(tag("Payment-Mode", paymentsMap[payment]))
-                          if (payment === "single") {
-                            tags.push(tag("Payment-Address", recipient))
+                  <NoteCard
+                    nolinks={true}
+                    note={{ title, description: desc, thumbnail }}
+                    notebooks={pubmap[pub] ? [pubmap[pub]] : []}
+                    profile={profile}
+                  />
+                  <Flex>
+                    {activeStep === 0 ? null : (
+                      <Button
+                        mt={5}
+                        mr={4}
+                        w="100%"
+                        sx={{
+                          borderRadius: "3px",
+                          cursor: "pointer",
+                          border: "1px solid #222326",
+                          ":hover": { bg: "#f6f6f7" },
+                          bg: "white",
+                        }}
+                        onClick={async () => {
+                          setActiveStep(activeStep - 1)
+                          setTab3(tabs3[activeStep - 1])
+                        }}
+                      >
+                        Previous Step
+                      </Button>
+                    )}
+                    {tab3 !== "License" ? (
+                      <Button
+                        ml={activeStep === 0 ? 0 : 4}
+                        mt={5}
+                        w="100%"
+                        sx={{
+                          opacity: oks[activeStep] ? 1 : 0.5,
+                          borderRadius: "3px",
+                          cursor: oks[activeStep] ? "pointer" : "default",
+                          border: "1px solid #222326",
+                          ":hover": { bg: "#f6f6f7" },
+                          bg: "white",
+                        }}
+                        onClick={async () => {
+                          if (oks[activeStep]) {
+                            setActiveStep(activeStep + 1)
+                            setTab3(tabs3[activeStep + 1])
                           }
-                          let _fraction = "1"
-                          if (isFractional === "yes") {
-                            _fraction = Number(fraction).toString()
-                          }
-                          token = token.replace(/\<BALANCE\>/g, _fraction)
-                          let _access = accessesMap[access]
-                          if (access === "one-time") _access += "-" + accessFee
-                          tags.push(tag("Access-Fee", _access))
-
-                          let _derivations = allowsMap[derivations]
-                          if (derivations === "allowed") {
-                            if (derivationTerm === "revenue") {
-                              _derivations += `-${dtMap[derivationTerm].split(" ").join("-")}-${derivationShare}`
-                            } else if (
-                              derivationTerm === "monthly" ||
-                              derivationTerm === "one-time"
-                            ) {
-                              _derivations += `-${dtMap[derivationTerm].split(" ").join("-")}-${derivationFee}`
-                            } else {
-                              _derivations += `-${dtMap[derivationTerm].split(" ").join("-")}-0`
-                            }
-                          }
-                          tags.push(tag("Derivations", _derivations))
-                          let _commercial = allowsMap[commercial]
-                          if (commercial === "allowed") {
-                            if (commercialTerm === "revenue") {
-                              _commercial += `-${ctMap[commercialTerm].split(" ").join("-")}-${commercialShare}`
-                            } else {
-                              _commercial += `-${ctMap[commercialTerm].split(" ").join("-")}-${commercialFee}`
-                            }
-                          }
-                          tags.push(tag("Commercial-Use", _commercial))
-                          let _training = allowsMap[training]
-                          if (training === "allowed") {
-                            _training += `-${ttMap[trainingTerm].split(" ").join("-")}-${trainingFee}`
-                          }
-                          tags.push(tag("Data-Model-Training", _training))
-                          tags.push(
-                            tag(
-                              "Render-With",
-                              "yXXAop3Yxm8QlZRzP46oRxZjCBp88YTpoSTPlTr4TcQ",
-                            ),
-                          )
-                          const { error, pid } = await note.spawn(md, tags)
-                          if (error) {
-                            alert("something went wrong")
-                          } else {
-                            await wait(5000)
-                            let data = await fetch("./atomic-note.lua").then(
+                        }}
+                      >
+                        Next Step
+                      </Button>
+                    ) : (
+                      <Button
+                        ml={4}
+                        mt={5}
+                        w="100%"
+                        sx={{
+                          opacity: ok3 ? 1 : 0.5,
+                          borderRadius: "3px",
+                          cursor: ok3 ? "pointer" : "default",
+                          border: "1px solid #222326",
+                          ":hover": { bg: "#f6f6f7" },
+                          bg: "white",
+                        }}
+                        onClick={async () => {
+                          const wait = ms =>
+                            new Promise(res => setTimeout(() => res(), ms))
+                          if (!ok3 || updatingArticle) return
+                          if (await badWallet(address)) return
+                          setUpdatingArticle(true)
+                          let to = false
+                          try {
+                            let token = await fetch("./atomic-asset.lua").then(
                               r => r.text(),
                             )
-                            data += "\n" + token
-                            const { error, res } = await note.eval(data)
+                            token = token.replace(
+                              /\<NAME\>/g,
+                              title.replace(/'/g, "\\'"),
+                            )
+                            token = token.replace(/\<TICKER\>/g, "ATOMIC")
+                            token = token.replace(/\<DENOMINATION\>/g, "1")
+                            const prid = await getProfileId(address)
+                            token = token.replace(
+                              /\<CREATOR\>/g,
+                              prid ?? address,
+                            )
+                            token = token.replace(/\<THUMBNAIL\>/g, thumbnail)
+                            token = token.replace(/\<DESCRIPTION\>/g, desc)
+                            const date = Date.now()
+                            token = token.replace(/\<DATECREATED\>/g, date)
+
+                            const note = new Note({
+                              wallet: window.arweaveWallet,
+                            })
+                            let tags = [
+                              tag("Title", title),
+                              tag("Description", desc),
+                              tag("Date-Created", Number(date).toString()),
+                              tag("Implements", "ANS-110"),
+                              tag(
+                                "License",
+                                "dE0rmDfl9_OWjkDznNEXHaSO_JohJkRolvMzaCroUdw",
+                              ),
+                              tag(
+                                "Currency",
+                                "xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10",
+                              ),
+                              tag("Asset-Type", "Atomic-Note"),
+                            ]
+                            if (!/^\s*$/.test(thumbnail)) {
+                              tag("Thumbnail", thumbnail)
+                            }
+                            if (prid) tags.push(tag("Creator", prid))
+                            tags.push(tag("Payment-Mode", paymentsMap[payment]))
+                            if (payment === "single") {
+                              tags.push(tag("Payment-Address", recipient))
+                            }
+                            let _fraction = "1"
+                            if (isFractional === "yes") {
+                              _fraction = Number(fraction).toString()
+                            }
+                            token = token.replace(/\<BALANCE\>/g, _fraction)
+                            let _access = accessesMap[access]
+                            if (access === "one-time")
+                              _access += "-" + accessFee
+                            tags.push(tag("Access-Fee", _access))
+
+                            let _derivations = allowsMap[derivations]
+                            if (derivations === "allowed") {
+                              if (derivationTerm === "revenue") {
+                                _derivations += `-${dtMap[derivationTerm].split(" ").join("-")}-${derivationShare}`
+                              } else if (
+                                derivationTerm === "monthly" ||
+                                derivationTerm === "one-time"
+                              ) {
+                                _derivations += `-${dtMap[derivationTerm].split(" ").join("-")}-${derivationFee}`
+                              } else {
+                                _derivations += `-${dtMap[derivationTerm].split(" ").join("-")}-0`
+                              }
+                            }
+                            tags.push(tag("Derivations", _derivations))
+                            let _commercial = allowsMap[commercial]
+                            if (commercial === "allowed") {
+                              if (commercialTerm === "revenue") {
+                                _commercial += `-${ctMap[commercialTerm].split(" ").join("-")}-${commercialShare}`
+                              } else {
+                                _commercial += `-${ctMap[commercialTerm].split(" ").join("-")}-${commercialFee}`
+                              }
+                            }
+                            tags.push(tag("Commercial-Use", _commercial))
+                            let _training = allowsMap[training]
+                            if (training === "allowed") {
+                              _training += `-${ttMap[trainingTerm].split(" ").join("-")}-${trainingFee}`
+                            }
+                            tags.push(tag("Data-Model-Training", _training))
+                            tags.push(
+                              tag(
+                                "Render-With",
+                                "yXXAop3Yxm8QlZRzP46oRxZjCBp88YTpoSTPlTr4TcQ",
+                              ),
+                            )
+                            const { error, pid } = await note.spawn(md, tags)
                             if (error) {
                               alert("something went wrong")
                             } else {
-                              const { error: error1, res: res1 } =
-                                await note.allow()
-                              if (error1) {
+                              await wait(5000)
+                              let data = await fetch("./atomic-note.lua").then(
+                                r => r.text(),
+                              )
+                              data += "\n" + token
+                              const { error, res } = await note.eval(data)
+                              if (error) {
                                 alert("something went wrong")
                               } else {
-                                const { error: error2, res: res2 } =
-                                  await note.init()
-                                if (error2) {
+                                const { error: error1, res: res1 } =
+                                  await note.allow()
+                                if (error1) {
                                   alert("something went wrong")
                                 } else {
-                                  let _notes = (await lf.getItem("notes")) ?? []
-                                  _notes.unshift({
-                                    id: pid,
-                                    title: title,
-                                    date,
-                                  })
-                                  await lf.setItem("notes", _notes)
-                                  setNotes(_notes)
-                                  to = true
-                                  if (prid) {
-                                    const { error: error3, res: res3 } =
-                                      await note.add(prid)
-                                  }
-                                  if (pub !== "None") {
-                                    const book = new Notebook({
-                                      wallet: window.arweaveWallet,
-                                      pid: pub,
+                                  const { error: error2, res: res2 } =
+                                    await note.init()
+                                  if (error2) {
+                                    alert("something went wrong")
+                                  } else {
+                                    let _notes =
+                                      (await lf.getItem("notes")) ?? []
+                                    _notes.unshift({
+                                      id: pid,
+                                      title: title,
+                                      date,
                                     })
-                                    const { res: res4, error: error4 } =
-                                      await book.update(pid)
+                                    await lf.setItem("notes", _notes)
+                                    setNotes(_notes)
+                                    to = true
+                                    if (prid) {
+                                      const { error: error3, res: res3 } =
+                                        await note.add(prid)
+                                    }
+                                    if (pub !== "None") {
+                                      const book = new Notebook({
+                                        wallet: window.arweaveWallet,
+                                        pid: pub,
+                                      })
+                                      const { res: res4, error: error4 } =
+                                        await book.update(pid)
+                                    }
+                                    setTimeout(() => {
+                                      navigate(`/n/${pid}`)
+                                      setTab("Info")
+                                      setUpdatingArticle(false)
+                                    }, 2000)
                                   }
-                                  setTimeout(() => {
-                                    navigate(`/n/${pid}`)
-                                    setTab("Info")
-                                    setUpdatingArticle(false)
-                                  }, 2000)
                                 }
                               }
                             }
+                          } catch (e) {
+                            console.log(e)
+                            alert("something went wrong")
                           }
-                        } catch (e) {
-                          console.log(e)
-                          alert("something went wrong")
-                        }
-                        setUpdatingArticle(to)
-                      }}
-                    >
-                      {updatingArticle ? circleNotch : "Create New Atomic Note"}
-                    </Button>
-                  )}
+                          setUpdatingArticle(to)
+                        }}
+                      >
+                        {updatingArticle
+                          ? circleNotch
+                          : "Create New Atomic Note"}
+                      </Button>
+                    )}
+                  </Flex>
                 </Box>
               )}
               {tab !== "Versions" ? null : (

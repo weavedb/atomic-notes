@@ -132,6 +132,23 @@ class Note {
     }
     return { error, res }
   }
+  async info() {
+    let error = null
+    let res = null
+    let tags = [action("Info")]
+    try {
+      const _res = await dryrun({
+        process: this.pid,
+        tags,
+        signer: this.signer,
+      })
+      res = JSON.parse(_res.Messages[0].Data)
+      if (!res) error = "something went wrong"
+    } catch (e) {
+      error = e
+    }
+    return { error, res }
+  }
 
   async list() {
     let error = null
