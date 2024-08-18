@@ -3,9 +3,11 @@ import { RouterProvider, createHashRouter } from "react-router-dom"
 import { ChakraProvider } from "@chakra-ui/react"
 import ReactDOM from "react-dom/client"
 import App from "./App.jsx"
-import Article from "./pages/Article"
-import Admin from "./pages/Admin"
+import Note from "./pages/Note"
+import User from "./pages/User"
 import AtomicNote from "./pages/AtomicNote"
+import Book from "./pages/Book"
+import CreateBook from "./pages/CreateBook"
 
 const router = createHashRouter([
   {
@@ -13,16 +15,24 @@ const router = createHashRouter([
     element: <App />,
   },
   {
-    path: "/a/:id",
-    element: <Article />,
+    path: "/u/:id",
+    element: <User />,
   },
   {
-    path: "/admin",
-    element: <Admin />,
+    path: "/n/:id",
+    element: <Note />,
   },
   {
-    path: "/atomic-note/:pid",
+    path: "/b/:id",
+    element: <Book />,
+  },
+  {
+    path: "/n/:pid/edit",
     element: <AtomicNote />,
+  },
+  {
+    path: "/b/:pid/edit",
+    element: <CreateBook />,
   },
 ])
 

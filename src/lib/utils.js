@@ -1,5 +1,6 @@
 import { dryrun } from "@permaweb/aoconnect"
-
+import lf from "localforage"
+import { fromPairs, map, prop } from "ramda"
 const getArticles = async ({ limit, skip } = {}) => {
   let tags = [{ name: "Action", value: "List" }]
   if (limit) tags.push({ name: "limit", value: limit.toString() })
@@ -41,5 +42,168 @@ const defaultProfile = profile => {
     }
   )
 }
+const action = value => tag("Action", value)
+const tag = (name, value) => ({ name, value })
+const wait = ms => new Promise(res => setTimeout(() => res(), ms))
 
-export { getArticles, getProfile, defaultProfile, ao, arweave_logo }
+const getAoProf = async prid => {
+  let pr = null
+  const _res2 = await dryrun({
+    process: "SNy4m-DrqxWl01YqGM4sxI8qCni-58re8uuJLvZPypY",
+    tags: [action("Get-Metadata-By-ProfileIds")],
+    data: JSON.stringify({ ProfileIds: [prid] }),
+  })
+  if (_res2?.Messages?.[0]?.Data) {
+    const profiles = JSON.parse(_res2.Messages[0].Data)
+    pr = fromPairs(profiles.map(obj => [obj.ProfileId, obj]))[prid]
+  }
+  return pr
+}
+
+const getInfo = async prid => {
+  const res = await dryrun({
+    process: prid,
+    tags: [action("Info")],
+  })
+  try {
+    return JSON.parse(res?.Messages?.[0]?.Data)
+  } catch (e) {}
+  return null
+}
+
+const getAoProfile = async address => {
+  let pr = await getProfileId(address)
+  const prid = await getProfileId(address)
+  if (prid) {
+    const _res2 = await dryrun({
+      process: "SNy4m-DrqxWl01YqGM4sxI8qCni-58re8uuJLvZPypY",
+      tags: [action("Get-Metadata-By-ProfileIds")],
+      data: JSON.stringify({ ProfileIds: [prid] }),
+    })
+    if (_res2?.Messages?.[0]?.Data) {
+      const profiles = JSON.parse(_res2.Messages[0].Data)
+      pr = fromPairs(profiles.map(obj => [obj.ProfileId, obj]))[prid]
+    }
+  }
+  return pr
+}
+const getProfileId = async address => {
+  let pr = null
+  const _res = await dryrun({
+    process: "SNy4m-DrqxWl01YqGM4sxI8qCni-58re8uuJLvZPypY",
+    tags: [action("Get-Profiles-By-Delegate")],
+    data: JSON.stringify({ Address: address }),
+  })
+  if (_res?.Messages?.[0]?.Data) {
+    const profile = JSON.parse(_res.Messages[0].Data)
+    if (profile[0]) {
+      pr = profile[0].ProfileId
+    }
+  }
+  return pr
+}
+
+const getProf = ({ address, setAddress, setProfile, setInit }) => {
+  ;(async () => {
+    if (address) {
+      let _profile = await lf.getItem(`profile-${address}`)
+      if (_profile) {
+        setProfile(_profile)
+        setInit(true)
+      }
+      _profile = await getAoProfile(address)
+      setProfile(_profile)
+      if (_profile) {
+        await lf.setItem(`profile-${address}`, _profile)
+      } else {
+        alert("You have no AO profile. Create one on BazAR.")
+        await lf.removeItem(`address`)
+        setAddress(null)
+      }
+      setInit(true)
+    }
+  })()
+}
+const getAddr = ({ setAddress, setInit }) => {
+  ;(async () => {
+    const userAddress = await lf.getItem("address")
+    if (userAddress) {
+      setAddress(userAddress)
+    } else {
+      setInit(true)
+    }
+  })()
+}
+
+const getNotes = async pids => {
+  const query = `query {
+    transactions(ids: [${map(v => `"${v}"`)(pids).join(",")}], tags: { name: "Asset-Type", values: ["Atomic-Note"]}) {
+        edges {
+            node {
+                id
+                owner { address }
+                tags { name value }
+            }
+        }
+    }
+}`
+  const res = await fetch("https://arweave.net/graphql", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query }),
+  }).then(r => r.json())
+  return map(prop("node"))(res?.data?.transactions?.edges ?? [])
+}
+const getBooks = async pids => {
+  const query = `query {
+    transactions(ids: [${map(v => `"${v}"`)(pids).join(",")}], tags: { name: "Collection-Type", values: ["Atomic-Notes"]}) {
+        edges {
+            node {
+                id
+                owner { address }
+                tags { name value }
+            }
+        }
+    }
+}`
+  const res = await fetch("https://arweave.net/graphql", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query }),
+  }).then(r => r.json())
+  return map(prop("node"))(res?.data?.transactions?.edges ?? [])
+}
+
+const tags = tags => fromPairs(map(v => [v.name, v.value])(tags))
+const ltags = tags => fromPairs(map(v => [v.name.toLowerCase(), v.value])(tags))
+const badWallet = async addr => {
+  let isValid = false
+  try {
+    await window.arweaveWallet.connect(["ACCESS_ADDRESS", "SIGN_TRANSACTION"])
+    const addr2 = await window.arweaveWallet.getActiveAddress()
+    isValid = addr === addr2
+  } catch (e) {}
+  if (!isValid) alert(`The wrong wallet: use ${addr} or reconnect the wallet.`)
+  return !isValid
+}
+export {
+  badWallet,
+  getBooks,
+  ltags,
+  tags,
+  getNotes,
+  getAddr,
+  getAoProfile,
+  getProf,
+  wait,
+  getArticles,
+  getProfile,
+  getProfileId,
+  defaultProfile,
+  ao,
+  arweave_logo,
+  action,
+  tag,
+  getAoProf,
+  getInfo,
+}

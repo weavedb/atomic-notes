@@ -199,7 +199,6 @@ class Note {
         signer: this.signer,
       })
       const _res = await result({ message: mid, process: this.pid })
-      console.log(_res)
       res = _res.Messages[0]
       if (!res) error = "something went wrong"
     } catch (e) {
