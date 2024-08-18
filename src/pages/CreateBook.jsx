@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import Header from "../components/Header"
+import NotebookCard from "../components/NotebookCard"
 import lf from "localforage"
 import Arweave from "arweave"
 import "@mdxeditor/editor/style.css"
@@ -33,6 +34,7 @@ import {
   action,
   tag,
   badWallet,
+  validAddress,
 } from "../lib/utils"
 
 import {
@@ -203,21 +205,22 @@ function App(a) {
 
   useEffect(() => {
     ;(async () => {
-      const info = await getInfo(pid)
-      if (info) {
-        setMetadata(info)
-        setNotes(
-          o(
-            sortBy(v => v["date-created"] * -1),
-            map(v => {
-              return { ...ltags(v.tags), id: v.id, owner: v.owner.address }
-            }),
-          )(await getNotes(info.Assets)),
-        )
+      if (pid !== "new") {
+        const info = await getInfo(pid)
+        if (info) {
+          setMetadata(info)
+          setNotes(
+            o(
+              sortBy(v => v["date-created"] * -1),
+              map(v => {
+                return { ...ltags(v.tags), id: v.id, owner: v.owner.address }
+              }),
+            )(await getNotes(info.Assets)),
+          )
+        }
       }
     })()
   }, [pid])
-  console.log(metadata)
   useEffect(() => {
     ;(async () => {
       if (address) {
@@ -243,7 +246,10 @@ function App(a) {
   const tabs = pid === "new" ? ["Create"] : [first]
   const tabs3 = ["Publication"]
 
-  const ok = !/^\s*$/.test(title)
+  const ok =
+    !/^\s*$/.test(title) &&
+    (thumbnail === "" || validAddress(thumbnail)) &&
+    (banner === "" || validAddress(banner))
 
   return (
     <>
@@ -343,37 +349,69 @@ function App(a) {
                           />
                         </Box>
                         <Box mb={4}>
-                          <Box mb={2}>Banner</Box>
+                          <Box mb={2}>Banner (Arweave TxID)</Box>
                           <Input
                             bg="white"
-                            disabled={true}
                             value={banner}
-                            sx={{ border: "1px solid #999" }}
+                            color={
+                              banner === "" || validAddress(banner)
+                                ? ""
+                                : "crimson"
+                            }
+                            sx={{
+                              border: `1px solid ${banner === "" || validAddress(banner) ? "#999" : "crimson"}`,
+                            }}
                             onChange={e => setBanner(e.target.value)}
                           />
                         </Box>
                         <Box>
-                          <Box mb={2}>Thumbnail</Box>
+                          <Box mb={2}>Thumbnail (Arweave TxID)</Box>
                           <Input
                             bg="white"
-                            disabled={true}
                             value={thumbnail}
-                            sx={{ border: "1px solid #999" }}
+                            color={
+                              thumbnail === "" || validAddress(thumbnail)
+                                ? ""
+                                : "crimson"
+                            }
+                            sx={{
+                              border: `1px solid ${thumbnail === "" || validAddress(thumbnail) ? "#999" : "crimson"}`,
+                            }}
                             onChange={e => setThumbnail(e.target.value)}
                           />
                         </Box>
                       </>
                     )}
                   </Box>
+                  {!banner ? null : (
+                    <Box
+                      h="200px"
+                      mt={6}
+                      bg="#f6f6f7"
+                      sx={{
+                        backgroundImage: `url(https://arweave.net/${banner})`,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                      }}
+                    ></Box>
+                  )}
+                  {!profile ? null : (
+                    <NotebookCard
+                      nolinks={true}
+                      note={{ title, description: desc, banner, thumbnail }}
+                    />
+                  )}
+
                   <Button
+                    mb={6}
                     w="100%"
                     mt={5}
                     sx={{
                       opacity: ok ? 1 : 0.5,
                       borderRadius: "3px",
                       cursor: ok ? "pointer" : "default",
-                      ":hover": { opacity: 0.75 },
-                      border: "1px solid #999",
+                      border: "1px solid #222326",
+                      ":hover": { bg: "#f6f6f7" },
                       bg: "white",
                     }}
                     onClick={async () => {
@@ -411,12 +449,21 @@ function App(a) {
                         let tags = [
                           tag("Title", title),
                           tag("Description", desc),
+                          tag("Thumbnail", thumbnail),
+                          tag("Banner", banner),
                           tag("Date-Created", Number(date).toString()),
                           action("Add-Collection"),
                           tag("Profile-Creator", prid),
                           tag("Creator", address),
                           tag("Collection-Type", "Atomic-Notes"),
                         ]
+                        if (!/^\s*$/.test(thumbnail)) {
+                          tag("Thumbnail", thumbnail)
+                        }
+                        if (!/^\s*$/.test(banner)) {
+                          tag("Banner", banner)
+                        }
+
                         const { error, pid } = await pub.spawn(tags)
                         if (error) {
                           alert("something went wrong")
@@ -429,11 +476,30 @@ function App(a) {
                             to = true
                             const { error: error3, res: res3 } =
                               await pub.add(prid)
-                            console.log(res3, error3)
-                            setTimeout(() => {
-                              navigate(`/b/${pid}`)
-                              setUpdatingArticle(false)
-                            }, 2000)
+                            if (error3) {
+                              alert("something went wrong")
+                            } else {
+                              let tags2 = [
+                                tag("Name", title),
+                                tag("Description", desc),
+                                tag("Thumbnail", thumbnail),
+                                tag("Banner", banner),
+                                tag("DateCreated", Number(date).toString()),
+                                action("Add-Collection"),
+                                tag("Creator", prid),
+                                tag("CollectionId", pid),
+                              ]
+                              const { error: error4, res: res4 } =
+                                await pub.register(tags2)
+                              if (error4) {
+                                alert("something went wrong")
+                              } else {
+                                setTimeout(async () => {
+                                  navigate(`/b/${pid}`)
+                                  setUpdatingArticle(false)
+                                }, 2000)
+                              }
+                            }
                           }
                         }
                       } catch (e) {

@@ -42,6 +42,11 @@ function Header({
       }}
       mb={4}
     >
+      <style>{`
+body, html, #root{
+  height: 100%;
+}`}</style>
+
       <Flex
         px={3}
         maxW="854px"

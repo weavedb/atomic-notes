@@ -2,11 +2,14 @@ local bint = require('.bint')(256)
 local json = require('json')
 
 if Name ~= '<NAME>' then Name = '<NAME>' end
+if Description ~= '<DESCRIPTION>' then Description = '<DESCRIPTION>' end
+if Thumbnail ~= '<THUMBNAIL>' then Thumbnail = '<THUMBNAIL>' end
 --if Collection ~= '<COLLECTION>' then Collection = '<COLLECTION>' end
 if Creator ~= '<CREATOR>' then Creator = '<CREATOR>' end
 if Ticker ~= '<TICKER>' then Ticker = '<TICKER>' end
 if Denomination ~= '<DENOMINATION>' then Denomination = '<DENOMINATION>' end
 if not Balances then Balances = { ['<CREATOR>'] = '<BALANCE>' } end
+if DateCreated ~= '<DATECREATED>' then DateCreated = '<DATECREATED>' end
 
 Transferable = true
 
@@ -38,11 +41,13 @@ Handlers.add('Info', Handlers.utils.hasMatchingTag('Action', 'Info'), function(m
 		Target = msg.From,
 		Action = 'Read-Success',
 		Data = json.encode({
-			Name = Name,
+		        Name = Name,
+		        Description = Description,
 			Ticker = Ticker,
 			Denomination = Denomination,
 			Balances = Balances,
-			Transferable = Transferable
+			Transferable = Transferable,
+			Thumbnail = Thumbnail
 		})
 	})
 end)

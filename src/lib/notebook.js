@@ -21,8 +21,10 @@ class Notebook {
     wallet,
     module = "cNlipBptaF9JeFAf4wUmpi43EojNanIBos3EfNrEOWo",
     scheduler = "_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA",
+    registry = "TFWDmf8a3_nw43GCm_CuYlYoylHAjCcFGbgHfDaGcsg",
     pid,
   }) {
+    this.registry = registry
     this.pid = pid
     this.wallet = wallet
     this.signer = createDataItemSigner(this.wallet)
@@ -86,6 +88,28 @@ class Notebook {
       if (!res) error = "something went wrong"
     } catch (e) {
       error = e
+    }
+    return { error, mid, res }
+  }
+
+  async register(tags) {
+    let error = null
+    let mid = null
+    let res = null
+    try {
+      mid = await message({
+        process: this.registry,
+        tags: tags,
+        signer: this.signer,
+      })
+      console.log(mid)
+      const _res = await result({ message: mid, process: this.registry })
+      res = _res.Messages[0]
+      console.log(res)
+      if (!res) error = "something went wrong"
+    } catch (e) {
+      error = e
+      console.log(e)
     }
     return { error, mid, res }
   }

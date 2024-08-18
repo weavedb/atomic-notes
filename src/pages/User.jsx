@@ -3,7 +3,9 @@ import Notebook from "../lib/notebook"
 import { Link } from "react-router-dom"
 import { useState, useEffect } from "react"
 import Header from "../components/Header"
-import { AddIcon } from "@chakra-ui/icons"
+import NoteCard from "../components/NoteCard"
+import { AddIcon, EditIcon } from "@chakra-ui/icons"
+
 import {
   getBooks,
   getNotes,
@@ -50,6 +52,8 @@ function User({}) {
   const [books, setBooks] = useState([])
   const [bookmap, setBookMap] = useState({})
   const [notemap, setNoteMap] = useState({})
+  const [assetmap, setAssetMap] = useState({})
+
   useEffect(() => getAddr({ setAddress, setInit }), [])
   useEffect(
     () => getProf({ address, setProfile, setInit, setAddress }),
@@ -96,7 +100,17 @@ function User({}) {
       setBookMap(bookmap)
     })()
   }, [books])
-
+  /*
+  useEffect(() => {
+    ;(async () => {
+      let assetmap = {}
+      for (let v of notes) {
+        assetmap[v.id] = await getInfo(v.id)
+        setAssetMap(assetmap)
+      }
+    })()
+  }, [notes])
+  */
   const isCreator = id === profile?.ProfileId
   return (
     <>
@@ -159,126 +173,51 @@ function User({}) {
                       const _books = notemap[v.id] ?? []
                       const bids = pluck("id", books)
                       const diff = difference(bids, _books)
+                      let notebooks = []
+                      for (let v2 of notemap[v.id] ?? []) {
+                        if (bookmap[v2])
+                          notebooks.push({ id: v2, ...bookmap[v2] })
+                      }
+                      let _note = v
+                      if (assetmap[v.id]) {
+                        _note.thumbnail = assetmap[v.id].Thumbnail
+                      }
+                      const addToNotebook = v3 => async () => {
+                        if (await badWallet(address)) return
+                        const book = new Notebook({
+                          wallet: window.arweaveWallet,
+                          pid: v3,
+                        })
+                        const { res, error } = await book.update(v.id)
+                        const status = tags(res?.Tags || []).Status
+                        if (status === "Success") {
+                          let _map = clone(notemap)
+                          let _bmap = clone(bookmap)
+                          _map[v.id] ??= []
+                          _map[v.id].push(v3)
+                          setNoteMap(_map)
+                          if (_bmap[v3]) {
+                            _bmap[v3].Assets.push(v.id)
+                            setBookMap(_bmap)
+                          }
+                        } else {
+                          alert("something went wrong")
+                        }
+                      }
                       return (
-                        <Flex
-                          p={4}
-                          sx={{
-                            borderBottom: "1px solid rgb(226,232,240)",
-                            cursor: "pointer",
-                          }}
-                        >
-                          <Link to={`/n/${v.id}`}>
-                            <Card variant="unstyled">
-                              <CardHeader>
-                                <Flex spacing="4">
-                                  <Flex
-                                    flex="1"
-                                    gap="4"
-                                    alignItems="center"
-                                    flexWrap="wrap"
-                                  >
-                                    <Box>
-                                      <Heading mb={1} size="md">
-                                        {v.title}
-                                      </Heading>
-                                      <Text mb={1}>{v.description}</Text>
-                                      <Flex align="center" mt={2}>
-                                        <Text color="#999" fontSize="xs">
-                                          {dayjs(v["date-created"] * 1).format(
-                                            "MMM DD",
-                                          )}
-                                        </Text>
-                                        {map(v2 => {
-                                          const _book = bookmap[v2]
-                                          return !_book ? null : (
-                                            <Tag
-                                              size="sm"
-                                              ml={4}
-                                              sx={{
-                                                ":hover": { opacity: 0.75 },
-                                              }}
-                                              onClick={e => {
-                                                e.preventDefault()
-                                                navigate(`/b/${v2}`)
-                                              }}
-                                            >
-                                              {_book.Name}
-                                            </Tag>
-                                          )
-                                        })(notemap[v.id] ?? [])}
-                                      </Flex>
-                                    </Box>
-                                  </Flex>
-                                </Flex>
-                              </CardHeader>
-                            </Card>
-                          </Link>
-                          <Link to={`/n/${v.id}`} style={{ flex: 1 }}>
-                            <Box />
-                          </Link>
-                          {!isCreator || diff.length === 0 ? null : (
-                            <Box>
-                              <Menu>
-                                <MenuButton
-                                  size="sm"
-                                  colorScheme="gray"
-                                  variant="outline"
-                                  as={IconButton}
-                                  icon={<AddIcon />}
-                                  sx={{
-                                    ":hover": {
-                                      cursor: "pointer",
-                                      opacity: 0.75,
-                                    },
-                                  }}
-                                />
-                                <MenuList>
-                                  {map(v3 => {
-                                    const v2 = bookmap[v3]
-                                    return !v2 ? null : (
-                                      <MenuItem
-                                        onClick={async () => {
-                                          if (await badWallet(address)) return
-                                          const book = new Notebook({
-                                            wallet: window.arweaveWallet,
-                                            pid: v3,
-                                          })
-                                          const { res, error } =
-                                            await book.update(v.id)
-                                          const status = tags(
-                                            res?.Tags || [],
-                                          ).Status
-                                          if (status === "Success") {
-                                            let _map = clone(notemap)
-                                            let _bmap = clone(bookmap)
-                                            _map[v.id] ??= []
-                                            _map[v.id].push(v3)
-                                            setNoteMap(_map)
-                                            if (_bmap[v3]) {
-                                              _bmap[v3].Assets.push(v.id)
-                                              setBookMap(_bmap)
-                                            }
-                                          } else {
-                                            alert("something went wrong")
-                                          }
-                                        }}
-                                      >
-                                        <Box
-                                          fontSize="12px"
-                                          mr={4}
-                                          my={1}
-                                          pr={3}
-                                        >
-                                          {v2.Name}
-                                        </Box>
-                                      </MenuItem>
-                                    )
-                                  })(diff)}
-                                </MenuList>
-                              </Menu>
-                            </Box>
-                          )}
-                        </Flex>
+                        <>
+                          <NoteCard
+                            addToNotebook={addToNotebook}
+                            bookmap={bookmap}
+                            diff={diff}
+                            isCreator={isCreator}
+                            navigate={navigate}
+                            notebooks={notebooks}
+                            note={_note}
+                            profile={user}
+                            variant="line"
+                          />
+                        </>
                       )
                     })(notes)}
                   </TabPanel>
@@ -301,7 +240,6 @@ function User({}) {
                                   {!bmap ? null : (
                                     <Avatar
                                       mr={4}
-                                      name={user.DisplayName}
                                       src={`https://arweave.net/${bmap.Thumbnail}`}
                                       size="xl"
                                     />
