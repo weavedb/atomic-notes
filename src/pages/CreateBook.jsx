@@ -17,6 +17,9 @@ import {
   Flex,
   Box,
   Image,
+  FormControl,
+  FormLabel,
+  Switch,
 } from "@chakra-ui/react"
 import { useParams } from "react-router-dom"
 import { Link } from "react-router-dom"
@@ -177,6 +180,7 @@ function App(a) {
 
   const [articles, setArticles] = useState([])
   const [title, setTitle] = useState("")
+  const [bazar, setBazar] = useState(false)
   const [desc, setDesc] = useState("")
   const [banner, setBanner] = useState(
     "eXCtpVbcd_jZ0dmU2PZ8focaKxBGECBQ8wMib7sIVPo",
@@ -380,6 +384,20 @@ function App(a) {
                             onChange={e => setThumbnail(e.target.value)}
                           />
                         </Box>
+                        <FormControl display="flex" alignItems="center" mt={4}>
+                          <FormLabel
+                            htmlFor="email-alerts"
+                            mb="0"
+                            fontSize="12px"
+                          >
+                            Add to BazAR registry?
+                          </FormLabel>
+                          <Switch
+                            colorScheme="gray"
+                            isChecked={bazar}
+                            onChange={e => setBazar(!bazar)}
+                          />
+                        </FormControl>
                       </>
                     )}
                   </Box>
@@ -479,20 +497,28 @@ function App(a) {
                             if (error3) {
                               alert("something went wrong")
                             } else {
-                              let tags2 = [
-                                tag("Name", title),
-                                tag("Description", desc),
-                                tag("Thumbnail", thumbnail),
-                                tag("Banner", banner),
-                                tag("DateCreated", Number(date).toString()),
-                                action("Add-Collection"),
-                                tag("Creator", prid),
-                                tag("CollectionId", pid),
-                              ]
-                              const { error: error4, res: res4 } =
-                                await pub.register(tags2)
-                              if (error4) {
-                                alert("something went wrong")
+                              if (bazar) {
+                                let tags2 = [
+                                  tag("Name", title),
+                                  tag("Description", desc),
+                                  tag("Thumbnail", thumbnail),
+                                  tag("Banner", banner),
+                                  tag("DateCreated", Number(date).toString()),
+                                  action("Add-Collection"),
+                                  tag("Creator", prid),
+                                  tag("CollectionId", pid),
+                                ]
+
+                                const { error: error4, res: res4 } =
+                                  await pub.register(tags2)
+                                if (error4) {
+                                  alert("something went wrong")
+                                } else {
+                                  setTimeout(async () => {
+                                    navigate(`/b/${pid}`)
+                                    setUpdatingArticle(false)
+                                  }, 2000)
+                                }
                               } else {
                                 setTimeout(async () => {
                                   navigate(`/b/${pid}`)

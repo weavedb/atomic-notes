@@ -6,7 +6,7 @@ import {
   dryrun,
   assign,
 } from "@permaweb/aoconnect"
-
+import { searchTag } from "./utils"
 const action = value => tag("Action", value)
 const tag = (name, value) => ({ name, value })
 const getTag = (res, name) => {
@@ -69,6 +69,23 @@ class Notebook {
     }
     return { mid, res, error }
   }
+  async info() {
+    let error = null
+    let res = null
+    let tags = [action("Info")]
+    try {
+      const _res = await dryrun({
+        process: this.pid,
+        tags,
+        signer: this.signer,
+      })
+      res = JSON.parse(_res.Messages[0].Data)
+      if (!res) error = "something went wrong"
+    } catch (e) {
+      error = e
+    }
+    return { error, res }
+  }
 
   async add(creator) {
     let error = null
@@ -102,10 +119,8 @@ class Notebook {
         tags: tags,
         signer: this.signer,
       })
-      console.log(mid)
       const _res = await result({ message: mid, process: this.registry })
       res = _res.Messages[0]
-      console.log(res)
       if (!res) error = "something went wrong"
     } catch (e) {
       error = e
@@ -129,9 +144,10 @@ class Notebook {
         signer: this.signer,
       })
       const _res = await result({ message: mid, process: this.pid })
-      res = _res.Messages[0]
+      res = searchTag(_res, "Status", "Success")
       if (!res) error = "something went wrong"
     } catch (e) {
+      console.log(e)
       error = e
     }
     return { error, mid, res }

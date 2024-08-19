@@ -187,7 +187,28 @@ const badWallet = async addr => {
   return !isValid
 }
 const validAddress = addr => /^[a-zA-Z0-9_-]{43}$/.test(addr)
+
+const gTag = (_tags, name) => {
+  const __tags = tags(_tags)
+  return __tags[name] ?? null
+}
+
+const tagEq = (tags, name, val = null) => {
+  const _tags = gTag(tags, name)
+  return _tags === val
+}
+
+const searchTag = (res, name, val) => {
+  for (let v of res.Messages || []) {
+    if (tagEq(v.Tags || {}, name, val)) return v
+  }
+  return null
+}
+
 export {
+  gTag,
+  tagEq,
+  searchTag,
   validAddress,
   badWallet,
   getBooks,

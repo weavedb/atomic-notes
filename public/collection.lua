@@ -98,7 +98,12 @@ Handlers.add('Update-Assets', Handlers.utils.hasMatchingTag('Action', 'Update-As
 		if data.UpdateType == 'Add' then
 			for _, assetId in ipairs(data.AssetIds) do
 				if not assetExists(assetId) then
-					table.insert(Assets, assetId)
+				        table.insert(Assets, assetId)
+					ao.send({
+					      Target = assetId,
+					      Action = 'Add-To-Collection-Success',
+					      Tags = {}
+					})
 				end
 			end
 		end
@@ -107,7 +112,12 @@ Handlers.add('Update-Assets', Handlers.utils.hasMatchingTag('Action', 'Update-As
 			for _, assetId in ipairs(data.AssetIds) do
 				for i, id in ipairs(Assets) do
 					if id == assetId then
-						table.remove(Assets, i)
+					         table.remove(Assets, i)
+						 ao.send({
+						       Target = assetId,
+						       Action = 'Remove-From-Collection-Success',
+						       Tags = {}
+						 })
 						break
 					end
 				end
