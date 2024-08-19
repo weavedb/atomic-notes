@@ -224,6 +224,8 @@ function AtomicNote(a) {
   const { pid } = useParams()
   const navigate = useNavigate()
   const t = useToast()
+  const fileInputRef = useRef(null)
+
   const [address, setAddress] = useState(null)
   const [profile, setProfile] = useState(null)
   const [init, setInit] = useState(false)
@@ -705,6 +707,48 @@ function AtomicNote(a) {
                           cursor: "pointer",
                           ":hover": { opacity: 0.5 },
                         }}
+                        onClick={() => {
+                          fileInputRef.current.click()
+                        }}
+                      >
+                        <Input
+                          type="file"
+                          display="none"
+                          accept=".md"
+                          ref={fileInputRef}
+                          onChange={e => {
+                            const file = e.target.files[0]
+                            if (file) {
+                              const reader = new FileReader()
+                              reader.onload = e => {
+                                const text = e.target.result
+                                if (tab2 === "Markdown") setTab2("Preview")
+                                ref.current?.setMarkdown("")
+                                setMD(text)
+                                setEditTitle("")
+                                setEditID("")
+                                setEditTxid("")
+                                setDraftID(Date.now())
+                                setTimeout(() => {
+                                  setTab2("Markdown")
+                                  msg(t, "MD imported!", null, "info")
+                                }, 0)
+                              }
+                              reader.readAsText(file)
+                            }
+                          }}
+                        />{" "}
+                        Import MD
+                      </Flex>
+                      <Flex
+                        fontSize="12px"
+                        mr={4}
+                        justify="center"
+                        sx={{
+                          borderRadius: "3px",
+                          cursor: "pointer",
+                          ":hover": { opacity: 0.5 },
+                        }}
                         onClick={async () => {
                           const blob = new Blob([md], { type: "text/markdown" })
                           const link = document.createElement("a")
@@ -761,7 +805,7 @@ function AtomicNote(a) {
                             setDraftID(Date.now())
                             setTimeout(() => {
                               setTab2("Markdown")
-                              msg(t, "Content cleared!")
+                              msg(t, "Content cleared!", null, "info")
                             }, 0)
                           }
                         }}
