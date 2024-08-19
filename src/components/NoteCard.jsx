@@ -13,6 +13,7 @@ import {
   TabPanel,
   Text,
   Flex,
+  Input,
   Box,
   Image,
   Card,
@@ -20,6 +21,7 @@ import {
   Avatar,
   Heading,
 } from "@chakra-ui/react"
+import { getPFP } from "../lib/utils"
 import { Link } from "react-router-dom"
 import { DeleteIcon, AddIcon, EditIcon } from "@chakra-ui/icons"
 import dayjs from "dayjs"
@@ -37,6 +39,9 @@ const NoteCard = ({
   diff = [],
   isCreator,
   bookmap = {},
+  fileInputRef,
+  thumb64,
+  onChange,
 }) => {
   const props =
     variant === "enclosed"
@@ -90,11 +95,7 @@ const NoteCard = ({
               if (!nolinks) navigate(`/u/${profile.ProfileId}`)
             }}
           >
-            <Image
-              mr={2}
-              boxSize="24px"
-              src={`https://arweave.net/${profile.ProfileImage}`}
-            />
+            <Image mr={2} boxSize="24px" src={getPFP(profile)} />
             <Text fontSize="xs" sx={{}}>
               {profile.DisplayName}
             </Text>
@@ -264,7 +265,36 @@ const NoteCard = ({
           )}
         </Flex>
       </Flex>
-      {!note.thumbnail ? null : (
+      {onChange ? (
+        <Box
+          h="100px"
+          w="150px"
+          ml={5}
+          bg="#f6f6f7"
+          sx={{
+            borderRadius: "5px",
+            backgroundImage:
+              note.thumb64 ??
+              (note.thumbnail
+                ? `url(https://arweave.net/${note.thumbnail})`
+                : ""),
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            cursor: "pointer",
+            ":hover": { opacity: 0.75 },
+          }}
+          onClick={() => fileInputRef.current.click()}
+          size="xl"
+        >
+          <Input
+            display="none"
+            type="file"
+            accept="image/*"
+            ref={fileInputRef}
+            onChange={onChange}
+          />
+        </Box>
+      ) : !note.thumbnail ? null : (
         <Box
           h="100px"
           w="150px"

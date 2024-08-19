@@ -16,6 +16,7 @@ import {
   badWallet,
   msg,
   err,
+  getPFP,
 } from "../lib/utils"
 import dayjs from "dayjs"
 import {
@@ -127,11 +128,7 @@ function User({}) {
                                   "MMM DD",
                                 )}
                               </Text>
-                              <Image
-                                mr={2}
-                                src={`https://arweave.net/${user.ProfileImage}`}
-                                boxSize="24px"
-                              />
+                              <Image mr={2} src={getPFP(user)} boxSize="24px" />
                               <Text>{user.DisplayName}</Text>
                             </Flex>
                           </Link>

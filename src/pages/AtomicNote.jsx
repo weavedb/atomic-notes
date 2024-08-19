@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react"
-import { useNavigate } from "react-router-dom"
+import { useLocation, useNavigate } from "react-router-dom"
 import Header from "../components/Header"
 import NoteCard from "../components/NoteCard"
 import lf from "localforage"
@@ -9,7 +9,17 @@ import "../github-markdown.css"
 import markdownIt from "markdown-it"
 import { toHtml } from "hast-util-to-html"
 import { common, createStarryNight } from "@wooorm/starry-night"
-import { AddIcon, EditIcon } from "@chakra-ui/icons"
+import {
+  SpinnerIcon,
+  ArrowRightIcon,
+  ArrowLeftIcon,
+  CheckIcon,
+  InfoOutlineIcon,
+  TimeIcon,
+  AddIcon,
+  EditIcon,
+  CopyIcon,
+} from "@chakra-ui/icons"
 import {
   Spinner,
   AbsoluteCenter,
@@ -96,6 +106,7 @@ import {
   validAddress,
   msg,
   err,
+  getPFP,
 } from "../lib/utils"
 import { circleNotch } from "../lib/svgs.jsx"
 import {
@@ -223,8 +234,10 @@ const steps = [
 function AtomicNote(a) {
   const { pid } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const t = useToast()
   const fileInputRef = useRef(null)
+  const fileInputRef2 = useRef(null)
 
   const [address, setAddress] = useState(null)
   const [profile, setProfile] = useState(null)
@@ -264,12 +277,16 @@ function AtomicNote(a) {
   const [articles, setArticles] = useState([])
   const [title, setTitle] = useState("")
   const [desc, setDesc] = useState("")
+
+  const [thumb64, setThumb64] = useState(null)
+  const [thumb8, setThumb8] = useState(null)
   const [thumbnail, setThumbnail] = useState(
     "eXCtpVbcd_jZ0dmU2PZ8focaKxBGECBQ8wMib7sIVPo",
   )
+
   const [id, setId] = useState("")
   const [txid, setTxid] = useState("")
-  const first = pid === "new" ? "Editor" : "Info"
+  const first = pid === "new" ? "Edit" : "Info"
   const [tab, setTab] = useState(first)
   const [tab2, setTab2] = useState("Markdown")
   const [tab3, setTab3] = useState("Note")
@@ -469,6 +486,10 @@ function AtomicNote(a) {
   }, [pid])
 
   useEffect(() => {
+    setTab(first)
+  }, [location.key])
+
+  useEffect(() => {
     ;(async () => {
       if (tab2 === "Preview") {
         const html = await getHTML(md)
@@ -485,15 +506,16 @@ function AtomicNote(a) {
   const isOwner = (address && metadata && metadata.Owner === address) ?? false
   const tabs =
     pid === "new"
-      ? ["Editor", "Create", "Drafts"]
+      ? ["Edit", "Create", "Drafts"]
       : isEditor
-        ? [first, "Versions", "Drafts", "Editor"]
+        ? [first, "Versions", "Drafts", "Edit"]
         : [first]
   const tabs2 = ["Markdown", "Preview"]
   const tabs3 = ["Note", "Tokens", "License"]
 
   const ok =
-    !/^\s*$/.test(title) && (thumbnail === "" || validAddress(thumbnail))
+    !/^\s*$/.test(title) &&
+    (thumb64 || thumbnail === "" || validAddress(thumbnail))
   const ok_editor = validAddress(newEditor)
   const ok_profile = !/^\s*$/.test(name)
   const _profile = defaultProfile(profile)
@@ -557,6 +579,13 @@ function AtomicNote(a) {
   let oks = [ok, true, ok3]
 
   const isCreator = profile && (pid === "new" || isEditor)
+  const icons = {
+    Edit: <EditIcon mr={3} />,
+    Create: <AddIcon mr={3} />,
+    Drafts: <CopyIcon mr={3} />,
+    Info: <InfoOutlineIcon mr={3} />,
+    Versions: <TimeIcon mr={3} />,
+  }
   return (
     <>
       <Header
@@ -575,12 +604,19 @@ function AtomicNote(a) {
               )
             }
             setTab(v)
-            if (v === "Editor") setTab2("Markdown")
+            if (v === "Edit") setTab2("Markdown")
           }}
           variant="line"
           colorScheme="gray"
         >
-          <TabList>{map(v => <Tab>{v}</Tab>)(tabs)}</TabList>
+          <TabList>
+            {map(v => (
+              <Tab sx={{ ":hover": { opacity: 0.75 } }}>
+                {icons[v]}
+                {v}
+              </Tab>
+            ))(tabs)}
+          </TabList>
         </Tabs>
       </Header>
       {!initNote ? (
@@ -610,7 +646,7 @@ function AtomicNote(a) {
         <>
           <Flex minH="100%" direction="column" pt="70px">
             <>
-              {tab !== "Editor" ? null : (
+              {tab !== "Edit" ? null : (
                 <>
                   <Flex mb={4} justify="center">
                     <Flex maxW="830px" width="100%">
@@ -816,14 +852,18 @@ function AtomicNote(a) {
                   </Flex>
                   <Flex mb={4} justify="center">
                     <Flex
-                      h="40px"
+                      h="45px"
+                      bg="#f6f6f7"
                       align="center"
                       maxW="830px"
                       width="100%"
                       fontSize="12px"
-                      py={2}
                       px={4}
-                      sx={{ borderRadius: "3px", border: "1px solid #4A5568" }}
+                      sx={{
+                        borderRadius: "3px",
+                        borderTop: "2px solid #4A5568",
+                        borderBottom: "2px solid #4A5568",
+                      }}
                     >
                       {editTxid ? (
                         <Flex w="100%" align="center">
@@ -927,7 +967,7 @@ function AtomicNote(a) {
                               mb={4}
                               p={6}
                               fontSize="12px"
-                              bg="#f0f0f0"
+                              bg="#f6f6f7"
                               sx={{ borderRadius: "10px" }}
                             >
                               <Flex>
@@ -967,7 +1007,7 @@ function AtomicNote(a) {
                                         <Image
                                           title={newEditorProfile.ProfileId}
                                           mr={3}
-                                          src={`https://arweave.net/${newEditorProfile.ProfileImage}`}
+                                          src={getPFP(newEditorProfile)}
                                           boxSize="30px"
                                           sx={{ borderRadius: "50%" }}
                                         />
@@ -1037,7 +1077,7 @@ function AtomicNote(a) {
                                       >
                                         <Image
                                           mr={3}
-                                          src={`https://arweave.net/${aoProfiles[v].ProfileImage}`}
+                                          src={getPFP(aoProfiles[v])}
                                           boxSize="30px"
                                         />
                                         <Box
@@ -1077,7 +1117,7 @@ function AtomicNote(a) {
                                         <Flex
                                           bg={
                                             editTxid === v.txid
-                                              ? "#f0f0f0"
+                                              ? "#f6f6f7"
                                               : "white"
                                           }
                                           justify="center"
@@ -1209,17 +1249,28 @@ function AtomicNote(a) {
                         )
                       ) : tab4 === "Main" ? (
                         <>
-                          <Box position="relative" mb={4}>
-                            <Divider />
-                            <AbsoluteCenter
-                              bg="white"
-                              px="4"
-                              fontSize="14px"
-                              color="#aaa"
-                            >
-                              Note Preview
-                            </AbsoluteCenter>
-                          </Box>
+                          <Flex
+                            h="45px"
+                            bg="#f6f6f7"
+                            align="center"
+                            maxW="830px"
+                            width="100%"
+                            fontSize="12px"
+                            px={4}
+                            mb={4}
+                            sx={{
+                              borderRadius: "3px",
+                              borderTop: "2px solid #4A5568",
+                              borderBottom: "2px solid #4A5568",
+                            }}
+                          >
+                            <Flex w="100%" align="center">
+                              <Box as="b" mr={4} fontSize="16px">
+                                {title}
+                              </Box>
+                              <Box flex={1}></Box>
+                            </Flex>
+                          </Flex>
                           <Box mb={2} sx={{ overflowY: "auto" }}>
                             <Box
                               mb={4}
@@ -1236,7 +1287,7 @@ function AtomicNote(a) {
                           <Box
                             p={6}
                             fontSize="12px"
-                            bg="#f0f0f0"
+                            bg="#f6f6f7"
                             sx={{ borderRadius: "10px" }}
                           >
                             <>
@@ -1260,10 +1311,34 @@ function AtomicNote(a) {
                                 />
                               </Box>
                               <Box mb={4}>
-                                <Box mb={2}>Thumbnail (Arweave TxID)</Box>
+                                <Flex mb={2}>
+                                  <Box>Thumbnail (Arweave TxID)</Box>
+                                  <Box flex={1} />
+                                  {!thumb64 ? null : (
+                                    <Box
+                                      sx={{
+                                        textDecoration: "underline",
+                                        cursor: "pointer",
+                                        ":hover": { opacity: 0.75 },
+                                      }}
+                                      onClick={() => {
+                                        setThumb64(null)
+                                        setThumb8(null)
+                                        fileInputRef2.current.value = ""
+                                      }}
+                                    >
+                                      clear the thumbnail
+                                    </Box>
+                                  )}
+                                </Flex>
                                 <Input
+                                  disabled={thumb64}
                                   bg="white"
-                                  value={thumbnail}
+                                  value={
+                                    thumb64
+                                      ? thumb64.slice(0, 60) + "..."
+                                      : thumbnail
+                                  }
                                   color={
                                     thumbnail === "" || validAddress(thumbnail)
                                       ? ""
@@ -1278,10 +1353,31 @@ function AtomicNote(a) {
                             </>
                           </Box>
                           <NoteCard
+                            fileInputRef={fileInputRef2}
                             nolinks={true}
-                            note={{ date, title, description: desc, thumbnail }}
+                            note={{
+                              thumb64,
+                              date,
+                              title,
+                              description: desc,
+                              thumbnail,
+                            }}
                             notebooks={pubmap[pub] ? [pubmap[pub]] : []}
                             profile={profile}
+                            onChange={e => {
+                              const image = e.target.files[0]
+                              if (image) {
+                                const reader = new FileReader()
+                                reader.onload = e => setThumb64(e.target.result)
+                                reader.readAsDataURL(image)
+
+                                const reader2 = new FileReader()
+                                reader2.onload = e => {
+                                  setThumb8({ image, data: e.target.result })
+                                }
+                                reader2.readAsArrayBuffer(image)
+                              }
+                            }}
                           />
                           <Button
                             mt={5}
@@ -1300,12 +1396,42 @@ function AtomicNote(a) {
                               if (!ok || updatingArticle) return
                               if (await badWallet(t, address)) return
                               setUpdatingArticle(true)
+                              const arweave = Arweave.init({
+                                host: "arweave.net",
+                                port: 443,
+                                protocol: "https",
+                              })
                               let to = false
                               try {
+                                let _thumb = thumbnail
+                                if (thumb8) {
+                                  const data = new Uint8Array(thumb8.data)
+                                  const transaction =
+                                    await arweave.createTransaction({
+                                      data,
+                                    })
+                                  transaction.addTag(
+                                    "Content-Type",
+                                    thumb8.image.type,
+                                  )
+                                  await arweave.transactions.sign(transaction)
+                                  const response =
+                                    await arweave.transactions.post(transaction)
+                                  if (response.status === 200) {
+                                    _thumb = transaction.id
+                                    setThumbnail(_thumb)
+                                    setThumb64(null)
+                                    setThumb8(null)
+                                  } else {
+                                    err(t)
+                                    setUpdatingArticle(false)
+                                    return
+                                  }
+                                }
                                 let tokens = [
                                   `Name = '${title.replace(/'/g, "\\'")}'`,
                                   `Description = '${desc.replace(/'/g, "\\'")}'`,
-                                  `Thumbnail = '${thumbnail}'`,
+                                  `Thumbnail = '${_thumb}'`,
                                 ]
                                 const note = new Note({
                                   wallet: window.arweaveWallet,
@@ -1337,7 +1463,7 @@ function AtomicNote(a) {
                       )}
                     </>
                   )}
-                  {tab !== "Editor" ? null : (
+                  {tab !== "Edit" ? null : (
                     <Box
                       mb={2}
                       height={tab2 === "Preview" ? "" : "calc(100vh - 175px)"}
@@ -1440,7 +1566,7 @@ function AtomicNote(a) {
                         mt={6}
                         p={6}
                         fontSize="12px"
-                        bg="#f0f0f0"
+                        bg="#f6f6f7"
                         sx={{ borderRadius: "10px" }}
                       >
                         {tab3 !== "Note" ? null : (
@@ -1465,22 +1591,45 @@ function AtomicNote(a) {
                               />
                             </Box>
                             <Box mb={4}>
-                              <Box mb={2}>Thumbnail (Arweave TxID)</Box>
+                              <Flex mb={2}>
+                                <Box>Thumbnail (Arweave TxID)</Box>
+                                <Box flex={1} />
+                                {!thumb64 ? null : (
+                                  <Box
+                                    sx={{
+                                      textDecoration: "underline",
+                                      cursor: "pointer",
+                                      ":hover": { opacity: 0.75 },
+                                    }}
+                                    onClick={() => {
+                                      setThumb64(null)
+                                      setThumb8(null)
+                                      fileInputRef2.current.value = ""
+                                    }}
+                                  >
+                                    clear the thumbnail
+                                  </Box>
+                                )}
+                              </Flex>
                               <Input
+                                disabled={thumb64}
+                                bg="white"
+                                value={
+                                  thumb64
+                                    ? thumb64.slice(0, 60) + "..."
+                                    : thumbnail
+                                }
                                 color={
                                   thumbnail === "" || validAddress(thumbnail)
                                     ? ""
                                     : "crimson"
                                 }
-                                bg="white"
-                                value={thumbnail}
                                 sx={{
                                   border: `1px solid ${thumbnail === "" || validAddress(thumbnail) ? "#999" : "crimson"}`,
                                 }}
                                 onChange={e => setThumbnail(e.target.value)}
                               />
                             </Box>
-
                             <Box>
                               <Box mb={2}>Notebook</Box>
                               <Select
@@ -1778,12 +1927,34 @@ function AtomicNote(a) {
                         )}
                       </Box>
                       <NoteCard
+                        fileInputRef={fileInputRef2}
                         nolinks={true}
                         note={{ title, description: desc, thumbnail }}
                         notebooks={pubmap[pub] ? [pubmap[pub]] : []}
                         profile={profile}
+                        note={{
+                          thumb64,
+                          date,
+                          title,
+                          description: desc,
+                          thumbnail,
+                        }}
+                        onChange={e => {
+                          const image = e.target.files[0]
+                          if (image) {
+                            const reader = new FileReader()
+                            reader.onload = e => setThumb64(e.target.result)
+                            reader.readAsDataURL(image)
+
+                            const reader2 = new FileReader()
+                            reader2.onload = e => {
+                              setThumb8({ image, data: e.target.result })
+                            }
+                            reader2.readAsArrayBuffer(image)
+                          }
+                        }}
                       />
-                      <Flex>
+                      <Flex mb={6}>
                         {activeStep === 0 ? null : (
                           <Button
                             mt={5}
@@ -1800,6 +1971,7 @@ function AtomicNote(a) {
                               setActiveStep(activeStep - 1)
                               setTab3(tabs3[activeStep - 1])
                             }}
+                            leftIcon={<ArrowLeftIcon mr={2} />}
                           >
                             Previous Step
                           </Button>
@@ -1823,6 +1995,7 @@ function AtomicNote(a) {
                                 setTab3(tabs3[activeStep + 1])
                               }
                             }}
+                            rightIcon={<ArrowRightIcon ml={2} />}
                           >
                             Next Step
                           </Button>
@@ -1845,8 +2018,38 @@ function AtomicNote(a) {
                               if (!ok3 || updatingArticle) return
                               if (await badWallet(t, address)) return
                               setUpdatingArticle(true)
+                              const arweave = Arweave.init({
+                                host: "arweave.net",
+                                port: 443,
+                                protocol: "https",
+                              })
                               let to = false
                               try {
+                                let _thumb = thumbnail
+                                if (thumb8) {
+                                  const data = new Uint8Array(thumb8.data)
+                                  const transaction =
+                                    await arweave.createTransaction({
+                                      data,
+                                    })
+                                  transaction.addTag(
+                                    "Content-Type",
+                                    thumb8.image.type,
+                                  )
+                                  await arweave.transactions.sign(transaction)
+                                  const response =
+                                    await arweave.transactions.post(transaction)
+                                  if (response.status === 200) {
+                                    _thumb = transaction.id
+                                    setThumbnail(_thumb)
+                                    setThumb64(null)
+                                    setThumb8(null)
+                                  } else {
+                                    err(t)
+                                    setUpdatingArticle(false)
+                                    return
+                                  }
+                                }
                                 let token = await fetch(
                                   "./atomic-asset.lua",
                                 ).then(r => r.text())
@@ -1861,10 +2064,7 @@ function AtomicNote(a) {
                                   /\<CREATOR\>/g,
                                   prid ?? address,
                                 )
-                                token = token.replace(
-                                  /\<THUMBNAIL\>/g,
-                                  thumbnail,
-                                )
+                                token = token.replace(/\<THUMBNAIL\>/g, _thumb)
                                 token = token.replace(/\<DESCRIPTION\>/g, desc)
                                 const date = Date.now()
                                 token = token.replace(/\<DATECREATED\>/g, date)
@@ -1887,8 +2087,8 @@ function AtomicNote(a) {
                                   ),
                                   tag("Asset-Type", "Atomic-Note"),
                                 ]
-                                if (!/^\s*$/.test(thumbnail)) {
-                                  tag("Thumbnail", thumbnail)
+                                if (!/^\s*$/.test(_thumb)) {
+                                  tags.push(tag("Thumbnail", _thumb))
                                 }
                                 if (prid) tags.push(tag("Creator", prid))
                                 tags.push(
@@ -2055,7 +2255,7 @@ function AtomicNote(a) {
                                   bg={
                                     (selectedVersion ?? currentVersion) ===
                                     v.version
-                                      ? "#f0f0f0"
+                                      ? "#f6f6f7"
                                       : "white"
                                   }
                                   justify="center"
@@ -2104,7 +2304,7 @@ function AtomicNote(a) {
                               </Box>
                               <Box fontSize="12px" as="span" ml={3}>
                                 <Flex
-                                  bg={editTxid === v.txid ? "#f0f0f0" : "white"}
+                                  bg={editTxid === v.txid ? "#f6f6f7" : "white"}
                                   justify="center"
                                   px={2}
                                   py={1}
@@ -2177,7 +2377,7 @@ function AtomicNote(a) {
                               </Box>
                               <Box fontSize="12px" as="span" ml={4}>
                                 <Flex
-                                  bg={editTxid === v.txid ? "#f0f0f0" : "white"}
+                                  bg={editTxid === v.txid ? "#f6f6f7" : "white"}
                                   justify="center"
                                   px={2}
                                   py={1}
@@ -2269,9 +2469,9 @@ function AtomicNote(a) {
                               <Box mx={3} as="span" fontSize="14px">
                                 updated {dayjs(v.update).format("MM/DD HH:mm")}
                               </Box>
-                              <Box fontSize="12px" as="span">
+                              <Box fontSize="12px" as="span" ml={2}>
                                 <Flex
-                                  bg={editTxid === v.txid ? "#f0f0f0" : "white"}
+                                  bg={editTxid === v.txid ? "#f6f6f7" : "white"}
                                   justify="center"
                                   px={2}
                                   py={1}
@@ -2299,7 +2499,7 @@ function AtomicNote(a) {
                                         ref.current?.setMarkdown(_draft.body)
                                         setDraftID(_draft.draftID)
                                         setMD(_draft.body)
-                                        setTab("Editor")
+                                        setTab("Edit")
                                       }, 0)
                                     }
                                   }}
