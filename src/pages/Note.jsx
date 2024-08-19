@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { useNavigate, useParams } from "react-router-dom"
-import { Flex, Box, Image, Spinner } from "@chakra-ui/react"
+import { useToast, Flex, Box, Image, Spinner } from "@chakra-ui/react"
 import markdownIt from "markdown-it"
 import Note from "../lib/note"
 import { toHtml } from "hast-util-to-html"
@@ -11,12 +11,21 @@ import { dryrun } from "@permaweb/aoconnect"
 import { circleNotch } from "../lib/svgs.jsx"
 import Header from "../components/Header"
 import NoteCard from "../components/NoteCard"
-import { getAoProf, getNotes, tags, getAddr, getProf } from "../lib/utils"
+import {
+  msg,
+  err,
+  getAoProf,
+  getNotes,
+  tags,
+  getAddr,
+  getProf,
+} from "../lib/utils"
 import Notebook from "../lib/notebook"
 
 function Article(a) {
   const { id } = useParams()
   const navigate = useNavigate()
+  const t = useToast()
   const [address, setAddress] = useState(null)
   const [profile, setProfile] = useState(null)
   const [init, setInit] = useState(false)
@@ -26,9 +35,9 @@ function Article(a) {
   const [user, setuser] = useState(null)
   const [initNote, setInitNote] = useState(false)
   const [pubmap, setPubmap] = useState({})
-  useEffect(() => getAddr({ setAddress, setInit }), [])
+  useEffect(() => getAddr({ setAddress, setInit, t }), [])
   useEffect(
-    () => getProf({ address, setProfile, setInit, setAddress }),
+    () => getProf({ address, setProfile, setInit, setAddress, t }),
     [address],
   )
   useEffect(() => {
@@ -110,7 +119,7 @@ function Article(a) {
   return (
     <>
       <Header
-        {...{ address, setAddress, profile, setProfile, init, setInit }}
+        {...{ address, setAddress, profile, setProfile, init, setInit, t }}
       />
       <Flex
         minH="100%"

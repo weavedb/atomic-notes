@@ -103,20 +103,27 @@ const getProfileId = async address => {
   return pr
 }
 
-const getProf = ({ address, setAddress, setProfile, setInit }) => {
+const getProf = ({ address, setAddress, setProfile, setInit, t }) => {
   ;(async () => {
     if (address) {
       let _profile = await lf.getItem(`profile-${address}`)
+      let isCache = false
       if (_profile) {
         setProfile(_profile)
         setInit(true)
+        isCache = true
       }
       _profile = await getAoProfile(address)
       setProfile(_profile)
       if (_profile) {
         await lf.setItem(`profile-${address}`, _profile)
+        if (!isCache) msg(t, "Wallet Connected!")
       } else {
-        alert("You have no AO profile. Create one on BazAR.")
+        err(
+          t,
+          "Wallet Connected!",
+          "You have no AO profile. Create one on BazAR.",
+        )
         await lf.removeItem(`address`)
         setAddress(null)
       }
@@ -176,14 +183,15 @@ const getBooks = async pids => {
 
 const tags = tags => fromPairs(map(v => [v.name, v.value])(tags))
 const ltags = tags => fromPairs(map(v => [v.name.toLowerCase(), v.value])(tags))
-const badWallet = async addr => {
+const badWallet = async (t, addr) => {
   let isValid = false
   try {
     await window.arweaveWallet.connect(["ACCESS_ADDRESS", "SIGN_TRANSACTION"])
     const addr2 = await window.arweaveWallet.getActiveAddress()
     isValid = addr === addr2
   } catch (e) {}
-  if (!isValid) alert(`The wrong wallet: use ${addr} or reconnect the wallet.`)
+  if (!isValid)
+    err(t, "The wrong wallet", `use ${addr} or reconnect the wallet.`)
   return !isValid
 }
 const validAddress = addr => /^[a-zA-Z0-9_-]{43}$/.test(addr)
@@ -205,7 +213,24 @@ const searchTag = (res, name, val) => {
   return null
 }
 
+const msg = (t, title = "Success!", description, status = "success") => {
+  t({
+    title,
+    description,
+    status,
+    isClosable: true,
+  })
+}
+
+const err = (
+  t,
+  title = "something went wrong!",
+  description,
+  status = "success",
+) => msg(t, title, description, "error")
 export {
+  err,
+  msg,
   gTag,
   tagEq,
   searchTag,

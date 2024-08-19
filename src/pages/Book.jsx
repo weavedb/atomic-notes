@@ -14,6 +14,8 @@ import {
   ltags,
   tags,
   badWallet,
+  msg,
+  err,
 } from "../lib/utils"
 import dayjs from "dayjs"
 import {
@@ -31,11 +33,13 @@ import {
   CardHeader,
   Avatar,
   Heading,
+  useToast,
 } from "@chakra-ui/react"
 import { o, sortBy, map, pluck, fromPairs, clone, reject } from "ramda"
 function User({}) {
   const { id } = useParams()
   const navigate = useNavigate()
+  const t = useToast()
   const [address, setAddress] = useState(null)
   const [profile, setProfile] = useState(null)
   const [init, setInit] = useState(false)
@@ -44,9 +48,9 @@ function User({}) {
   const [book, setBook] = useState(null)
   const [assetmap, setAssetMap] = useState({})
 
-  useEffect(() => getAddr({ setAddress, setInit }), [])
+  useEffect(() => getAddr({ setAddress, setInit, t }), [])
   useEffect(
-    () => getProf({ address, setProfile, setInit, setAddress }),
+    () => getProf({ address, setProfile, setInit, setAddress, t }),
     [address],
   )
 
@@ -83,7 +87,7 @@ function User({}) {
   return (
     <>
       <Header
-        {...{ address, setAddress, profile, setProfile, init, setInit }}
+        {...{ address, setAddress, profile, setProfile, init, setInit, t }}
       />
       {!book ? null : (
         <Flex justify="center" pt="60px">
@@ -133,6 +137,26 @@ function User({}) {
                           </Link>
                         )}
                       </Box>
+                      <Box flex={1} />
+                      {!isCreator ? null : (
+                        <Link to={`/b/${id}/edit`}>
+                          <Button
+                            title="Edit"
+                            size="sm"
+                            colorScheme="gray"
+                            variant="outline"
+                            sx={{
+                              border: "1px solid #222326",
+                              ":hover": {
+                                bg: "white",
+                                opacity: 0.75,
+                              },
+                            }}
+                          >
+                            Edit
+                          </Button>
+                        </Link>
+                      )}
                     </Flex>
                   </Flex>
                 </CardHeader>
@@ -152,7 +176,7 @@ function User({}) {
                       const deleteFromNotebook = v => async e => {
                         e.preventDefault()
                         e.stopPropagation()
-                        if (await badWallet(address)) return
+                        if (await badWallet(t, address)) return
                         if (
                           confirm(
                             "Would you like to remove the note from this notebook?",
@@ -168,7 +192,7 @@ function User({}) {
                             let _notes = clone(notes)
                             setNotes(reject(v2 => v2.id === v.id)(_notes))
                           } else {
-                            alert("something went wrong")
+                            err(t, "something went wrong")
                           }
                         }
                       }
