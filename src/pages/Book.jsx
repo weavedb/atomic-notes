@@ -151,6 +151,7 @@ function User({}) {
 
                       const deleteFromNotebook = v => async e => {
                         e.preventDefault()
+                        e.stopPropagation()
                         if (await badWallet(address)) return
                         if (
                           confirm(
@@ -178,6 +179,8 @@ function User({}) {
                           note={_note}
                           profile={profile}
                           variant="line"
+                          isCreator={isCreator}
+                          notebooks={[{ ...book, id }]}
                         />
                       )
                     })(notes)}

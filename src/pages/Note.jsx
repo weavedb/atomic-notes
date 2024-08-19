@@ -12,6 +12,7 @@ import { circleNotch } from "../lib/svgs.jsx"
 import Header from "../components/Header"
 import NoteCard from "../components/NoteCard"
 import { getAoProf, getNotes, tags, getAddr, getProf } from "../lib/utils"
+import Notebook from "../lib/notebook"
 
 function Article(a) {
   const { id } = useParams()
@@ -24,7 +25,7 @@ function Article(a) {
   const [note, setNote] = useState(null)
   const [user, setuser] = useState(null)
   const [initNote, setInitNote] = useState(false)
-
+  const [pubmap, setPubmap] = useState({})
   useEffect(() => getAddr({ setAddress, setInit }), [])
   useEffect(
     () => getProf({ address, setProfile, setInit, setAddress }),
@@ -40,7 +41,15 @@ function Article(a) {
           title: res.Name,
           description: res.Description,
           thumbnail: res.Thumbnail,
+          collections: res.Collections || [],
         })
+        let pubmap = {}
+        for (let v of res.Collections || []) {
+          const nb = new Note({ pid: v })
+          const { error: error2, res: info } = await nb.info()
+          if (!error2) pubmap[v] = info
+        }
+        setPubmap(pubmap)
       }
     })()
   }, [md])
@@ -94,6 +103,10 @@ function Article(a) {
     })()
   }, [id])
   const isCreator = user && user?.ProfileId === profile?.ProfileId
+  let notebooks = []
+  for (let v of note?.collections || []) {
+    if (pubmap[v]) notebooks.push({ ...pubmap[v], id: v })
+  }
   return (
     <>
       <Header
@@ -144,6 +157,7 @@ function Article(a) {
           {!note || !user ? null : (
             <Box py={4}>
               <NoteCard
+                notebooks={notebooks}
                 bazar={true}
                 profile={user}
                 note={note}

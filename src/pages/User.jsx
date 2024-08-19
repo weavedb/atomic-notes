@@ -5,7 +5,7 @@ import { useState, useEffect } from "react"
 import Header from "../components/Header"
 import NoteCard from "../components/NoteCard"
 import { AddIcon, EditIcon } from "@chakra-ui/icons"
-
+import lf from "localforage"
 import {
   getBooks,
   getNotes,
@@ -39,7 +39,17 @@ import {
   Avatar,
   Heading,
 } from "@chakra-ui/react"
-import { o, sortBy, map, pluck, fromPairs, clone, difference } from "ramda"
+import {
+  indexOf,
+  without,
+  o,
+  sortBy,
+  map,
+  pluck,
+  fromPairs,
+  clone,
+  difference,
+} from "ramda"
 function User({}) {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -90,14 +100,41 @@ function User({}) {
       let bookmap = {}
       let notemap = {}
       for (let v of books) {
-        bookmap[v.id] = await getInfo(v.id)
+        const _info = await lf.getItem(`notebook-${v.id}`)
+        if (_info) {
+          bookmap[v.id] = _info
+          for (let v2 of bookmap[v.id].Assets || []) {
+            notemap[v2] ??= []
+            notemap[v2].push(v.id)
+            setNoteMap(notemap)
+          }
+        }
+        setBookMap(bookmap)
+      }
+      for (let v of books) {
+        const info = await getInfo(v.id)
+        if (info) await lf.setItem(`notebook-${v.id}`, info)
+        let exists = []
+        for (let k in notemap) {
+          for (let v2 of notemap[k]) {
+            if (v2 === v.id) exists.push(k)
+          }
+        }
+        const diff = difference(exists, info.Assets)
+        bookmap[v.id] = info
+        for (let v2 of diff) {
+          notemap[v2] ??= []
+          notemap[v2] = without([v.id], notemap[v2])
+        }
         for (let v2 of bookmap[v.id].Assets || []) {
           notemap[v2] ??= []
-          notemap[v2].push(v.id)
+          if (indexOf(v.id, notemap[v2]) === -1) {
+            notemap[v2].push(v.id)
+            setNoteMap(notemap)
+          }
         }
+        setBookMap(bookmap)
       }
-      setNoteMap(notemap)
-      setBookMap(bookmap)
     })()
   }, [books])
   /*

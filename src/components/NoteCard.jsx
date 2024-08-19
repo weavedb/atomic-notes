@@ -104,6 +104,7 @@ const NoteCard = ({
               colorScheme="gray"
               size="sm"
               sx={{
+                cursor: "pointer",
                 ":hover": { opacity: 0.75 },
               }}
               onClick={e => {
@@ -170,7 +171,7 @@ const NoteCard = ({
                     e.stopPropagation()
                   }}
                 >
-                  AO Process
+                  AO
                 </Button>
               </Link>
               <Link target="_blank" to={`https://arweave.net/${note.id}`}>
@@ -191,7 +192,7 @@ const NoteCard = ({
                     e.stopPropagation()
                   }}
                 >
-                  Arwave Tx
+                  Arwave
                 </Button>
               </Link>
               <Link
@@ -215,7 +216,7 @@ const NoteCard = ({
                     e.stopPropagation()
                   }}
                 >
-                  Trade on BazAR
+                  BazAR
                 </Button>
               </Link>
             </>
