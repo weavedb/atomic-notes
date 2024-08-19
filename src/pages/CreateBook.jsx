@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react"
+import Arweave from "arweave"
 import { useNavigate } from "react-router-dom"
 import Header from "../components/Header"
 import NotebookCard from "../components/NotebookCard"
@@ -67,6 +68,9 @@ function App(a) {
   const { pid } = useParams()
   const navigate = useNavigate()
   const t = useToast()
+  const fileInputRef = useRef(null)
+  const fileInputRef2 = useRef(null)
+
   const [address, setAddress] = useState(null)
   const [profile, setProfile] = useState(null)
   const [init, setInit] = useState(false)
@@ -95,6 +99,12 @@ function App(a) {
   const [banner, setBanner] = useState(
     "eXCtpVbcd_jZ0dmU2PZ8focaKxBGECBQ8wMib7sIVPo",
   )
+  const [banner64, setBanner64] = useState(null)
+  const [banner8, setBanner8] = useState(null)
+
+  const [thumb64, setThumb64] = useState(null)
+  const [thumb8, setThumb8] = useState(null)
+
   const [thumbnail, setThumbnail] = useState(
     "lJovHqM9hwNjHV5JoY9NGWtt0WD-5D4gOqNL2VWW5jk",
   )
@@ -166,7 +176,7 @@ function App(a) {
   const ok =
     !/^\s*$/.test(title) &&
     (thumbnail === "" || validAddress(thumbnail)) &&
-    (banner === "" || validAddress(banner))
+    (banner64 || banner === "" || validAddress(banner))
 
   const isCreator =
     profile && (pid === "new" || profile.ProfileId === metadata?.Creator)
@@ -209,7 +219,7 @@ function App(a) {
                     <Box
                       p={6}
                       fontSize="12px"
-                      bg="#f0f0f0"
+                      bg="#f6f6f7"
                       sx={{ borderRadius: "10px" }}
                     >
                       <>
@@ -233,10 +243,32 @@ function App(a) {
                           />
                         </Box>
                         <Box mb={4}>
-                          <Box mb={2}>Banner (Arweave TxID)</Box>
+                          <Flex mb={2}>
+                            <Box>Banner (Arweave TxID)</Box>
+                            <Box flex={1} />
+                            {!banner64 ? null : (
+                              <Box
+                                sx={{
+                                  textDecoration: "underline",
+                                  cursor: "pointer",
+                                  ":hover": { opacity: 0.75 },
+                                }}
+                                onClick={() => {
+                                  setBanner64(null)
+                                  setBanner8(null)
+                                  fileInputRef2.current.value = ""
+                                }}
+                              >
+                                clear the banner
+                              </Box>
+                            )}
+                          </Flex>
                           <Input
+                            disabled={banner64}
                             bg="white"
-                            value={banner}
+                            value={
+                              banner64 ? banner64.slice(0, 60) + "..." : banner
+                            }
                             color={
                               banner === "" || validAddress(banner)
                                 ? ""
@@ -249,10 +281,32 @@ function App(a) {
                           />
                         </Box>
                         <Box>
-                          <Box mb={2}>Thumbnail (Arweave TxID)</Box>
+                          <Flex mb={2}>
+                            <Box>Thumbnail (Arweave TxID)</Box>
+                            <Box flex={1} />
+                            {!thumb64 ? null : (
+                              <Box
+                                sx={{
+                                  textDecoration: "underline",
+                                  cursor: "pointer",
+                                  ":hover": { opacity: 0.75 },
+                                }}
+                                onClick={() => {
+                                  setThumb64(null)
+                                  setThumb8(null)
+                                  fileInputRef2.current.value = ""
+                                }}
+                              >
+                                clear the thumbnail
+                              </Box>
+                            )}
+                          </Flex>
                           <Input
+                            disabled={thumb64}
                             bg="white"
-                            value={thumbnail}
+                            value={
+                              thumb64 ? thumb64.slice(0, 60) + "..." : thumbnail
+                            }
                             color={
                               thumbnail === "" || validAddress(thumbnail)
                                 ? ""
@@ -289,7 +343,6 @@ function App(a) {
                                 Add to BazAR registry?
                               </FormLabel>
                               <Switch
-                                colorScheme="gray"
                                 isChecked={bazar}
                                 onChange={e => setBazar(!bazar)}
                               />
@@ -298,22 +351,67 @@ function App(a) {
                         </FormControl>
                       </>
                     </Box>
-                    {!banner ? null : (
-                      <Box
-                        h="200px"
-                        mt={6}
-                        bg="#f6f6f7"
-                        sx={{
-                          backgroundImage: `url(https://arweave.net/${banner})`,
-                          backgroundSize: "cover",
-                          backgroundPosition: "center",
+                    <Box
+                      h="200px"
+                      mt={6}
+                      bg="#f6f6f7"
+                      sx={{
+                        backgroundImage:
+                          banner64 ??
+                          (banner ? `url(https://arweave.net/${banner})` : ""),
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                        cursor: "pointer",
+                        ":hover": { opacity: 0.75 },
+                      }}
+                      onClick={() => fileInputRef.current.click()}
+                    >
+                      <Input
+                        display="none"
+                        type="file"
+                        accept="image/*"
+                        ref={fileInputRef}
+                        onChange={e => {
+                          const image = e.target.files[0]
+                          if (image) {
+                            const reader = new FileReader()
+                            reader.onload = e => setBanner64(e.target.result)
+                            reader.readAsDataURL(image)
+
+                            const reader2 = new FileReader()
+                            reader2.onload = e => {
+                              setBanner8({ image, data: e.target.result })
+                            }
+                            reader2.readAsArrayBuffer(image)
+                          }
                         }}
-                      ></Box>
-                    )}
+                      />
+                    </Box>
                     {!profile ? null : (
                       <NotebookCard
+                        fileInputRef={fileInputRef2}
                         nolinks={true}
-                        note={{ title, description: desc, banner, thumbnail }}
+                        note={{
+                          thumb64,
+                          title,
+                          description: desc,
+                          banner,
+                          thumbnail,
+                        }}
+                        onChange={e => {
+                          const image = e.target.files[0]
+                          if (image) {
+                            const reader = new FileReader()
+                            reader.onload = e => setThumb64(e.target.result)
+                            reader.readAsDataURL(image)
+
+                            const reader2 = new FileReader()
+                            reader2.onload = e => {
+                              setThumb8({ image, data: e.target.result })
+                            }
+                            reader2.readAsArrayBuffer(image)
+                          }
+                        }}
                       />
                     )}
 
@@ -333,9 +431,66 @@ function App(a) {
                         if (!ok || updatingArticle) return
                         if (await badWallet(t, address)) return
                         setUpdatingArticle(true)
+                        const arweave = Arweave.init({
+                          host: "arweave.net",
+                          port: 443,
+                          protocol: "https",
+                        })
                         let to = false
-                        if (pid === "new") {
-                          try {
+                        try {
+                          let _thumb = thumbnail
+                          if (thumb8) {
+                            const data = new Uint8Array(thumb8.data)
+                            const transaction = await arweave.createTransaction(
+                              {
+                                data,
+                              },
+                            )
+                            transaction.addTag(
+                              "Content-Type",
+                              thumb8.image.type,
+                            )
+                            await arweave.transactions.sign(transaction)
+                            const response =
+                              await arweave.transactions.post(transaction)
+                            if (response.status === 200) {
+                              _thumb = transaction.id
+                              setThumbnail(_thumb)
+                              setThumb64(null)
+                              setThumb8(null)
+                            } else {
+                              err(t)
+                              setUpdatingArticle(false)
+                              return
+                            }
+                          }
+                          let _banner = banner
+                          if (banner8) {
+                            const data = new Uint8Array(banner8.data)
+                            const transaction = await arweave.createTransaction(
+                              {
+                                data,
+                              },
+                            )
+                            transaction.addTag(
+                              "Content-Type",
+                              banner8.image.type,
+                            )
+                            await arweave.transactions.sign(transaction)
+                            const response =
+                              await arweave.transactions.post(transaction)
+                            if (response.status === 200) {
+                              _banner = transaction.id
+                              setBanner(_banner)
+                              setBanner64(null)
+                              setBanner8(null)
+                            } else {
+                              err(t)
+                              setUpdatingArticle(false)
+                              return
+                            }
+                          }
+                          if (pid === "new") {
                             let token = await fetch("./collection.lua").then(
                               r => r.text(),
                             )
@@ -360,27 +515,26 @@ function App(a) {
                               /\<CREATOR\>/g,
                               prid ?? address,
                             )
-                            token = token.replace(/\<BANNER\>/g, banner)
-                            token = token.replace(/\<THUMBNAIL\>/g, thumbnail)
+                            token = token.replace(/\<BANNER\>/g, _banner)
+                            token = token.replace(/\<THUMBNAIL\>/g, _thumb)
                             const pub = new Notebook({
                               wallet: window.arweaveWallet,
                             })
                             let tags = [
                               tag("Title", title),
                               tag("Description", desc),
-                              tag("Thumbnail", thumbnail),
-                              tag("Banner", banner),
+                              tag("Thumbnail", _thumb),
                               tag("Date-Created", Number(date).toString()),
                               action("Add-Collection"),
                               tag("Profile-Creator", prid),
                               tag("Creator", address),
                               tag("Collection-Type", "Atomic-Notes"),
                             ]
-                            if (!/^\s*$/.test(thumbnail)) {
-                              tag("Thumbnail", thumbnail)
+                            if (!/^\s*$/.test(_thumb)) {
+                              tags.push(tag("Thumbnail", _thumb))
                             }
-                            if (!/^\s*$/.test(banner)) {
-                              tag("Banner", banner)
+                            if (!/^\s*$/.test(_banner)) {
+                              tags.push(tag("Banner", _banner))
                             }
 
                             const { error, pid } = await pub.spawn(tags)
@@ -402,8 +556,8 @@ function App(a) {
                                     let tags2 = [
                                       tag("Name", title),
                                       tag("Description", desc),
-                                      tag("Thumbnail", thumbnail),
-                                      tag("Banner", banner),
+                                      tag("Thumbnail", _thumb),
+                                      tag("Banner", _banner),
                                       tag(
                                         "DateCreated",
                                         Number(date).toString(),
@@ -432,19 +586,14 @@ function App(a) {
                                 }
                               }
                             }
-                          } catch (e) {
-                            console.log(e)
-                            alert("something went wrong")
-                          }
-                        } else {
-                          const wait = ms =>
-                            new Promise(res => setTimeout(() => res(), ms))
-                          try {
+                          } else {
+                            const wait = ms =>
+                              new Promise(res => setTimeout(() => res(), ms))
                             let tokens = [
                               `Name = '${title.replace(/'/g, "\\'")}'`,
                               `Description = '${desc.replace(/'/g, "\\'")}'`,
-                              `Thumbnail = '${thumbnail}'`,
-                              `Banner = '${banner}'`,
+                              `Thumbnail = '${_thumb}'`,
+                              `Banner = '${_banner}'`,
                             ]
                             const book = new Notebook({
                               wallet: window.arweaveWallet,
@@ -460,8 +609,8 @@ function App(a) {
                                 let tags2 = [
                                   tag("Name", title),
                                   tag("Description", desc),
-                                  tag("Thumbnail", thumbnail),
-                                  tag("Banner", banner),
+                                  tag("Thumbnail", _thumb),
+                                  tag("Banner", _banner),
                                   tag("DateCreated", metadata.DateCreated),
                                   action("Add-Collection"),
                                   tag("Creator", profile.ProfileId),
@@ -486,11 +635,12 @@ function App(a) {
                                 }, 2000)
                               }
                             }
-                          } catch (e) {
-                            console.log(e)
-                            err(t)
                           }
+                        } catch (e) {
+                          console.log(e)
+                          alert("something went wrong")
                         }
+
                         setUpdatingArticle(to)
                       }}
                     >

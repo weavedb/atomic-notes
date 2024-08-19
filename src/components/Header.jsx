@@ -13,7 +13,7 @@ import {
   MenuOptionGroup,
   MenuDivider,
 } from "@chakra-ui/react"
-import { msg, ao, getAoProfile, getAddr, getProf } from "../lib/utils"
+import { msg, ao, getAoProfile, getAddr, getProf, getPFP } from "../lib/utils"
 import { useParams } from "react-router-dom"
 import { Link } from "react-router-dom"
 import { useState, useEffect } from "react"
@@ -85,7 +85,7 @@ body, html, #root{
                         <Image
                           title={address}
                           ml={4}
-                          src={`https://arweave.net/${profile.ProfileImage}`}
+                          src={getPFP(profile)}
                           sx={{ borderRadius: "50%" }}
                           boxSize="30px"
                         />

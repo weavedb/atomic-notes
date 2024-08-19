@@ -13,6 +13,7 @@ import {
   TabPanel,
   Text,
   Flex,
+  Input,
   Box,
   Image,
   Card,
@@ -39,6 +40,9 @@ const NotebookCard = ({
   diff = [],
   isCreator,
   bookmap = {},
+  fileInputRef,
+  thumb64,
+  onChange,
 }) => {
   const props =
     variant === "enclosed"
@@ -60,7 +64,35 @@ const NotebookCard = ({
       <Card variant="unstyled">
         <CardHeader>
           <Flex spacing="4">
-            {!note.thumbnail ? null : (
+            {onChange ? (
+              <Box
+                boxSize="96px"
+                mr={4}
+                bg="#f6f6f7"
+                sx={{
+                  borderRadius: "50%",
+                  backgroundImage:
+                    note.thumb64 ??
+                    (note.thumbnail
+                      ? `url(https://arweave.net/${note.thumbnail})`
+                      : ""),
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  cursor: "pointer",
+                  ":hover": { opacity: 0.75 },
+                }}
+                onClick={() => fileInputRef.current.click()}
+                size="xl"
+              >
+                <Input
+                  display="none"
+                  type="file"
+                  accept="image/*"
+                  ref={fileInputRef}
+                  onChange={onChange}
+                />
+              </Box>
+            ) : !note.thumbnail ? null : (
               <Avatar
                 mr={4}
                 src={`https://arweave.net/${note.thumbnail}`}

@@ -228,6 +228,10 @@ const err = (
   description,
   status = "success",
 ) => msg(t, title, description, "error")
+const getPFP = profile =>
+  profile.ProfileImage === "None"
+    ? "/arweave.png"
+    : `https://arweave.net/${profile.ProfileImage}`
 export {
   err,
   msg,
@@ -254,4 +258,5 @@ export {
   tag,
   getAoProf,
   getInfo,
+  getPFP,
 }
