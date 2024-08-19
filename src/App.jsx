@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Image, Button, Flex, Box } from "@chakra-ui/react"
+import { Image, Button, Flex, Box, useToast } from "@chakra-ui/react"
 import { Link } from "react-router-dom"
 import { map } from "ramda"
 import { getAddr, getProf } from "./lib/utils"
@@ -15,17 +15,18 @@ function App() {
   const [address, setAddress] = useState(null)
   const [profile, setProfile] = useState(null)
   const [init, setInit] = useState(false)
+  const t = useToast()
 
-  useEffect(() => getAddr({ setAddress, setInit }), [])
+  useEffect(() => getAddr({ setAddress, setInit, t }), [])
   useEffect(
-    () => getProf({ address, setProfile, setInit, setAddress }),
+    () => getProf({ address, setProfile, setInit, setAddress, t }),
     [address],
   )
 
   return (
     <>
       <Header
-        {...{ address, setAddress, profile, setProfile, init, setInit }}
+        {...{ t, address, setAddress, profile, setProfile, init, setInit }}
       />
       <Flex justify="center" pt="60px" h="100%">
         <Flex w="100%" maxW="854px" px={3} pt={4} h="100%" direction="column">

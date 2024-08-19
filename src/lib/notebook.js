@@ -86,7 +86,23 @@ class Notebook {
     }
     return { error, res }
   }
-
+  async get(creator) {
+    let error = null
+    let res = null
+    let tags = [action("Get-Collections-By-User"), tag("Creator", creator)]
+    try {
+      const _res = await dryrun({
+        process: this.registry,
+        tags,
+        signer: this.signer,
+      })
+      res = JSON.parse(_res.Messages[0].Data)
+      if (!res) error = "something went wrong"
+    } catch (e) {
+      error = e
+    }
+    return { error, res }
+  }
   async add(creator) {
     let error = null
     let mid = null

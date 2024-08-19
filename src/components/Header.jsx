@@ -13,7 +13,7 @@ import {
   MenuOptionGroup,
   MenuDivider,
 } from "@chakra-ui/react"
-import { ao, getAoProfile, getAddr, getProf } from "../lib/utils"
+import { msg, ao, getAoProfile, getAddr, getProf } from "../lib/utils"
 import { useParams } from "react-router-dom"
 import { Link } from "react-router-dom"
 import { useState, useEffect } from "react"
@@ -27,6 +27,7 @@ function Header({
   setAddress,
   setProfile,
   setInit,
+  t,
 }) {
   return (
     <Flex
@@ -135,6 +136,7 @@ body, html, #root{
                     setProfile(null)
                     await lf.removeItem("address")
                     await lf.removeItem(`profile-${address}`)
+                    msg(t, "Wallet Disconnected!", null, "info")
                   }}
                 >
                   <Box fontSize="12px" mr={4} my={1} pr={3}>
@@ -162,6 +164,12 @@ body, html, #root{
                 setInit(false)
                 setAddress(addr)
                 await lf.setItem("address", addr)
+              } else {
+                toast({
+                  title: "Something Went Wrong!",
+                  status: "error",
+                  isClosable: true,
+                })
               }
             }}
           >

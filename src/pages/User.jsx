@@ -15,9 +15,12 @@ import {
   ltags,
   tags,
   badWallet,
+  msg,
+  err,
 } from "../lib/utils"
 import dayjs from "dayjs"
 import {
+  useToast,
   Tag,
   IconButton,
   Menu,
@@ -53,7 +56,7 @@ import {
 function User({}) {
   const { id } = useParams()
   const navigate = useNavigate()
-
+  const t = useToast()
   const [address, setAddress] = useState(null)
   const [profile, setProfile] = useState(null)
   const [init, setInit] = useState(false)
@@ -64,9 +67,9 @@ function User({}) {
   const [notemap, setNoteMap] = useState({})
   const [assetmap, setAssetMap] = useState({})
 
-  useEffect(() => getAddr({ setAddress, setInit }), [])
+  useEffect(() => getAddr({ setAddress, setInit, t }), [])
   useEffect(
-    () => getProf({ address, setProfile, setInit, setAddress }),
+    () => getProf({ address, setProfile, setInit, setAddress, t }),
     [address],
   )
 
@@ -152,7 +155,7 @@ function User({}) {
   return (
     <>
       <Header
-        {...{ address, setAddress, profile, setProfile, init, setInit }}
+        {...{ address, setAddress, profile, setProfile, init, setInit, t }}
       />
       {!user ? null : (
         <Flex justify="center" pt="60px">
@@ -220,7 +223,7 @@ function User({}) {
                         _note.thumbnail = assetmap[v.id].Thumbnail
                       }
                       const addToNotebook = v3 => async () => {
-                        if (await badWallet(address)) return
+                        if (await badWallet(t, address)) return
                         const book = new Notebook({
                           wallet: window.arweaveWallet,
                           pid: v3,
@@ -238,7 +241,7 @@ function User({}) {
                             setBookMap(_bmap)
                           }
                         } else {
-                          alert("something went wrong")
+                          err(t, "something went wrong")
                         }
                       }
                       return (
