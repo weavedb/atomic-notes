@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { useToast, Flex, Box, Image, Spinner } from "@chakra-ui/react"
 import markdownIt from "markdown-it"
-import Note from "../lib/note"
+import { Note, Notebook } from "atomic-notes"
 import { toHtml } from "hast-util-to-html"
 import "../github-markdown.css"
 import { common, createStarryNight } from "@wooorm/starry-night"
@@ -20,7 +20,6 @@ import {
   getAddr,
   getProf,
 } from "../lib/utils"
-import Notebook from "../lib/notebook"
 
 function Article(a) {
   const { id } = useParams()

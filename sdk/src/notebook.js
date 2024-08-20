@@ -31,6 +31,7 @@ class Notebook {
     this.module = module
     this.scheduler = scheduler
   }
+
   async spawn(tags) {
     let error = null
     try {
@@ -49,6 +50,7 @@ class Notebook {
     }
     return { error, pid: this.pid }
   }
+
   async eval(data) {
     let error = null
     let mid = null
@@ -69,6 +71,7 @@ class Notebook {
     }
     return { mid, res, error }
   }
+
   async info() {
     let error = null
     let res = null
@@ -86,6 +89,7 @@ class Notebook {
     }
     return { error, res }
   }
+
   async get(creator) {
     let error = null
     let res = null
@@ -103,6 +107,7 @@ class Notebook {
     }
     return { error, res }
   }
+
   async add(creator) {
     let error = null
     let mid = null

@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from "react-router-dom"
-import Notebook from "../lib/notebook"
+import { Notebook } from "atomic-notes"
 import { Link } from "react-router-dom"
 import { useState, useEffect } from "react"
 import Header from "../components/Header"

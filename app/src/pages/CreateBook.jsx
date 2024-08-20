@@ -21,7 +21,8 @@ import {
 } from "@chakra-ui/react"
 import { useParams } from "react-router-dom"
 import { Link } from "react-router-dom"
-import Notebook from "../lib/notebook"
+import { Notebook } from "atomic-notes"
+
 import {
   ltags,
   getNotes,

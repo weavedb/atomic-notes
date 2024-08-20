@@ -1,0 +1,22 @@
+{
+  "name": "atomic-notes",
+  "version": "0.1.1",
+  "description": "",
+  "main": "dist/cjs/index.js",
+  "module": "dist/esm/index.js",
+  "scripts": {
+    "build:cjs": "babel src --out-dir dist/cjs --config-file ./.babelrc-cjs",
+    "build:esm": "babel src --out-dir dist/esm --config-file ./.babelrc-esm",
+    "build": "npm run build:cjs && npm run build:esm"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "ramda": "^0.30.1"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.24.8",
+    "@babel/core": "^7.25.2",
+    "@babel/preset-env": "^7.25.3"
+  }
+}

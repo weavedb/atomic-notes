@@ -15,6 +15,7 @@ const getTag = (res, name) => {
   }
   return null
 }
+
 class Note {
   constructor({
     wallet,
@@ -30,6 +31,7 @@ class Note {
     this.module = module
     this.scheduler = scheduler
   }
+
   async spawn(data, tags) {
     let error = null
     try {
@@ -49,6 +51,7 @@ class Note {
     }
     return { error, pid: this.pid }
   }
+
   async eval(data) {
     let error = null
     let mid = null
@@ -69,6 +72,7 @@ class Note {
     }
     return { mid, res, error }
   }
+
   async allow() {
     let error = null
     let mid = null
@@ -87,6 +91,7 @@ class Note {
     }
     return { error, mid, res }
   }
+
   async init() {
     let error = null
     let mid = null
@@ -108,6 +113,7 @@ class Note {
     }
     return { error, mid, res }
   }
+
   async get(version) {
     let error = null
     let res = null
@@ -132,6 +138,7 @@ class Note {
     }
     return { error, res }
   }
+
   async info() {
     let error = null
     let res = null
@@ -185,6 +192,7 @@ class Note {
     }
     return { error, res }
   }
+
   async update(data, version) {
     let error = null
     let mid = null
