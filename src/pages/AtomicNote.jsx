@@ -10,6 +10,10 @@ import markdownIt from "markdown-it"
 import { toHtml } from "hast-util-to-html"
 import { common, createStarryNight } from "@wooorm/starry-night"
 import {
+  AttachmentIcon,
+  DownloadIcon,
+  NotAllowedIcon,
+  WarningTwoIcon,
   SpinnerIcon,
   ArrowRightIcon,
   ArrowLeftIcon,
@@ -260,6 +264,9 @@ function AtomicNote(a) {
   const [metadata, setMetadata] = useState(null)
   const [uploadingArweave, setUploadingArweave] = useState(false)
   const [updatingArticle, setUpdatingArticle] = useState(false)
+  const [progress, setProgress] = useState(0)
+  const [phases, setPhases] = useState(0)
+  const [phase, setPhase] = useState("")
   const [updatingProf, setUpdatingProf] = useState(false)
   const [editorInit, setEditorInit] = useState(false)
   const [aoProfile, setAoProfile] = useState(null)
@@ -280,9 +287,7 @@ function AtomicNote(a) {
 
   const [thumb64, setThumb64] = useState(null)
   const [thumb8, setThumb8] = useState(null)
-  const [thumbnail, setThumbnail] = useState(
-    "eXCtpVbcd_jZ0dmU2PZ8focaKxBGECBQ8wMib7sIVPo",
-  )
+  const [thumbnail, setThumbnail] = useState("")
 
   const [id, setId] = useState("")
   const [txid, setTxid] = useState("")
@@ -669,71 +674,6 @@ function AtomicNote(a) {
                         </TabList>
                       </Tabs>
                       <Box flex={1} />
-                      {pid === "new" ? null : (
-                        <Flex
-                          fontSize="12px"
-                          mr={4}
-                          justify="center"
-                          sx={{
-                            borderRadius: "3px",
-                            cursor: "pointer",
-                            ":hover": { opacity: 0.5 },
-                          }}
-                          onClick={async () => {
-                            if (uploadingArweave) return
-                            if (await badWallet(t, address)) return
-                            const version = prompt(
-                              `Enter a new version higher than ${currentVersion}`,
-                            )
-                            if (!version) {
-                              setUploadingArweave(false)
-                              return
-                            }
-                            setUploadingArweave(true)
-                            try {
-                              const note = new Note({
-                                wallet: window.arweaveWallet,
-                                pid,
-                              })
-                              const { res: patches } = await note.patches(md)
-                              const { error, res } = await note.update(
-                                patches,
-                                version,
-                              )
-                              if (!error) {
-                                setChanged(false)
-                                const _draft = {
-                                  title: editTitle,
-                                  id: editID,
-                                  body: md,
-                                  changed: false,
-                                  draftID,
-                                }
-                                await lf.setItem(`draft-${pid}`, _draft)
-                                await lf.setItem("draft-" + draftID, _draft)
-                                let _drafts = []
-                                for (let v of drafts) {
-                                  if (v.draftID !== draftID) _drafts.push(v)
-                                }
-                                await lf.setItem(`drafts-${pid}`, _drafts)
-                                await getInfo()
-                                setTab("Info")
-                                msg(t, `New version v${version} uploaded!`)
-                              } else {
-                                err(t)
-                              }
-                            } catch (e) {
-                              err(t)
-                            }
-                            setUploadingArweave(false)
-                          }}
-                        >
-                          {updatingArticle ? circleNotch : ""}
-                          <Box as="span" ml={2}>
-                            Post New Version
-                          </Box>
-                        </Flex>
-                      )}
                       <Flex
                         fontSize="12px"
                         mr={4}
@@ -746,7 +686,9 @@ function AtomicNote(a) {
                         onClick={() => {
                           fileInputRef.current.click()
                         }}
+                        align="center"
                       >
+                        <AttachmentIcon />
                         <Input
                           type="file"
                           display="none"
@@ -773,8 +715,8 @@ function AtomicNote(a) {
                               reader.readAsText(file)
                             }
                           }}
-                        />{" "}
-                        Import MD
+                        />
+                        <Box ml={2}>Import</Box>
                       </Flex>
                       <Flex
                         fontSize="12px"
@@ -794,33 +736,11 @@ function AtomicNote(a) {
                           URL.revokeObjectURL(link.href)
                           msg(t, "MD downloaded!")
                         }}
+                        align="center"
                       >
-                        Download MD
+                        <DownloadIcon />
+                        <Box ml={2}>Download</Box>
                       </Flex>
-                      {!editTxid ? null : (
-                        <Flex
-                          fontSize="12px"
-                          mr={4}
-                          justify="center"
-                          sx={{
-                            borderRadius: "3px",
-                            cursor: "pointer",
-                            ":hover": { opacity: 0.5 },
-                          }}
-                          onClick={async () => {
-                            setAddTxid(editTxid)
-                            setTxid(editTxid)
-                            setTitle(editTitle)
-                            if (editID !== "") {
-                              setUpdate(editID)
-                              setId(editID)
-                            }
-                            setTab("Create")
-                          }}
-                        >
-                          Add to AO
-                        </Flex>
-                      )}
                       <Flex
                         fontSize="12px"
                         mr={4}
@@ -845,8 +765,10 @@ function AtomicNote(a) {
                             }, 0)
                           }
                         }}
+                        align="center"
                       >
-                        Reset
+                        <NotAllowedIcon />
+                        <Box ml={2}>Reset</Box>
                       </Flex>
                     </Flex>
                   </Flex>
@@ -891,6 +813,91 @@ function AtomicNote(a) {
                             Draft ID: #{draftID}
                           </Box>
                           <Box flex={1}></Box>
+                          {pid === "new" ? (
+                            <Flex
+                              size="xs"
+                              px={2}
+                              py={1}
+                              bg="white"
+                              sx={{
+                                border: "1px solid #222362",
+                                borderRadius: "3px",
+                                ":hover": { opacity: 0.75 },
+                                cursor: "pointer",
+                              }}
+                              onClick={async () => setTab("Create")}
+                              align="center"
+                            >
+                              <AddIcon />
+                              <Box ml={2}>Create Note</Box>
+                            </Flex>
+                          ) : (
+                            <Flex
+                              size="xs"
+                              px={2}
+                              py={1}
+                              bg="white"
+                              sx={{
+                                border: "1px solid #222362",
+                                borderRadius: "3px",
+                                ":hover": { opacity: 0.75 },
+                                cursor: "pointer",
+                              }}
+                              onClick={async () => {
+                                if (uploadingArweave) return
+                                if (await badWallet(t, address)) return
+                                const version = prompt(
+                                  `Enter a new version higher than ${currentVersion}`,
+                                )
+                                if (!version) {
+                                  setUploadingArweave(false)
+                                  return
+                                }
+                                setUploadingArweave(true)
+                                try {
+                                  const note = new Note({
+                                    wallet: window.arweaveWallet,
+                                    pid,
+                                  })
+                                  const { res: patches } =
+                                    await note.patches(md)
+                                  const { error, res } = await note.update(
+                                    patches,
+                                    version,
+                                  )
+                                  if (!error) {
+                                    setChanged(false)
+                                    const _draft = {
+                                      title: editTitle,
+                                      id: editID,
+                                      body: md,
+                                      changed: false,
+                                      draftID,
+                                    }
+                                    await lf.setItem(`draft-${pid}`, _draft)
+                                    await lf.setItem("draft-" + draftID, _draft)
+                                    let _drafts = []
+                                    for (let v of drafts) {
+                                      if (v.draftID !== draftID) _drafts.push(v)
+                                    }
+                                    await lf.setItem(`drafts-${pid}`, _drafts)
+                                    await getInfo()
+                                    setTab("Info")
+                                    msg(t, `New version v ${version} uploaded!`)
+                                  } else {
+                                    err(t)
+                                  }
+                                } catch (e) {
+                                  err(t)
+                                }
+                                setUploadingArweave(false)
+                              }}
+                              align="center"
+                            >
+                              {uploadingArweave ? circleNotch : <AddIcon />}
+                              <Box ml={2}>Post New Version</Box>
+                            </Flex>
+                          )}
                         </Flex>
                       )}
                     </Flex>
@@ -964,7 +971,6 @@ function AtomicNote(a) {
                         <>
                           {!isOwner ? null : (
                             <Box
-                              mb={4}
                               p={6}
                               fontSize="12px"
                               bg="#f6f6f7"
@@ -1059,62 +1065,59 @@ function AtomicNote(a) {
                               </Flex>
                             </Box>
                           )}
-                          <Box w="100%" flex={1}>
-                            {map(v => {
-                              return (
-                                <>
-                                  <Flex
-                                    py={2}
-                                    px={6}
-                                    fontSize="16px"
-                                    align="center"
-                                  >
-                                    {aoProfiles[v] ? (
-                                      <Box
-                                        display="flex"
-                                        alignItems="center"
-                                        sx={{ textDecoration: "underline" }}
-                                      >
-                                        <Image
-                                          mr={3}
-                                          src={getPFP(aoProfiles[v])}
-                                          boxSize="30px"
-                                        />
+                          <TableContainer>
+                            <Table variant="simple">
+                              <Tbody>
+                                {map(v => (
+                                  <Tr>
+                                    <Td>
+                                      {aoProfiles[v] ? (
                                         <Box
-                                          fontSize="16px"
-                                          mr={3}
-                                          as="a"
-                                          target="_blank"
-                                          href={`https://ao-bazar.arweave.net/#/profile/${aoProfiles[v].ProfileId}`}
+                                          display="flex"
+                                          alignItems="center"
+                                          sx={{ textDecoration: "underline" }}
                                         >
-                                          {aoProfiles[v].Username}
+                                          <Image
+                                            mr={3}
+                                            src={getPFP(aoProfiles[v])}
+                                            boxSize="30px"
+                                          />
+                                          <Box
+                                            fontSize="16px"
+                                            mr={3}
+                                            as="a"
+                                            target="_blank"
+                                            href={`https://ao-bazar.arweave.net/#/profile/${aoProfiles[v].ProfileId}`}
+                                          >
+                                            {aoProfiles[v].Username}
+                                          </Box>
+                                          (
+                                          <Box
+                                            mx={2}
+                                            fontSize="12px"
+                                            as="a"
+                                            target="_blank"
+                                            href={`https://ao.link/#/entity/${v}`}
+                                          >
+                                            {v}
+                                          </Box>
+                                          )
                                         </Box>
-                                        (
+                                      ) : (
                                         <Box
-                                          mx={2}
-                                          fontSize="12px"
                                           as="a"
                                           target="_blank"
                                           href={`https://ao.link/#/entity/${v}`}
+                                          sx={{ textDecoration: "underline" }}
                                         >
                                           {v}
                                         </Box>
-                                        )
-                                      </Box>
-                                    ) : (
-                                      <Box
-                                        as="a"
-                                        target="_blank"
-                                        href={`https://ao.link/#/entity/${v}`}
-                                        sx={{ textDecoration: "underline" }}
-                                      >
-                                        {v}
-                                      </Box>
-                                    )}
-                                    <Box flex={1}></Box>
-                                    {!isOwner ? null : (
-                                      <Box fontSize="12px" as="span" ml={3}>
+                                      )}
+                                    </Td>
+                                    <Td>
+                                      {!isOwner ? null : (
                                         <Flex
+                                          fontSize="14px"
                                           bg={
                                             editTxid === v.txid
                                               ? "#f6f6f7"
@@ -1156,13 +1159,13 @@ function AtomicNote(a) {
                                         >
                                           Remove
                                         </Flex>
-                                      </Box>
-                                    )}
-                                  </Flex>
-                                </>
-                              )
-                            })(editors)}
-                          </Box>
+                                      )}
+                                    </Td>
+                                  </Tr>
+                                ))(editors)}
+                              </Tbody>
+                            </Table>
+                          </TableContainer>
                         </>
                       ) : tab4 === "License" ? (
                         !metadata ? null : (
@@ -2017,6 +2020,9 @@ function AtomicNote(a) {
                                 new Promise(res => setTimeout(() => res(), ms))
                               if (!ok3 || updatingArticle) return
                               if (await badWallet(t, address)) return
+                              setPhase("preparing")
+                              let prog = 0
+                              setProgress(prog)
                               setUpdatingArticle(true)
                               const arweave = Arweave.init({
                                 host: "arweave.net",
@@ -2024,9 +2030,23 @@ function AtomicNote(a) {
                                 protocol: "https",
                               })
                               let to = false
+                              let _phases = [
+                                "spawning a process",
+                                "waiting for 5 seconds",
+                                "uploading the lua contract",
+                                "authorizing the user",
+                                "initializing the note",
+                              ]
+                              if (thumb8)
+                                _phases.unshift("uploading the thumbnail")
+                              if (pub !== "None")
+                                _phases.push("adding to the collection")
+                              _phases.push("finishing up")
+                              setPhases(_phases.length)
                               try {
                                 let _thumb = thumbnail
                                 if (thumb8) {
+                                  setPhase("uploading the thumbnail")
                                   const data = new Uint8Array(thumb8.data)
                                   const transaction =
                                     await arweave.createTransaction({
@@ -2049,6 +2069,7 @@ function AtomicNote(a) {
                                     setUpdatingArticle(false)
                                     return
                                   }
+                                  setProgress(++prog)
                                 }
                                 let token = await fetch(
                                   "./atomic-asset.lua",
@@ -2141,29 +2162,38 @@ function AtomicNote(a) {
                                     "yXXAop3Yxm8QlZRzP46oRxZjCBp88YTpoSTPlTr4TcQ",
                                   ),
                                 )
+                                setPhase("spawning a process")
                                 const { error, pid } = await note.spawn(
                                   md,
                                   tags,
                                 )
+                                setProgress(++prog)
                                 if (error) {
                                   err(t)
                                 } else {
+                                  setPhase("waiting for 5 seconds")
                                   await wait(5000)
+                                  setProgress(++prog)
                                   let data = await fetch(
                                     "./atomic-note.lua",
                                   ).then(r => r.text())
                                   data += "\n" + token
+                                  setPhase("uploading the Lua contract")
                                   const { error, res } = await note.eval(data)
+                                  setProgress(++prog)
                                   if (error) {
                                     err(t)
                                   } else {
+                                    setPhase("authorizing the user")
                                     const { error: error1, res: res1 } =
                                       await note.allow()
                                     if (error1) {
                                       err(t)
+                                      setPhase("initializing the note")
                                     } else {
                                       const { error: error2, res: res2 } =
                                         await note.init()
+                                      setProgress(++prog)
                                       if (error2) {
                                         err(t)
                                       } else {
@@ -2178,17 +2208,26 @@ function AtomicNote(a) {
                                         setNotes(_notes)
                                         to = true
                                         if (prid) {
+                                          setPhase(
+                                            "adding the note to your AO profile",
+                                          )
                                           const { error: error3, res: res3 } =
                                             await note.add(prid)
+                                          setProgress(++prog)
                                         }
                                         if (pub !== "None") {
+                                          setPhase(
+                                            "adding the note to the collection",
+                                          )
                                           const book = new Notebook({
                                             wallet: window.arweaveWallet,
                                             pid: pub,
                                           })
                                           const { res: res4, error: error4 } =
                                             await book.update(pid)
+                                          setProgress(++prog)
                                         }
+                                        setPhase("finishing up")
                                         setTimeout(() => {
                                           setTab("Info")
                                           setUpdatingArticle(false)
@@ -2206,145 +2245,185 @@ function AtomicNote(a) {
                               setUpdatingArticle(to)
                             }}
                           >
-                            {updatingArticle
-                              ? circleNotch
-                              : "Create New Atomic Note"}
+                            {updatingArticle ? (
+                              <Flex>
+                                {circleNotch}
+                                <Box ml={2}>
+                                  {phase}... ({progress + 1} / {phases})
+                                </Box>
+                              </Flex>
+                            ) : (
+                              "Create New Atomic Note"
+                            )}
                           </Button>
                         )}
                       </Flex>
                     </Box>
                   )}
                   {tab !== "Versions" ? null : (
-                    <Box w="100%" flex={1}>
-                      {map(v => {
-                        return (
-                          <>
-                            <Flex
-                              py={3}
-                              px={6}
-                              fontSize="16px"
-                              align="center"
-                              sx={{ borderBottom: "1px solid #ddd" }}
-                            >
-                              <Box as="u">v {v.version}</Box>
-                              <Box
-                                fontSize="14px"
-                                as="span"
-                                ml={4}
-                                title={v.editor}
-                              >
-                                {v.editor ? (
-                                  <Box as="span">
-                                    by {v.editor.slice(0, 5)}...
-                                    {v.editor.slice(-5)}
-                                  </Box>
-                                ) : null}
-                              </Box>
-                              <Box flex={1}></Box>
-                              <Box mx={3} as="span" fontSize="14px">
-                                {v.date
-                                  ? dayjs(v.date).format("YYYY MM/DD HH:mm")
-                                  : metadata?.["Date-Created"]
-                                    ? dayjs(+metadata["Date-Created"]).format(
-                                        "YYYY MM/DD HH:mm",
-                                      )
-                                    : ""}
-                              </Box>
-                              <Box fontSize="12px" as="span" ml={3}>
-                                <Flex
-                                  bg={
-                                    (selectedVersion ?? currentVersion) ===
-                                    v.version
-                                      ? "#f6f6f7"
-                                      : "white"
-                                  }
-                                  justify="center"
-                                  px={2}
-                                  py={1}
-                                  sx={{
-                                    borderRadius: "3px",
-                                    cursor: "pointer",
-                                    ":hover": { opacity: 0.5 },
-                                    border: "1px solid #999",
-                                  }}
-                                  onClick={async () => {
-                                    if (
-                                      (selectedVersion ?? currentVersion) ===
-                                      v.version
-                                    ) {
-                                      setTab("Info")
-                                      setTab4("Main")
-                                    } else {
-                                      const note = new Note({
-                                        wallet: window.arweaveWallet,
-                                        pid,
-                                      })
-                                      const { error, res } = await note.get(
-                                        v.version,
-                                      )
-                                      if (error) {
-                                        err(t)
-                                        return
-                                      }
-                                      setSelectedMD(await getHTML(res.data))
-                                      setSelectedVersion(v.version)
-                                      setTab("Info")
-                                      setTab4("Main")
-                                    }
-                                    msg(
-                                      t,
-                                      `Version ${v.version} loaded!`,
-                                      null,
-                                      "info",
-                                    )
-                                  }}
-                                >
-                                  View
-                                </Flex>
-                              </Box>
-                              <Box fontSize="12px" as="span" ml={3}>
-                                <Flex
-                                  bg={editTxid === v.txid ? "#f6f6f7" : "white"}
-                                  justify="center"
-                                  px={2}
-                                  py={1}
-                                  sx={{
-                                    borderRadius: "3px",
-                                    cursor: "pointer",
-                                    ":hover": { opacity: 0.5 },
-                                    border: "1px solid #999",
-                                  }}
-                                  onClick={async () => {
-                                    const note = new Note({
-                                      wallet: window.arweaveWallet,
-                                      pid,
-                                    })
-                                    const { error, res } = await note.get(
-                                      v.version,
-                                    )
-                                    if (error) {
-                                      err(t)
-                                      return
-                                    }
-                                    setTab2("Markdown")
-                                    ref.current?.setMarkdown("")
-                                    setChanged(false)
-                                    setEditorInit(false)
-                                    ref.current?.setMarkdown(res.data)
-                                    setDraftID(Date.now())
-                                    setMD(res.data)
-                                    setTab("Editor")
-                                    msg(t, "New draft created!", null, "info")
-                                  }}
-                                >
-                                  Edit
-                                </Flex>
-                              </Box>
-                            </Flex>
-                          </>
-                        )
-                      })(versions)}
-                    </Box>
+                    <>
+                      <TableContainer>
+                        <Table variant="simple">
+                          <Thead sx={{ borderBottom: "2px solid #222362" }}>
+                            <Tr>
+                              <Th pb={4} pt={0}>
+                                Version
+                              </Th>
+                              <Th pb={4} pt={0}>
+                                Author
+                              </Th>
+                              <Th pb={4} pt={0}>
+                                Updated
+                              </Th>
+                              <Th pb={4} pt={0}></Th>
+                            </Tr>
+                          </Thead>
+                          <Tbody>
+                            {map(v => {
+                              const editor = aoProfiles[v.editor]
+                              return (
+                                <Tr>
+                                  <Td>
+                                    <Box as="u">v {v.version}</Box>
+                                  </Td>
+                                  <Td>
+                                    {editor ? (
+                                      <Link to={`/u/${editor.ProfileId}`}>
+                                        <Flex align="center">
+                                          <Image
+                                            src={getPFP(editor)}
+                                            boxSize="20px"
+                                            mr={2}
+                                          />
+                                          {editor.DisplayName}
+                                        </Flex>
+                                      </Link>
+                                    ) : v.editor ? (
+                                      <Box as="span">
+                                        {v.editor.slice(0, 5)}...
+                                        {v.editor.slice(-5)}
+                                      </Box>
+                                    ) : null}
+                                  </Td>
+                                  <Td fontSize="14px">
+                                    {v.date
+                                      ? dayjs(v.date).format("YYYY MM/DD HH:mm")
+                                      : metadata?.["Date-Created"]
+                                        ? dayjs(
+                                            +metadata["Date-Created"],
+                                          ).format("YYYY MM/DD HH:mm")
+                                        : ""}
+                                  </Td>
+                                  <Td>
+                                    <Flex fontSize="14px">
+                                      <Box as="span">
+                                        <Flex
+                                          bg={
+                                            (selectedVersion ??
+                                              currentVersion) === v.version
+                                              ? "#f6f6f7"
+                                              : "white"
+                                          }
+                                          justify="center"
+                                          px={2}
+                                          py={1}
+                                          sx={{
+                                            borderRadius: "3px",
+                                            cursor: "pointer",
+                                            ":hover": { opacity: 0.5 },
+                                            border: "1px solid #999",
+                                          }}
+                                          onClick={async () => {
+                                            if (
+                                              (selectedVersion ??
+                                                currentVersion) === v.version
+                                            ) {
+                                              setTab("Info")
+                                              setTab4("Main")
+                                            } else {
+                                              const note = new Note({
+                                                wallet: window.arweaveWallet,
+                                                pid,
+                                              })
+                                              const { error, res } =
+                                                await note.get(v.version)
+                                              if (error) {
+                                                err(t)
+                                                return
+                                              }
+                                              setSelectedMD(
+                                                await getHTML(res.data),
+                                              )
+                                              setSelectedVersion(v.version)
+                                              setTab("Info")
+                                              setTab4("Main")
+                                            }
+                                            msg(
+                                              t,
+                                              `Version ${v.version} loaded!`,
+                                              null,
+                                              "info",
+                                            )
+                                          }}
+                                        >
+                                          View
+                                        </Flex>
+                                      </Box>
+                                      <Box fontSize="12px" as="span" ml={3}>
+                                        <Flex
+                                          bg={
+                                            editTxid === v.txid
+                                              ? "#f6f6f7"
+                                              : "white"
+                                          }
+                                          justify="center"
+                                          px={2}
+                                          py={1}
+                                          sx={{
+                                            borderRadius: "3px",
+                                            cursor: "pointer",
+                                            ":hover": { opacity: 0.5 },
+                                            border: "1px solid #999",
+                                          }}
+                                          onClick={async () => {
+                                            const note = new Note({
+                                              wallet: window.arweaveWallet,
+                                              pid,
+                                            })
+                                            const { error, res } =
+                                              await note.get(v.version)
+                                            if (error) {
+                                              err(t)
+                                              return
+                                            }
+                                            setTab2("Markdown")
+                                            ref.current?.setMarkdown("")
+                                            setChanged(false)
+                                            setEditorInit(false)
+                                            ref.current?.setMarkdown(res.data)
+                                            setDraftID(Date.now())
+                                            setMD(res.data)
+                                            setTab("Edit")
+                                            msg(
+                                              t,
+                                              "New draft created!",
+                                              null,
+                                              "info",
+                                            )
+                                          }}
+                                        >
+                                          Edit
+                                        </Flex>
+                                      </Box>
+                                    </Flex>
+                                  </Td>
+                                </Tr>
+                              )
+                            })(versions)}
+                          </Tbody>
+                        </Table>
+                      </TableContainer>
+                    </>
                   )}
                   {tab !== "Notes" ? null : (
                     <Box w="100%" flex={1}>
@@ -2445,103 +2524,133 @@ function AtomicNote(a) {
                   )}
                   {tab !== "Drafts" ? null : (
                     <Box w="100%" flex={1}>
-                      <Flex justify="center" fontSize="12px" mb={4}>
-                        <i>
-                          Drafts are only stored on your local computer.
-                          Download MD files if you need access from other
-                          environments.
-                        </i>
-                      </Flex>
-                      {map(v => {
-                        return (
-                          <>
-                            <Flex
-                              py={3}
-                              px={6}
-                              fontSize="16px"
-                              align="center"
-                              sx={{ borderTop: "1px solid #ddd" }}
-                            >
-                              <Box as="u">
-                                {v.title ?? ""}#{v.draftID}
-                              </Box>
-                              <Box flex={1}></Box>
-                              <Box mx={3} as="span" fontSize="14px">
-                                updated {dayjs(v.update).format("MM/DD HH:mm")}
-                              </Box>
-                              <Box fontSize="12px" as="span" ml={2}>
-                                <Flex
-                                  bg={editTxid === v.txid ? "#f6f6f7" : "white"}
-                                  justify="center"
-                                  px={2}
-                                  py={1}
-                                  sx={{
-                                    borderRadius: "3px",
-                                    cursor: "pointer",
-                                    ":hover": { opacity: 0.5 },
-                                    border: "1px solid #999",
-                                  }}
-                                  onClick={async () => {
-                                    const _draft = await lf.getItem(
-                                      "draft-" + v.draftID,
-                                    )
-                                    if (_draft) {
-                                      if (_draft.txid) setEditTxid(_draft.txid)
-                                      if (_draft.title)
-                                        setEditTitle(_draft.title)
-                                      if (_draft.id) setEditID(_draft.id)
-                                      setMD("")
-                                      ref.current?.setMarkdown("")
-                                      setChanged(_draft.changed)
-                                      setEditorInit(false)
-                                      setTab2("Markdown")
-                                      setTimeout(() => {
-                                        ref.current?.setMarkdown(_draft.body)
-                                        setDraftID(_draft.draftID)
-                                        setMD(_draft.body)
-                                        setTab("Edit")
-                                      }, 0)
-                                    }
-                                  }}
-                                >
-                                  Edit
-                                </Flex>
-                              </Box>
-                              <Box fontSize="12px" as="span" ml={3}>
-                                <Flex
-                                  justify="center"
-                                  px={2}
-                                  py={1}
-                                  sx={{
-                                    borderRadius: "3px",
-                                    cursor: "pointer",
-                                    ":hover": { opacity: 0.5 },
-                                    border: "1px solid #999",
-                                  }}
-                                  onClick={async () => {
-                                    if (
-                                      !confirm("Would you like to delete it?")
-                                    ) {
-                                      return
-                                    }
-                                    let _drafts = []
-                                    for (let v2 of drafts) {
-                                      if (v.draftID !== v2.draftID)
-                                        _drafts.push(v2)
-                                    }
-                                    setDrafts(_drafts)
-                                    await lf.setItem(`drafts-${pid}`, _drafts)
-                                    await lf.removeItem("draft-" + v.draftID)
-                                    msg(t, "Draft Deleted!")
-                                  }}
-                                >
-                                  Delete
-                                </Flex>
-                              </Box>
-                            </Flex>
-                          </>
-                        )
-                      })(drafts)}
+                      <TableContainer>
+                        <Table variant="simple">
+                          <TableCaption>
+                            Drafts are only stored on your local computer.
+                            Download MD files if you need access from other
+                            environments.
+                          </TableCaption>
+                          <Thead sx={{ borderBottom: "2px solid #222362" }}>
+                            <Tr>
+                              <Th pb={4} pt={0}>
+                                Draft ID
+                              </Th>
+                              <Th pb={4} pt={0}>
+                                Last Edited
+                              </Th>
+                              <Th pb={4} pt={0}></Th>
+                            </Tr>
+                          </Thead>
+                          <Tbody>
+                            {map(
+                              v => (
+                                <Tr>
+                                  <Td>
+                                    <Box as="u">
+                                      {v.title ?? ""}#{v.draftID}
+                                    </Box>
+                                  </Td>
+                                  <Td>
+                                    <Box as="span" fontSize="14px">
+                                      {dayjs(v.update).format("MM/DD HH:mm")}
+                                    </Box>
+                                  </Td>
+                                  <Td>
+                                    <Flex>
+                                      <Box fontSize="14px" as="span">
+                                        <Flex
+                                          bg={
+                                            editTxid === v.txid
+                                              ? "#f6f6f7"
+                                              : "white"
+                                          }
+                                          justify="center"
+                                          px={2}
+                                          py={1}
+                                          sx={{
+                                            borderRadius: "3px",
+                                            cursor: "pointer",
+                                            ":hover": { opacity: 0.5 },
+                                            border: "1px solid #999",
+                                          }}
+                                          onClick={async () => {
+                                            const _draft = await lf.getItem(
+                                              "draft-" + v.draftID,
+                                            )
+                                            if (_draft) {
+                                              if (_draft.txid)
+                                                setEditTxid(_draft.txid)
+                                              if (_draft.title)
+                                                setEditTitle(_draft.title)
+                                              if (_draft.id)
+                                                setEditID(_draft.id)
+                                              setMD("")
+                                              ref.current?.setMarkdown("")
+                                              setChanged(_draft.changed)
+                                              setEditorInit(false)
+                                              setTab2("Markdown")
+                                              setTimeout(() => {
+                                                ref.current?.setMarkdown(
+                                                  _draft.body,
+                                                )
+                                                setDraftID(_draft.draftID)
+                                                setMD(_draft.body)
+                                                setTab("Edit")
+                                              }, 0)
+                                            }
+                                          }}
+                                        >
+                                          Edit
+                                        </Flex>
+                                      </Box>
+                                      <Box fontSize="12px" as="span" ml={3}>
+                                        <Flex
+                                          justify="center"
+                                          px={2}
+                                          py={1}
+                                          sx={{
+                                            borderRadius: "3px",
+                                            cursor: "pointer",
+                                            ":hover": { opacity: 0.5 },
+                                            border: "1px solid #999",
+                                          }}
+                                          onClick={async () => {
+                                            if (
+                                              !confirm(
+                                                "Would you like to delete it?",
+                                              )
+                                            ) {
+                                              return
+                                            }
+                                            let _drafts = []
+                                            for (let v2 of drafts) {
+                                              if (v.draftID !== v2.draftID)
+                                                _drafts.push(v2)
+                                            }
+                                            setDrafts(_drafts)
+                                            await lf.setItem(
+                                              `drafts-${pid}`,
+                                              _drafts,
+                                            )
+                                            await lf.removeItem(
+                                              "draft-" + v.draftID,
+                                            )
+                                            msg(t, "Draft Deleted!")
+                                          }}
+                                        >
+                                          Delete
+                                        </Flex>
+                                      </Box>
+                                    </Flex>
+                                  </Td>
+                                </Tr>
+                              ),
+                              drafts,
+                            )}
+                          </Tbody>
+                        </Table>
+                      </TableContainer>
                     </Box>
                   )}
                 </Flex>

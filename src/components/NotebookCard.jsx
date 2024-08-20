@@ -21,6 +21,7 @@ import {
   Avatar,
   Heading,
 } from "@chakra-ui/react"
+import { validAddress } from "../lib/utils"
 import { Link } from "react-router-dom"
 import { DeleteIcon, AddIcon, EditIcon } from "@chakra-ui/icons"
 import dayjs from "dayjs"
@@ -65,7 +66,7 @@ const NotebookCard = ({
         <CardHeader>
           <Flex spacing="4">
             {onChange ? (
-              <Box
+              <Flex
                 boxSize="96px"
                 mr={4}
                 bg="#f6f6f7"
@@ -83,6 +84,8 @@ const NotebookCard = ({
                 }}
                 onClick={() => fileInputRef.current.click()}
                 size="xl"
+                align="center"
+                justify="center"
               >
                 <Input
                   display="none"
@@ -91,7 +94,10 @@ const NotebookCard = ({
                   ref={fileInputRef}
                   onChange={onChange}
                 />
-              </Box>
+                {note.thumb64 || validAddress(note.thumbnail) ? null : (
+                  <AddIcon boxSize="20px" />
+                )}
+              </Flex>
             ) : !note.thumbnail ? null : (
               <Avatar
                 mr={4}
