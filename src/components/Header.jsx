@@ -13,7 +13,15 @@ import {
   MenuOptionGroup,
   MenuDivider,
 } from "@chakra-ui/react"
-import { msg, ao, getAoProfile, getAddr, getProf, getPFP } from "../lib/utils"
+import {
+  msg,
+  err,
+  ao,
+  getAoProfile,
+  getAddr,
+  getProf,
+  getPFP,
+} from "../lib/utils"
 import { useParams } from "react-router-dom"
 import { Link } from "react-router-dom"
 import { useState, useEffect } from "react"
@@ -165,11 +173,7 @@ body, html, #root{
                 setAddress(addr)
                 await lf.setItem("address", addr)
               } else {
-                toast({
-                  title: "Something Went Wrong!",
-                  status: "error",
-                  isClosable: true,
-                })
+                err(t)
               }
             }}
           >
