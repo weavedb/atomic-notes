@@ -21,6 +21,7 @@ import {
   Avatar,
   Heading,
 } from "@chakra-ui/react"
+import { validAddress } from "../lib/utils"
 import { getPFP } from "../lib/utils"
 import { Link } from "react-router-dom"
 import { DeleteIcon, AddIcon, EditIcon } from "@chakra-ui/icons"
@@ -266,7 +267,7 @@ const NoteCard = ({
         </Flex>
       </Flex>
       {onChange ? (
-        <Box
+        <Flex
           h="100px"
           w="150px"
           ml={5}
@@ -285,6 +286,8 @@ const NoteCard = ({
           }}
           onClick={() => fileInputRef.current.click()}
           size="xl"
+          align="center"
+          justify="center"
         >
           <Input
             display="none"
@@ -293,7 +296,10 @@ const NoteCard = ({
             ref={fileInputRef}
             onChange={onChange}
           />
-        </Box>
+          {note.thumb64 || validAddress(note.thumbnail) ? null : (
+            <AddIcon boxSize="20px" />
+          )}
+        </Flex>
       ) : !note.thumbnail ? null : (
         <Box
           h="100px"

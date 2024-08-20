@@ -3,6 +3,7 @@ import Arweave from "arweave"
 import { useNavigate } from "react-router-dom"
 import Header from "../components/Header"
 import NotebookCard from "../components/NotebookCard"
+import { AddIcon } from "@chakra-ui/icons"
 import lf from "localforage"
 import {
   Select,
@@ -351,7 +352,7 @@ function App(a) {
                         </FormControl>
                       </>
                     </Box>
-                    <Box
+                    <Flex
                       h="200px"
                       mt={6}
                       bg="#f6f6f7"
@@ -365,6 +366,8 @@ function App(a) {
                         ":hover": { opacity: 0.75 },
                       }}
                       onClick={() => fileInputRef.current.click()}
+                      align="center"
+                      justify="center"
                     >
                       <Input
                         display="none"
@@ -386,7 +389,10 @@ function App(a) {
                           }
                         }}
                       />
-                    </Box>
+                      {banner64 || validAddress(banner) ? null : (
+                        <AddIcon boxSize="30px" />
+                      )}
+                    </Flex>
                     {!profile ? null : (
                       <NotebookCard
                         fileInputRef={fileInputRef2}
