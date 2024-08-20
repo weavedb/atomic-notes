@@ -48,6 +48,23 @@ function App() {
                     Create Notes
                   </Button>
                 </Link>
+                <Link
+                  to="https://github.com/ocrybit/atomic-notes/tree/master/sdk"
+                  target="_blank"
+                >
+                  <Button
+                    ml={6}
+                    variant="outline"
+                    colorScheme="gray"
+                    mt={10}
+                    sx={{
+                      border: "1px solid #222326",
+                      ":hover": { bg: "#f6f6f7" },
+                    }}
+                  >
+                    Use SDK
+                  </Button>
+                </Link>
               </Box>
             </Flex>
           </Flex>
