@@ -68,8 +68,7 @@ import {
 } from "@chakra-ui/react"
 import { useParams } from "react-router-dom"
 import { Link } from "react-router-dom"
-import Note from "../lib/note"
-import Notebook from "../lib/notebook"
+import { Note, Notebook } from "atomic-notes"
 const action = value => tag("Action", value)
 const tag = (name, value) => ({ name, value })
 import {

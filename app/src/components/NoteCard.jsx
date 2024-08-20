@@ -27,6 +27,7 @@ import { Link } from "react-router-dom"
 import { DeleteIcon, AddIcon, EditIcon } from "@chakra-ui/icons"
 import dayjs from "dayjs"
 import { map } from "ramda"
+
 const NoteCard = ({
   note,
   bazar = false,

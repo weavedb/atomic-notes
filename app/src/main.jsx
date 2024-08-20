@@ -5,7 +5,7 @@ import ReactDOM from "react-dom/client"
 import App from "./App.jsx"
 import Note from "./pages/Note"
 import User from "./pages/User"
-import AtomicNote from "./pages/AtomicNote"
+import CreateNote from "./pages/CreateNote"
 import Book from "./pages/Book"
 import CreateBook from "./pages/CreateBook"
 
@@ -28,7 +28,7 @@ const router = createHashRouter([
   },
   {
     path: "/n/:pid/edit",
-    element: <AtomicNote />,
+    element: <CreateNote />,
   },
   {
     path: "/b/:pid/edit",

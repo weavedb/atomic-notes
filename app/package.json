@@ -20,6 +20,7 @@
     "@permaweb/aoconnect": "^0.0.56",
     "@wooorm/starry-night": "^3.4.0",
     "arweave": "^1.15.1",
+    "atomic-notes": "^0.1.1",
     "dayjs": "^1.11.11",
     "framer-motion": "^11.3.0",
     "hast-util-to-html": "^9.0.1",

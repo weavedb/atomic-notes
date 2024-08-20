@@ -2735,6 +2735,13 @@ asn1.js@^5.4.1:
     minimalistic-assert "^1.0.0"
     safer-buffer "^2.1.0"
 
+atomic-notes@^0.1.1:
+  version "0.1.1"
+  resolved "https://registry.npmjs.org/atomic-notes/-/atomic-notes-0.1.1.tgz"
+  integrity sha512-ZCLNDaNHNxcDlvWujK4WQH2E/DCchomDhj2evMPVzPp9h4klg7dC0FIfpWfhwQmCIyHFNOWK6ry3/ElKdsrBYw==
+  dependencies:
+    ramda "^0.30.1"
+
 available-typed-arrays@^1.0.7:
   version "1.0.7"
   resolved "https://registry.npmjs.org/available-typed-arrays/-/available-typed-arrays-1.0.7.tgz"
@@ -5065,6 +5072,11 @@ ramda@^0.29.1:
   integrity sha512-OfxIeWzd4xdUNxlWhgFazxsA/nl3mS4/jGZI5n00uWOoSSFRhC1b6gl6xvmzUamgmqELraWp0J/qqVlXYPDPyA==
 
 ramda@^0.30.0:
+  version "0.30.1"
+  resolved "https://registry.npmjs.org/ramda/-/ramda-0.30.1.tgz"
+  integrity sha512-tEF5I22zJnuclswcZMc8bDIrwRHRzf+NqVEmqg50ShAZMP7MWeR/RGDthfM/p+BlqvF2fXAzpn8i+SJcYD3alw==
+
+ramda@^0.30.1:
   version "0.30.1"
   resolved "https://registry.npmjs.org/ramda/-/ramda-0.30.1.tgz"
   integrity sha512-tEF5I22zJnuclswcZMc8bDIrwRHRzf+NqVEmqg50ShAZMP7MWeR/RGDthfM/p+BlqvF2fXAzpn8i+SJcYD3alw==
