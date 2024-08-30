@@ -2,6 +2,7 @@ import { readFileSync } from "fs"
 import { resolve } from "path"
 import { AO } from "../../src/index.js"
 import { wait } from "../../src/utils.js"
+
 class Src {
   constructor({ ao, base = "../../lua" }) {
     this.ao = ao
@@ -48,7 +49,7 @@ const setup = async () => {
 
   ao.module = module
   ao.scheduler = scheduler
-  const { error: _err, pid: registry_pid } = await ao.deploy({
+  const { err: _err, pid: registry_pid } = await ao.deploy({
     src: registry,
   })
   await ao.initRegistry({ registry: registry_pid })

@@ -110,7 +110,7 @@ describe("Atomic Notes", function () {
     const { pid: proxy_pid } = await ao.deploy({ src: proxy, module: module2 })
     const note = new Note({ proxy: proxy_pid, ao })
 
-    const { error, pid: note_pid } = await note.spawn({
+    const { err, pid: note_pid } = await note.spawn({
       library,
       src: atomic_note,
       ...note_tags,
@@ -120,14 +120,14 @@ describe("Atomic Notes", function () {
       profileId: _prof.ProfileId,
     })
 
-    const { error: error2, res: res2 } = await note.allow()
-    const { error: error3, res: res3 } = await note.init()
-    const { error: error4 } = await note.add(_prof.ProfileId)
+    const { err: err2, res: res2 } = await note.allow()
+    const { err: err3, res: res3 } = await note.init()
+    const { err: err4 } = await note.add(_prof.ProfileId)
     expect((await note.info()).out.Name).to.eql("title")
     expect((await note.get()).out.data).to.eql(v1)
     expect((await note.list()).out[0].version).to.eql("0.0.1")
     const { out: patches } = await note.patches(v2)
-    const { error: error5, res: res5 } = await note.update(patches, "0.0.2")
+    const { err: err5, res: res5 } = await note.update(patches, "0.0.2")
     expect((await note.get()).out.data).to.eql(v2)
     expect((await note.list()).out[1].version).to.eql("0.0.2")
     expect((await note.get("0.0.1")).out.data).to.eql(v1)
@@ -139,13 +139,13 @@ describe("Atomic Notes", function () {
     await note.addEditor(ao2.addr)
     expect((await note.editors()).out).to.eql([ao.addr, ao2.addr])
     const { out: patches2 } = await note2.patches(v3)
-    const { error: error6, res: res6 } = await note2.update(patches2, "0.0.3")
+    const { err: err6, res: res6 } = await note2.update(patches2, "0.0.3")
     expect((await note.get()).out.data).to.eql(v3)
     expect((await note.list()).out[2].version).to.eql("0.0.3")
     await note.removeEditor(ao2.addr)
     expect((await note.editors()).out).to.eql([ao.addr])
     const { out: patches3 } = await note2.patches(v4)
-    const { error: error7, res: res7 } = await note2.update(patches3, "0.0.4")
+    const { err: err7, res: res7 } = await note2.update(patches3, "0.0.4")
     expect((await note.get()).out.data).to.eql(v3)
     const info = await ao.info()
     expect(info.Collections[0].Id).to.eql(collection_pid)

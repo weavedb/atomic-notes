@@ -38,9 +38,9 @@ class Notebook {
       tags.push(tag("Banner", banner))
     }
 
-    let error = null
+    let err = null
     try {
-      const { pid, error: _error } = await this.ao.deploy({
+      const { pid, err: _err } = await this.ao.deploy({
         tags,
         src,
         fills: {
@@ -53,16 +53,16 @@ class Notebook {
           THUMBNAIL: thumbnail ?? "None",
         },
       })
-      if (_error) {
-        error = _error
+      if (_err) {
+        err = _err
       } else {
         this.pid = pid
-        const { error: _error2, res: _res2 } = await this.add(profileId)
-        if (_error2) {
-          error = _error2
+        const { err: _err2, res: _res2 } = await this.add(profileId)
+        if (_err2) {
+          err = _err2
         } else {
           if (bazar) {
-            const { error: _error3, res: _res3 } = await this.register({
+            const { err: _err3, res: _res3 } = await this.register({
               name: title,
               description,
               thumbnail,
@@ -75,10 +75,10 @@ class Notebook {
         }
       }
     } catch (e) {
-      error = e
+      err = e
       console.log(e)
     }
-    return { error, pid: this.pid }
+    return { err, pid: this.pid }
   }
 
   async info() {
