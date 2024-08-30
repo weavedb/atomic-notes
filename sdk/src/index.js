@@ -1,4 +1,5 @@
-import Note from "./note"
-import Notebook from "./notebook"
+import Note from "./note.js"
+import Notebook from "./notebook.js"
+import AO from "./ao.js"
 
-export { Note, Notebook }
+export { Note, Notebook, AO }
