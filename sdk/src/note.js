@@ -1,291 +1,217 @@
-import {
-  spawn,
-  result,
-  createDataItemSigner,
-  message,
-  dryrun,
-  assign,
-} from "@permaweb/aoconnect"
-
-const action = value => tag("Action", value)
-const tag = (name, value) => ({ name, value })
-const getTag = (res, name) => {
-  for (const v of res?.Tags ?? []) {
-    if (v.name === name) return v.value
-  }
-  return null
-}
+import { getTag, action, tag, wait, udl } from "./utils.js"
 
 class Note {
   constructor({
     wallet,
     proxy = "0uboI80S6vMxJD9Yn41Wdwnp9uAHEi4XLGQhBrp3qSQ",
-    module = "cNlipBptaF9JeFAf4wUmpi43EojNanIBos3EfNrEOWo",
-    scheduler = "_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA",
+    render_with = "yXXAop3Yxm8QlZRzP46oRxZjCBp88YTpoSTPlTr4TcQ",
+    ao,
     pid,
   }) {
+    this.render_with = render_with
+    this.ao = ao
     this.pid = pid
-    this.wallet = wallet
-    this.signer = createDataItemSigner(this.wallet)
     this.proxy = proxy
-    this.module = module
-    this.scheduler = scheduler
   }
+  async spawn({
+    title,
+    description,
+    thumbnail,
+    profileId,
+    banner,
+    payment,
+    payment_address,
+    recipient,
+    isFractional,
+    fraction,
+    access,
+    accessFee,
+    derivations,
+    derivationTerm,
+    derivationShare,
+    derivationFee,
+    commercial,
+    commercialTerm,
+    commercialShare,
+    commercialFee,
+    training,
+    trainingTerm,
+    trainingFee,
+    data,
+    balance,
+    src,
+    library,
+  }) {
+    const date = Date.now()
+    let tags = [
+      action("Add-Uploaded-Asset"),
+      tag("Title", title),
+      tag("Description", description),
+      tag("Date-Created", Number(date).toString()),
+      tag("Implements", "ANS-110"),
+      tag("Type", "blog-post"),
+      tag("Asset-Type", "Atomic-Note"),
+      tag("Render-With", "yXXAop3Yxm8QlZRzP46oRxZjCBp88YTpoSTPlTr4TcQ"),
+      tag("Content-Type", "text/markdown"),
+      ...udl({
+        payment,
+        payment_address,
+        recipient,
+        access,
+        accessFee,
+        derivations,
+        derivationTerm,
+        derivationShare,
+        derivationFee,
+        commercial,
+        commercialTerm,
+        commercialShare,
+        commercialFee,
+        training,
+        trainingTerm,
+        trainingFee,
+      }),
+    ]
 
-  async spawn(data, tags) {
+    if (!/^\s*$/.test(thumbnail)) tags.push(tag("Thumbnail", thumbnail))
+    if (profileId) tags.push(tag("Creator", profileId))
     let error = null
     try {
-      this.pid = await spawn({
-        module: this.module,
-        scheduler: this.scheduler,
-        signer: this.signer,
-        tags: [
-          tag("Content-Type", "text/markdown"),
-          action("Add-Uploaded-Asset"),
-          ...tags,
+      const _balance = isFractional ? Number(balance).toString() : "1"
+      const { pid, _error } = await this.ao.deploy({
+        loads: [
+          { src: library },
+          {
+            src,
+            fills: {
+              NAME: title,
+              CREATOR: profileId,
+              TICKER: "ATOMIC",
+              DENOMINATION: "1",
+              DESCRIPTION: description,
+              THUMBNAIL: thumbnail ?? "None",
+              DATECREATED: date,
+              BALANCE: _balance,
+            },
+          },
         ],
+        tags,
         data,
       })
+      if (_error) {
+        error = _error
+      } else {
+        this.pid = pid
+      }
     } catch (e) {
       error = e
+      console.log(e)
     }
     return { error, pid: this.pid }
   }
 
-  async eval(data) {
-    let error = null
-    let mid = null
-    let res = null
-    try {
-      mid = await message({
-        process: this.pid,
-        tags: [action("Eval")],
-        signer: this.signer,
-        data,
-      })
-      const _res = await result({ message: mid, process: this.pid })
-      res = _res.Output
-      if (!res) error = "something went wrong"
-    } catch (e) {
-      console.log(e)
-      error = e
-    }
-    return { mid, res, error }
-  }
-
   async allow() {
-    let error = null
-    let mid = null
-    let res = null
-    try {
-      mid = await message({
-        process: this.proxy,
-        tags: [action("Allow")],
-        signer: this.signer,
-      })
-      let _res = await result({ message: mid, process: this.proxy })
-      res = _res.Messages[0]
-      if (!res) error = "something went wrong"
-    } catch (e) {
-      error = e
-    }
-    return { error, mid, res }
+    return await this.ao.msg({
+      pid: this.proxy,
+      action: "Allow",
+      checkData: "allowed!",
+    })
   }
 
   async init() {
-    let error = null
-    let mid = null
-    let res = null
-
-    try {
-      mid = await assign({
-        process: this.proxy,
-        message: this.pid,
-      })
-      const _res = await result({
-        message: mid,
-        process: this.proxy,
-      })
-      res = _res.Messages[0]
-      if (!res) error = "something went wrong"
-    } catch (e) {
-      error = e
-    }
-    return { error, mid, res }
+    return await this.ao.asg({
+      pid: this.proxy,
+      mid: this.pid,
+      check: { Action: "Assigned" },
+    })
   }
 
   async get(version) {
-    let error = null
-    let res = null
-    let tags = [action("Get")]
-    if (version) tags.push(tag("Version", version))
-    try {
-      const _res = await dryrun({
-        process: this.pid,
-        tags,
-        signer: this.signer,
-      })
-      res = _res.Messages[0]
-      if (!res) error = "something went wrong"
-      res = {
-        version: getTag(res, "Version"),
-        data: getTag(res, "Data"),
-        date: getTag(res, "Date"),
-      }
-      if (res.date === "nil") res.date = null
-    } catch (e) {
-      error = e
-    }
-    return { error, res }
+    let tags = {}
+    if (version) tags.Version = version
+    return await this.ao.dry({
+      action: "Get",
+      pid: this.pid,
+      check: { Data: true },
+      tags,
+      get: { obj: { version: "Version", data: "Data", date: "Date" } },
+    })
   }
 
   async info() {
-    let error = null
-    let res = null
-    let tags = [action("Info")]
-    try {
-      const _res = await dryrun({
-        process: this.pid,
-        tags,
-        signer: this.signer,
-      })
-      res = JSON.parse(_res.Messages[0].Data)
-      if (!res) error = "something went wrong"
-    } catch (e) {
-      error = e
-    }
-    return { error, res }
+    return await this.ao.dry({
+      pid: this.pid,
+      action: "Info",
+      checkData: true,
+      get: { data: true, json: true },
+    })
   }
 
   async list() {
-    let error = null
-    let res = null
-    try {
-      const _res = await dryrun({
-        process: this.pid,
-        tags: [action("List")],
-        signer: this.signer,
-      })
-      res = getTag(_res.Messages[0], "Versions")
-      if (!res) error = "something went wrong"
-      res = JSON.parse(res)
-    } catch (e) {
-      error = e
-    }
-    return { error, res }
+    return await this.ao.dry({
+      pid: this.pid,
+      action: "List",
+      check: { Versions: true },
+      get: { name: "Versions", json: true },
+    })
   }
 
   async patches(data) {
-    let error = null
-    let res = null
-    try {
-      const _res = await dryrun({
-        process: this.pid,
-        tags: [action("Patches")],
-        signer: this.signer,
-        data,
-      })
-      res = getTag(_res.Messages[0], "Patches")
-      if (!res) error = "something went wrong"
-    } catch (e) {
-      error = e
-    }
-    return { error, res }
+    return await this.ao.dry({
+      pid: this.pid,
+      action: "Patches",
+      data,
+      check: { Patches: true },
+      get: "Patches",
+    })
   }
 
   async update(data, version) {
-    let error = null
-    let mid = null
-    let res = null
-    try {
-      mid = await message({
-        process: this.pid,
-        tags: [action("Update"), tag("Version", version)],
-        signer: this.signer,
-        data,
-      })
-      const _res = await result({ message: mid, process: this.pid })
-      res = _res.Messages[0]
-      if (!res) error = "something went wrong"
-    } catch (e) {
-      error = e
-    }
-    return { error, mid, res }
+    return await this.ao.msg({
+      pid: this.pid,
+      action: "Update",
+      tags: { Version: version },
+      data,
+      checkData: "updated!",
+    })
   }
 
   async add(creator) {
-    let error = null
-    let mid = null
-    let res = null
-    try {
-      mid = await message({
-        process: this.pid,
-        tags: [action("Add-Asset-To-Profile"), tag("ProfileProcess", creator)],
-        signer: this.signer,
-      })
-      const _res = await result({ message: mid, process: this.pid })
-      res = _res.Messages[0]
-      if (!res) error = "something went wrong"
-    } catch (e) {
-      error = e
-    }
-    return { error, mid, res }
+    return await this.ao.msg({
+      pid: this.pid,
+      action: "Add-Asset-To-Profile",
+      tags: { ProfileProcess: creator },
+      check: { Action: "Add-Uploaded-Asset" },
+    })
   }
 
   async editors() {
-    let error = null
-    let res = null
-    try {
-      const _res = await dryrun({
-        process: this.pid,
-        tags: [action("Editors")],
-        signer: this.signer,
-      })
-      res = getTag(_res.Messages[0], "Editors")
-      if (!res) error = "something went wrong"
-      res = JSON.parse(res)
-    } catch (e) {
-      error = e
-    }
-    return { error, res }
+    return await this.ao.dry({
+      pid: this.pid,
+      action: "Editors",
+      check: { Editors: true },
+      get: { name: "Editors", json: true },
+    })
   }
 
   async addEditor(editor) {
-    let error = null
-    let mid = null
-    let res = null
-    try {
-      mid = await message({
-        process: this.pid,
-        tags: [tag("Editor", editor), action("Add-Editor")],
-        signer: this.signer,
-      })
-      const _res = await result({ message: mid, process: this.pid })
-      res = getTag(_res.Messages[0], "Editors")
-      if (!res) error = "something went wrong"
-    } catch (e) {
-      error = e
-    }
-    return { error, mid, res }
+    return await this.ao.msg({
+      pid: this.pid,
+      action: "Add-Editor",
+      tags: { Editor: editor },
+      checkData: "editor added!",
+      get: { name: "Editors", json: true },
+    })
   }
 
   async removeEditor(editor) {
-    let error = null
-    let mid = null
-    let res = null
-    try {
-      mid = await message({
-        process: this.pid,
-        tags: [tag("Editor", editor), action("Remove-Editor")],
-        signer: this.signer,
-      })
-      const _res = await result({ message: mid, process: this.pid })
-      res = getTag(_res.Messages[0], "Editors")
-      if (!res) error = "something went wrong"
-    } catch (e) {
-      error = e
-    }
-    return { error, mid, res }
+    return await this.ao.msg({
+      pid: this.pid,
+      action: "Remove-Editor",
+      tags: { Editor: editor },
+      checkData: "editor removed!",
+      get: { name: "Editors", json: true },
+    })
   }
 }
 
