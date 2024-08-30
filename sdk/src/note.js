@@ -75,10 +75,10 @@ class Note {
 
     if (!/^\s*$/.test(thumbnail)) tags.push(tag("Thumbnail", thumbnail))
     if (profileId) tags.push(tag("Creator", profileId))
-    let error = null
+    let err = null
     try {
       const _balance = isFractional ? Number(balance).toString() : "1"
-      const { pid, _error } = await this.ao.deploy({
+      const { pid, err: _err } = await this.ao.deploy({
         loads: [
           { src: library },
           {
@@ -98,16 +98,16 @@ class Note {
         tags,
         data,
       })
-      if (_error) {
-        error = _error
+      if (_err) {
+        err = _err
       } else {
         this.pid = pid
       }
     } catch (e) {
-      error = e
+      err = e
       console.log(e)
     }
-    return { error, pid: this.pid }
+    return { err, pid: this.pid }
   }
 
   async allow() {

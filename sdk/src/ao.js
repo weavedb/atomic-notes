@@ -226,7 +226,7 @@ class AO {
     checkData,
     get,
   }) {
-    let error = null
+    let err = null
     let mid = null
     let res
     let _tags = [action(_action)]
@@ -249,22 +249,22 @@ class AO {
       res = _res
       for (const k in check ?? {}) {
         if (!searchTag(_res, k, check[k])) {
-          error = "something went wrong"
+          err = "something went wrong"
           break
         }
       }
       if (checkData) {
-        if (!isData(checkData, _res)) error = "something went wrong"
+        if (!isData(checkData, _res)) err = "something went wrong"
       }
-      if (!error && get) out = getTagVal(get, res)
+      if (!err && get) out = getTagVal(get, res)
     } catch (e) {
-      error = e
+      err = e
     }
-    return { mid, res, error, out }
+    return { mid, res, err, out }
   }
 
   async asg({ pid, mid, jwk = this.jwk, check }) {
-    let error = null
+    let err = null
     let res = null
     try {
       mid = await this.assign({
@@ -273,18 +273,18 @@ class AO {
         signer: createDataItemSigner(jwk),
       })
       const _res = await this.result({ process: pid, message: mid })
-      if (!_res) error = "something went wrong"
+      if (!_res) err = "something went wrong"
       res = _res.Messages[0]
       for (const k in check ?? {}) {
         if (!searchTag(_res, k, check[k])) {
-          error = "something went wrong"
+          err = "something went wrong"
           break
         }
       }
     } catch (e) {
-      error = e
+      err = e
     }
-    return { mid, res, error }
+    return { mid, res, err }
   }
 
   async dry({
@@ -297,7 +297,7 @@ class AO {
     checkData,
     get,
   }) {
-    let error = null
+    let err = null
     let res
     let _tags = [action(_action)]
     let out = null
@@ -318,31 +318,31 @@ class AO {
       res = _res
       for (const k in check ?? {}) {
         if (!searchTag(_res, k, check[k])) {
-          error = "something went wrong"
+          err = "something went wrong"
           break
         }
       }
       if (checkData) {
-        if (!isData(checkData, _res)) error = "something went wrong"
+        if (!isData(checkData, _res)) err = "something went wrong"
       }
-      if (!error && get) out = getTagVal(get, res)
+      if (!err && get) out = getTagVal(get, res)
     } catch (e) {
-      error = e
+      err = e
     }
-    return { res, error, out }
+    return { res, err, out }
   }
 
   async eval({ pid, jwk = this.jwk, data }) {
-    let error = null
+    let err = null
     const {
       res,
       mid,
-      error: _error,
+      err: _err,
     } = await this.msg({ pid, jwk, data, action: "Eval" })
-    if (_error || typeof res.Output?.data !== "object") {
-      error = "something went wrong"
+    if (_err || typeof res.Output?.data !== "object") {
+      err = "something went wrong"
     }
-    return { error, mid, res }
+    return { err, mid, res }
   }
 
   async initRegistry({ registry, jwk = this.jwk }) {
@@ -419,9 +419,9 @@ class AO {
       )
     }
 
-    const { error, res, mid } = await this.eval({ data: _data, pid })
-    if (error) {
-      return { pid, error }
+    const { err, res, mid } = await this.eval({ data: _data, pid })
+    if (err) {
+      return { pid, err }
     } else {
       await wait(1000)
       return { pid }
@@ -444,8 +444,8 @@ class AO {
       loads = [{ src, fills }]
     }
     for (const v of loads) {
-      const { error } = await this.load({ ...v, pid })
-      if (error) return { error, pid }
+      const { err } = await this.load({ ...v, pid })
+      if (err) return { err, pid }
     }
     return { pid }
   }
