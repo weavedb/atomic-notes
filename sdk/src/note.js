@@ -1,4 +1,4 @@
-import { getTag, action, tag, wait, udl } from "./utils.js"
+import { scripts, getTag, action, tag, wait, udl } from "./utils.js"
 
 class Note {
   constructor({
@@ -39,8 +39,8 @@ class Note {
     trainingFee,
     data,
     balance,
-    src,
-    library,
+    src = scripts["atomic-note"],
+    library = scripts["atomic-note-library"],
   }) {
     const date = Date.now()
     let tags = [

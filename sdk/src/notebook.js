@@ -1,4 +1,4 @@
-import { action, tag } from "./utils.js"
+import { scripts, action, tag } from "./utils.js"
 
 class Notebook {
   constructor({
@@ -13,7 +13,7 @@ class Notebook {
   }
 
   async spawn({
-    src,
+    src = scripts.collection,
     title,
     description,
     thumbnail,
