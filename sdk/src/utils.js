@@ -167,7 +167,15 @@ const getTagVal = (get, res) => {
   }
   return out
 }
+
+const scripts = {
+  "atomic-note-library": "XnV_WEZVaw9D_GiDPg6kydbIhErdTYm6GKlSO1pyfsI",
+  collection: "NKISXnq5XseLQd_u-lfO6ThBLuikLoontY47UlONrB4",
+  "atomic-note": "8ItY-41YrV5D286SpqNH2DGbVO4kWpcY5Rcs7w2SCC0",
+}
+
 export {
+  scripts,
   getTagVal,
   isData,
   query,
