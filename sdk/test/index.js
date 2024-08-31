@@ -47,6 +47,7 @@ describe("Atomic Notes", function () {
     registry_pid,
     collection_registry_pid,
     ao
+  let profile_pid, notebook, notebook_pid, note, note_pid, ao2, note2
 
   before(async () => {
     ;({
@@ -66,39 +67,43 @@ describe("Atomic Notes", function () {
     } = await setup())
   })
 
-  it("should handle multiple atomic note versions", async () => {
-    const { pid: profile_pid } = await ao.deploy({
+  it("should create an AO profile", async () => {
+    ;({ pid: profile_pid } = await ao.deploy({
       src: profile,
       fills: { REGISTRY: registry_pid },
-    })
+    }))
     ok(await ao.updateProfile({ id: profile_pid, profile: prof }))
     await wait(1000)
     const _prof = await ao.profile()
     expect(_prof.DisplayName).to.eql(prof.DisplayName)
+  })
 
-    const notebook = new Notebook({ registry: collection_registry_pid, ao })
-
-    const { pid: collection_pid } = ok(
+  it("should create a notebook", async () => {
+    notebook = new Notebook({ registry: collection_registry_pid, ao })
+    ;({ pid: notebook_pid } = ok(
       await notebook.create({
         src: collection,
         info: { title: "title", description: "desc" },
         bazar: true,
       }),
-    )
+    ))
     expect((await notebook.get(ao.id)).out.Collections[0].Id).to.eql(
-      collection_pid,
+      notebook_pid,
     )
-
     expect((await notebook.info()).out.Name).to.eql("title")
+  })
+
+  it("should update a notebook", async () => {
     ok(await notebook.updateInfo({ title: "title2" }))
     expect((await notebook.info()).out.Name).to.eql("title2")
+  })
 
+  it("should create a note", async () => {
     const { pid: proxy_pid } = ok(
       await ao.deploy({ src: proxy, module: module2 }),
     )
-    const note = new Note({ proxy: proxy_pid, ao })
-
-    const { pid: note_pid } = ok(
+    note = new Note({ proxy: proxy_pid, ao })
+    ;({ pid: note_pid } = ok(
       await note.create({
         library,
         src: atomic_note,
@@ -123,58 +128,90 @@ describe("Atomic Notes", function () {
           training: { mode: "allowed", term: "one-time", fee: "0.1" },
         },
       }),
-    )
+    ))
 
     expect((await note.info()).out.Name).to.eql("title")
+  })
+
+  it("should update a note", async () => {
     ok(await note.updateInfo({ title: "title2" }))
     expect((await note.info()).out.Name).to.eql("title2")
+  })
 
+  it("should add a note to a notebook", async () => {
     ok(await notebook.addNote(note.pid))
     expect((await notebook.info()).out.Assets).to.eql([note.pid])
+  })
+
+  it("should remove a note from a notebook", async () => {
     ok(await notebook.removeNote(note.pid))
     expect((await notebook.info()).out.Assets).to.eql([])
+  })
 
+  it("should add notes to a notebook", async () => {
     ok(await notebook.addNotes([note.pid]))
     expect((await notebook.info()).out.Assets).to.eql([note.pid])
+  })
+
+  it("should remove notes from a notebook", async () => {
     ok(await notebook.removeNotes([note.pid]))
     expect((await notebook.info()).out.Assets).to.eql([])
+  })
+
+  it("should update the version with new content", async () => {
     expect((await note.get()).out.data).to.eql(v1)
     expect((await note.list()).out[0].version).to.eql("0.0.1")
     ok(await note.update(v2, "0.0.2"))
     expect((await note.get()).out.data).to.eql(v2)
     expect((await note.list()).out[1].version).to.eql("0.0.2")
+  })
+
+  it("should add an editor", async () => {
     expect((await note.get("0.0.1")).out.data).to.eql(v1)
     expect((await note.editors()).out).to.eql([ao.addr])
-    const ao2 = new AO({ arweave, aoconnect })
+    ao2 = new AO({ arweave, aoconnect })
     await ao2.gen("10")
     await ao2.transfer("5", ao.addr)
-    const note2 = new Note({ pid: note_pid, ao: ao2 })
+    note2 = new Note({ pid: note_pid, ao: ao2 })
     ok(await note.addEditor(ao2.addr))
     expect((await note.editors()).out).to.eql([ao.addr, ao2.addr])
     ok(await note2.update(v3, "0.0.3"))
     expect((await note.get()).out.data).to.eql(v3)
     expect((await note.list()).out[2].version).to.eql("0.0.3")
+  })
+
+  it("should remove an editor", async () => {
     ok(await note.removeEditor(ao2.addr))
     expect((await note.editors()).out).to.eql([ao.addr])
     fail(await note2.update(v4, "0.0.4"))
     expect((await note.get()).out.data).to.eql(v3)
+  })
+
+  it("should bump with major/minor/patch", async () => {
     ok(await note.update(v4, "minor"))
     expect((await note.get()).out.version).to.eql("0.1.0")
     ok(await note.update(v5, "patch"))
     expect((await note.get()).out.version).to.eql("0.1.1")
     ok(await note.update(v6, "major"))
     expect((await note.get()).out.version).to.eql("1.0.0")
+  })
 
+  it("should return the correct notebook info", async () => {
     const info = await ao.info()
-    expect(info.Collections[0].Id).to.eql(collection_pid)
+    expect(info.Collections[0].Id).to.eql(notebook_pid)
     expect(info.Assets[0].Id).to.eql(note_pid)
     expect(info.Owner).to.eql(ao.addr)
     expect(info.Id).to.eql(ao.id)
+  })
+
+  it("should init AO with an existing jwk", async () => {
     const ao3 = await new AO({
       arweave,
       aoconnect,
       registry: registry_pid,
     }).init(ao.jwk)
     expect(ao3.id).to.eql(ao.id)
+    expect(ao3.jwk).to.eql(ao.jwk)
+    expect(ao3.addr).to.eql(ao.addr)
   })
 })
