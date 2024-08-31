@@ -1,14 +1,14 @@
 {
   "name": "atomic-notes",
-  "version": "0.3.1",
-  "type": "module",
+  "version": "0.3.8",
   "description": "",
+  "type": "module",
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
   "scripts": {
     "build:cjs": "babel src --out-dir dist/cjs --config-file ./.babelrc-cjs",
     "build:esm": "babel src --out-dir dist/esm --config-file ./.babelrc-esm",
-    "build": "npm run build:cjs && npm run build:esm",
+    "build": "npm run build:cjs && npm run build:esm && node make.js && cp .npmignore dist/",
     "test": "mocha"
   },
   "engines": {
@@ -18,7 +18,9 @@
   "license": "MIT",
   "dependencies": {
     "@babel/plugin-transform-modules-commonjs": "^7.24.8",
+    "@permaweb/aoconnect": "^0.0.59",
     "arbundles": "^0.11.1",
+    "arweave": "^1.15.1",
     "ramda": "^0.30.1"
   },
   "devDependencies": {
