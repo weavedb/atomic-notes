@@ -1,5 +1,5 @@
 import { scripts, action, tag } from "./utils.js"
-
+import { is } from "ramda"
 class Notebook {
   constructor({
     wallet,
@@ -12,15 +12,13 @@ class Notebook {
     this.pid = pid
   }
 
-  async spawn({
+  async create({
     src = scripts.collection,
-    title,
-    description,
-    thumbnail,
-    profileId,
-    banner,
+    info: { title, description, thumbnail, banner } = {},
     bazar = false,
   }) {
+    const profileId = this.ao.id
+    if (!profileId) return { err: "no ao profile id" }
     const date = Date.now()
     let tags = [
       action("Add-Collection"),
@@ -34,10 +32,7 @@ class Notebook {
     if (thumbnail && !/^\s*$/.test(thumbnail)) {
       tags.push(tag("Thumbnail", thumbnail))
     }
-    if (banner && !/^\s*$/.test(banner)) {
-      tags.push(tag("Banner", banner))
-    }
-
+    if (banner && !/^\s*$/.test(banner)) tags.push(tag("Banner", banner))
     let err = null
     try {
       const { pid, err: _err } = await this.ao.deploy({
@@ -81,6 +76,21 @@ class Notebook {
     return { err, pid: this.pid }
   }
 
+  async updateInfo({ title, description, thumbnail, banner }) {
+    let info_map = {
+      Name: title,
+      Description: description,
+      Thumbnail: thumbnail,
+      Banner: banner,
+    }
+    let new_info = []
+    for (const k in info_map) {
+      if (info_map[k])
+        new_info.push(`${k} = '${info_map[k].replace(/'/g, "\\'")}'`)
+    }
+    if (new_info.length === 0) return { err: "empty info" }
+    return this.ao.eval({ pid: this.pid, data: new_info.join("\n") })
+  }
   async info() {
     return await this.ao.dry({
       pid: this.pid,
@@ -135,12 +145,30 @@ class Notebook {
     })
   }
 
-  async update(pid, remove) {
+  async addNote(note_pid) {
+    return await this.update(note_pid)
+  }
+
+  async removeNote(note_pid) {
+    return await this.update(note_pid, true)
+  }
+
+  async addNotes(note_pids) {
+    return await this.update(note_pids)
+  }
+
+  async removeNotes(note_pids) {
+    return await this.update(note_pids, true)
+  }
+
+  async update(note_pid, remove) {
+    let ids = note_pid
+    if (!is(Array, ids)) ids = [ids]
     return this.ao.msg({
       pid: this.pid,
       action: "Update-Assets",
       data: JSON.stringify({
-        AssetIds: [pid],
+        AssetIds: ids,
         UpdateType: remove ? "Remove" : "Add",
       }),
       check: { Status: "Success" },
