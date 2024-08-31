@@ -35,6 +35,7 @@ class AO {
     if (!_arweave.protocol)
       _arweave.protocol = isLocalhost(_arweave.host) ? "http" : "https"
     if (!_arweave.port) _arweave.port = isLocalhost(_arweave.host) ? 1984 : 443
+    this.toSigner = createDataItemSigner
     if (aoconnect) {
       const { assign, result, message, spawn, dryrun } = connect(aoconnect)
       this.assign = assign
@@ -61,7 +62,7 @@ class AO {
     this.jwk = jwk
     this.addr = await this.toAddr(jwk)
     this.pub = jwk.n
-    this.signer = createDataItemSigner(jwk)
+    this.signer = this.toSigner(jwk)
     await this.profile()
     return this
   }
@@ -98,7 +99,7 @@ class AO {
       this.jwk = jwk
       this.pub = jwk.n
       this.addr = addr
-      this.signer = createDataItemSigner(jwk)
+      this.signer = this.toSigner(jwk)
     }
     let bal = "0"
     if (amount && isLocalhost(this.host)) bal = await this.mint(addr, amount)
@@ -195,25 +196,31 @@ class AO {
     return this.scheduler
   }
 
-  async spw({
+  async spwn({
     module = this.module,
     scheduler = this.scheduler,
     jwk = this.jwk,
     tags = [],
     data,
   }) {
-    const pid = await this.spawn({
-      module,
-      scheduler,
-      signer: createDataItemSigner(jwk),
-      tags: [
-        { name: "Memory-Limit", value: "500-mb" },
-        { name: "Compute-Limit", value: "9000000000000" },
-        ...tags,
-      ],
-      data,
-    })
-    return pid
+    let err = null
+    let pid = null
+    try {
+      pid = await this.spawn({
+        module,
+        scheduler,
+        signer: this.toSigner(jwk),
+        tags: [
+          { name: "Memory-Limit", value: "500-mb" },
+          { name: "Compute-Limit", value: "9000000000000" },
+          ...tags,
+        ],
+        data,
+      })
+    } catch (e) {
+      err = e
+    }
+    return { err, pid }
   }
 
   async msg({
@@ -228,9 +235,9 @@ class AO {
   }) {
     let err = null
     let mid = null
-    let res
-    let _tags = [action(_action)]
+    let res = null
     let out = null
+    let _tags = [action(_action)]
     for (const k in tags) {
       if (is(Array)(tags[k])) {
         for (const v of tags[k]) _tags.push(tag(k, v))
@@ -241,7 +248,7 @@ class AO {
     try {
       mid = await this.message({
         process: pid,
-        signer: createDataItemSigner(jwk),
+        signer: this.toSigner(jwk),
         tags: _tags,
         data,
       })
@@ -263,14 +270,15 @@ class AO {
     return { mid, res, err, out }
   }
 
-  async asg({ pid, mid, jwk = this.jwk, check }) {
+  async asgn({ pid, mid, jwk = this.jwk, check, checkData, get }) {
     let err = null
     let res = null
+    let out = null
     try {
       mid = await this.assign({
         process: pid,
         message: mid,
-        signer: createDataItemSigner(jwk),
+        signer: this.toSigner(jwk),
       })
       const _res = await this.result({ process: pid, message: mid })
       if (!_res) err = "something went wrong"
@@ -281,10 +289,14 @@ class AO {
           break
         }
       }
+      if (checkData) {
+        if (!isData(checkData, _res)) err = "something went wrong"
+      }
+      if (!err && get) out = getTagVal(get, res)
     } catch (e) {
       err = e
     }
-    return { mid, res, err }
+    return { mid, res, err, out }
   }
 
   async dry({
@@ -311,7 +323,7 @@ class AO {
     try {
       const _res = await this.dryrun({
         process: pid,
-        signer: createDataItemSigner(jwk),
+        signer: this.toSigner(jwk),
         tags: _tags,
         data,
       })
@@ -354,9 +366,11 @@ class AO {
     })
   }
 
-  async updateProfile({ jwk, profile, pid }) {
+  async updateProfile({ jwk, profile, id }) {
+    if (!id) id = this.id ?? (await this.ids())[0]
+    if (!id) return { err: "no profile id" }
     return await this.msg({
-      pid,
+      pid: id,
       jwk,
       data: JSON.stringify(profile),
       action: "Update-Profile",
@@ -369,7 +383,7 @@ class AO {
     jwk = this.jwk,
   } = {}) {
     const res = await this.dryrun({
-      signer: createDataItemSigner(jwk),
+      signer: this.toSigner(jwk),
       process: registry,
       tags: [{ name: "Action", value: "Get-Profiles-By-Delegate" }],
       data: JSON.stringify({ Address: addr }),
@@ -386,26 +400,25 @@ class AO {
     if (!id) id = this.id ?? (await this.ids())[0]
     if (!id) return null
     const res = await this.dryrun({
-      signer: createDataItemSigner(jwk),
+      signer: this.toSigner(jwk),
       process: registry,
       tags: [{ name: "Action", value: "Get-Metadata-By-ProfileIds" }],
       data: JSON.stringify({ ProfileIds: [id] }),
     })
-    const prof = JSON.parse(res.Messages[0]?.Data ?? [])[0] ?? null
-    if (id === this.id) this.prof = prof
-    return prof
+    const profile = JSON.parse(res.Messages[0]?.Data ?? [])[0] ?? null
+    return profile
   }
 
   async info({ id, registry = this.registry, jwk = this.jwk } = {}) {
     if (!id) id = this.id ?? (await this.ids())[0]
     if (!id) return null
     const res = await this.dryrun({
-      signer: createDataItemSigner(jwk),
+      signer: this.toSigner(jwk),
       process: id,
       tags: [{ name: "Action", value: "Info" }],
     })
-    const prof = JSON.parse(res.Messages[0]?.Data ?? null)
-    return prof ? assoc("Id", id, prof) : null
+    const profile = JSON.parse(res.Messages[0]?.Data ?? null)
+    return profile ? assoc("Id", id, profile) : null
   }
 
   async load({ src, fills, pid }) {
@@ -421,10 +434,10 @@ class AO {
 
     const { err, res, mid } = await this.eval({ data: _data, pid })
     if (err) {
-      return { pid, err }
+      return { mid, err }
     } else {
       await wait(1000)
-      return { pid }
+      return { mid, err: null }
     }
   }
 
@@ -438,7 +451,7 @@ class AO {
     tags = [],
     data,
   }) {
-    const pid = await this.spw({ module, scheduler, jwk, tags, data })
+    const { pid } = await this.spwn({ module, scheduler, jwk, tags, data })
     await wait(1000)
     if (!loads) {
       loads = [{ src, fills }]

@@ -13,35 +13,16 @@ class Note {
     this.pid = pid
     this.proxy = proxy
   }
-  async spawn({
-    title,
-    description,
-    thumbnail,
-    profileId,
-    banner,
-    payment,
-    payment_address,
-    recipient,
-    isFractional,
-    fraction,
-    access,
-    accessFee,
-    derivations,
-    derivationTerm,
-    derivationShare,
-    derivationFee,
-    commercial,
-    commercialTerm,
-    commercialShare,
-    commercialFee,
-    training,
-    trainingTerm,
-    trainingFee,
-    data,
-    balance,
+  async create({
     src = scripts["atomic-note"],
     library = scripts["atomic-note-library"],
+    data,
+    info: { title, description, thumbnail, banner },
+    token: { fraction = "1" },
+    udl: { payment, access, derivations, commercial, training },
   }) {
+    const profileId = this.ao.id
+    if (!profileId) return { err: "no ao profile id" }
     const date = Date.now()
     let tags = [
       action("Add-Uploaded-Asset"),
@@ -53,31 +34,16 @@ class Note {
       tag("Asset-Type", "Atomic-Note"),
       tag("Render-With", "yXXAop3Yxm8QlZRzP46oRxZjCBp88YTpoSTPlTr4TcQ"),
       tag("Content-Type", "text/markdown"),
-      ...udl({
-        payment,
-        payment_address,
-        recipient,
-        access,
-        accessFee,
-        derivations,
-        derivationTerm,
-        derivationShare,
-        derivationFee,
-        commercial,
-        commercialTerm,
-        commercialShare,
-        commercialFee,
-        training,
-        trainingTerm,
-        trainingFee,
-      }),
+      ...udl({ payment, access, derivations, commercial, training }),
     ]
-
     if (!/^\s*$/.test(thumbnail)) tags.push(tag("Thumbnail", thumbnail))
     if (profileId) tags.push(tag("Creator", profileId))
     let err = null
     try {
-      const _balance = isFractional ? Number(balance).toString() : "1"
+      const balance =
+        typeof fraction === "number"
+          ? Number(fraction * 1).toString()
+          : fraction
       const { pid, err: _err } = await this.ao.deploy({
         loads: [
           { src: library },
@@ -91,7 +57,7 @@ class Note {
               DESCRIPTION: description,
               THUMBNAIL: thumbnail ?? "None",
               DATECREATED: date,
-              BALANCE: _balance,
+              BALANCE: balance,
             },
           },
         ],
@@ -102,6 +68,18 @@ class Note {
         err = _err
       } else {
         this.pid = pid
+        const { err: _err2 } = await this.allow()
+        if (_err2) {
+          err = _err2
+        } else {
+          const { err: _err3 } = await this.init()
+          if (_err3) {
+            err = _err3
+          } else {
+            const { err: _err4 } = await this.add(profileId)
+            if (_err4) err = _err4
+          }
+        }
       }
     } catch (e) {
       err = e
@@ -119,7 +97,7 @@ class Note {
   }
 
   async init() {
-    return await this.ao.asg({
+    return await this.ao.asgn({
       pid: this.proxy,
       mid: this.pid,
       check: { Action: "Assigned" },
@@ -147,6 +125,21 @@ class Note {
     })
   }
 
+  async updateInfo({ title, description, thumbnail }) {
+    let info_map = {
+      Name: title,
+      Description: description,
+      Thumbnail: thumbnail,
+    }
+    let new_info = []
+    for (const k in info_map) {
+      if (info_map[k])
+        new_info.push(`${k} = '${info_map[k].replace(/'/g, "\\'")}'`)
+    }
+    if (new_info.length === 0) return { err: "empty info" }
+    return this.ao.eval({ pid: this.pid, data: new_info.join("\n") })
+  }
+
   async list() {
     return await this.ao.dry({
       pid: this.pid,
@@ -154,6 +147,18 @@ class Note {
       check: { Versions: true },
       get: { name: "Versions", json: true },
     })
+  }
+
+  async update(data, version) {
+    let err = null
+    const { err: _err, out: patches } = await this.patches(data)
+    if (_err) {
+      err = _err
+    } else {
+      const { err: _err2 } = await this.updateVersion(patches, version)
+      if (_err2) err = _err2
+    }
+    return { err }
   }
 
   async patches(data) {
@@ -166,12 +171,12 @@ class Note {
     })
   }
 
-  async update(data, version) {
+  async updateVersion(patches, version) {
     return await this.ao.msg({
       pid: this.pid,
       action: "Update",
       tags: { Version: version },
-      data,
+      data: patches,
       checkData: "updated!",
     })
   }

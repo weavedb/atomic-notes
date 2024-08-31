@@ -19,7 +19,7 @@ const paymentsMap = fromPairs(payments.map(({ key, val }) => [key, val]))
 const dTerms = [
   { key: "credit", val: "With Credit" },
   { key: "indication", val: "With Indication" },
-  { key: "passthrought", val: "With License Passthrough" },
+  { key: "passthrough", val: "With License Passthrough" },
   { key: "revenue", val: "With Revenue Share" },
   { key: "monthly", val: "With Monthly Fee" },
   { key: "one-time", val: "With One-Time Fee" },
@@ -75,57 +75,43 @@ const query = txid => `query {
 
 const isLocalhost = v => includes(v, ["localhost", "127.0.0.1"])
 
-const udl = ({
-  payment,
-  payment_address,
-  recipient,
-  access,
-  accessFee,
-  derivations,
-  derivationTerm,
-  derivationShare,
-  derivationFee,
-  commercial,
-  commercialTerm,
-  commercialShare,
-  commercialFee,
-  training,
-  trainingTerm,
-  trainingFee,
-}) => {
+const udl = ({ payment, access, derivations, commercial, training }) => {
   let tags = [
     tag("License", "dE0rmDfl9_OWjkDznNEXHaSO_JohJkRolvMzaCroUdw"),
     tag("Currency", "xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10"),
   ]
-  tags.push(tag("Payment-Mode", paymentsMap[payment]))
-  if (payment === "single") tags.push(tag("Payment-Address", recipient))
-  let _access = accessesMap[access]
-  if (access === "one-time") _access += "-" + accessFee
+  tags.push(tag("Payment-Mode", paymentsMap[payment.mode]))
+  if (payment === "single") tags.push(tag("Payment-Address", payment.recipient))
+  let _access = accessesMap[access.mode]
+  if (access === "one-time") _access += "-" + access.fee
   tags.push(tag("Access-Fee", _access))
 
-  let _derivations = allowsMap[derivations]
-  if (derivations === "allowed") {
-    if (derivationTerm === "revenue") {
-      _derivations += `-${dtMap[derivationTerm].split(" ").join("-")}-${derivationShare}`
-    } else if (derivationTerm === "monthly" || derivationTerm === "one-time") {
-      _derivations += `-${dtMap[derivationTerm].split(" ").join("-")}-${derivationFee}`
+  let _derivations = allowsMap[derivations.mode]
+  if (derivations.mode === "allowed") {
+    if (derivations.term === "revenue") {
+      _derivations += `-${dtMap[derivations.term].split(" ").join("-")}-${derivations.share}`
+    } else if (
+      derivations.term === "monthly" ||
+      derivations.term === "one-time"
+    ) {
+      _derivations += `-${dtMap[derivations.term].split(" ").join("-")}-${derivations.fee}`
     } else {
-      _derivations += `-${dtMap[derivationTerm].split(" ").join("-")}-0`
+      _derivations += `-${dtMap[derivations.term].split(" ").join("-")}-0`
     }
   }
   tags.push(tag("Derivations", _derivations))
-  let _commercial = allowsMap[commercial]
+  let _commercial = allowsMap[commercial.mode]
   if (commercial === "allowed") {
-    if (commercialTerm === "revenue") {
-      _commercial += `-${ctMap[commercialTerm].split(" ").join("-")}-${commercialShare}`
+    if (commercial.term === "revenue") {
+      _commercial += `-${ctMap[commercial.term].split(" ").join("-")}-${commercial.share}`
     } else {
-      _commercial += `-${ctMap[commercialTerm].split(" ").join("-")}-${commercialFee}`
+      _commercial += `-${ctMap[commercial.term].split(" ").join("-")}-${commercial.fee}`
     }
   }
   tags.push(tag("Commercial-Use", _commercial))
-  let _training = allowsMap[training]
+  let _training = allowsMap[training.mode]
   if (training === "allowed") {
-    _training += `-${ttMap[trainingTerm].split(" ").join("-")}-${trainingFee}`
+    _training += `-${ttMap[training.term].split(" ").join("-")}-${training.fee}`
   }
   tags.push(tag("Data-Model-Training", _training))
   return tags

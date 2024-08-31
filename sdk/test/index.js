@@ -8,37 +8,18 @@ const aoconnect = {
   CU_URL: "http://localhost:4004",
   GATEWAY_URL: "http://localhost:4000",
 }
+
 const arweave = { port: 4000 }
 const v1 = "# this is markdown 1"
 const v2 = "# this is markdown 2"
 const v3 = "# this is markdown 3"
 const v4 = "# this is markdown 4"
 
-const udl = {
-  payment: "single",
-  access: "one-time",
-  accessFee: "1.3",
-  derivations: "allowed",
-  derivationTerm: "one-time",
-  derivationShare: "5.0",
-  derivationFee: "1.0",
-  commercial: "allowed",
-  commercialTerm: "one-time",
-  commercialShare: "5.0",
-  commercialFee: "1.0",
-  training: "allowed",
-  trainingTerm: "one-time",
-  trainingFee: "0.1",
-}
 const note_tags = {
   title: "title",
   description: "desc",
   thumbnail: "None",
   banner: "None",
-  balance: "100",
-  isFractional: true,
-  fraction: "100",
-  data: v1,
 }
 
 const prof = {
@@ -88,18 +69,16 @@ describe("Atomic Notes", function () {
       src: profile,
       fills: { REGISTRY: registry_pid },
     })
-    const { res } = await ao.updateProfile({ pid: profile_pid, profile: prof })
+    const { res } = await ao.updateProfile({ id: profile_pid, profile: prof })
     await wait(1000)
     const _prof = await ao.profile()
     expect(_prof.DisplayName).to.eql(prof.DisplayName)
 
     const notebook = new Notebook({ registry: collection_registry_pid, ao })
 
-    const { pid: collection_pid } = await notebook.spawn({
+    const { pid: collection_pid } = await notebook.create({
       src: collection,
-      title: "title",
-      description: "desc",
-      profileId: ao.id,
+      info: { title: "title", description: "desc" },
       bazar: true,
     })
     expect((await notebook.get(ao.id)).out.Collections[0].Id).to.eql(
@@ -107,27 +86,54 @@ describe("Atomic Notes", function () {
     )
 
     expect((await notebook.info()).out.Name).to.eql("title")
+    await notebook.updateInfo({ title: "title2" })
+    expect((await notebook.info()).out.Name).to.eql("title2")
+
     const { pid: proxy_pid } = await ao.deploy({ src: proxy, module: module2 })
     const note = new Note({ proxy: proxy_pid, ao })
 
-    const { err, pid: note_pid } = await note.spawn({
+    const { err, pid: note_pid } = await note.create({
       library,
       src: atomic_note,
-      ...note_tags,
-      ...udl,
-      payment_address: ao.addr,
-      recipient: ao.addr,
-      profileId: _prof.ProfileId,
+      data: v1,
+      info: note_tags,
+      token: { fraction: "100" },
+      udl: {
+        payment: { mode: "single", recipient: ao.addr },
+        access: { mode: "one-time", fee: "1.3" },
+        derivations: {
+          mode: "allowed",
+          term: "one-time",
+          share: "5.0",
+          fee: "1.0",
+        },
+        commercial: {
+          mode: "allowed",
+          term: "one-time",
+          share: "5.0",
+          fee: "1.0",
+        },
+        training: { mode: "allowed", term: "one-time", fee: "0.1" },
+      },
     })
 
-    const { err: err2, res: res2 } = await note.allow()
-    const { err: err3, res: res3 } = await note.init()
-    const { err: err4 } = await note.add(_prof.ProfileId)
     expect((await note.info()).out.Name).to.eql("title")
+    await note.updateInfo({ title: "title2" })
+    expect((await note.info()).out.Name).to.eql("title2")
+
+    await notebook.addNote(note.pid)
+    expect((await notebook.info()).out.Assets).to.eql([note.pid])
+    await notebook.removeNote(note.pid)
+    expect((await notebook.info()).out.Assets).to.eql([])
+
+    await notebook.addNotes([note.pid])
+    expect((await notebook.info()).out.Assets).to.eql([note.pid])
+    await notebook.removeNotes([note.pid])
+    expect((await notebook.info()).out.Assets).to.eql([])
+
     expect((await note.get()).out.data).to.eql(v1)
     expect((await note.list()).out[0].version).to.eql("0.0.1")
-    const { out: patches } = await note.patches(v2)
-    const { err: err5, res: res5 } = await note.update(patches, "0.0.2")
+    const { err: err5 } = await note.update(v2, "0.0.2")
     expect((await note.get()).out.data).to.eql(v2)
     expect((await note.list()).out[1].version).to.eql("0.0.2")
     expect((await note.get("0.0.1")).out.data).to.eql(v1)
@@ -138,14 +144,12 @@ describe("Atomic Notes", function () {
     const note2 = new Note({ pid: note_pid, ao: ao2 })
     await note.addEditor(ao2.addr)
     expect((await note.editors()).out).to.eql([ao.addr, ao2.addr])
-    const { out: patches2 } = await note2.patches(v3)
-    const { err: err6, res: res6 } = await note2.update(patches2, "0.0.3")
+    const { err: err6 } = await note2.update(v3, "0.0.3")
     expect((await note.get()).out.data).to.eql(v3)
     expect((await note.list()).out[2].version).to.eql("0.0.3")
     await note.removeEditor(ao2.addr)
     expect((await note.editors()).out).to.eql([ao.addr])
-    const { out: patches3 } = await note2.patches(v4)
-    const { err: err7, res: res7 } = await note2.update(patches3, "0.0.4")
+    const { err: err7 } = await note2.update(v4, "0.0.4")
     expect((await note.get()).out.data).to.eql(v3)
     const info = await ao.info()
     expect(info.Collections[0].Id).to.eql(collection_pid)
