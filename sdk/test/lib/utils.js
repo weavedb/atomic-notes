@@ -2,7 +2,7 @@ import { readFileSync } from "fs"
 import { resolve } from "path"
 import { AO } from "../../src/index.js"
 import { wait } from "../../src/utils.js"
-
+import { expect } from "chai"
 class Src {
   constructor({ ao, base = "../../lua" }) {
     this.ao = ao
@@ -74,4 +74,13 @@ const setup = async () => {
     ao,
   }
 }
-export { Src, setup }
+const ok = obj => {
+  expect(obj.err).to.eql(null)
+  return obj
+}
+const fail = obj => {
+  expect(obj.err).to.not.eql(null)
+  return obj
+}
+
+export { Src, setup, ok, fail }
