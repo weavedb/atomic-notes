@@ -68,14 +68,8 @@ describe("Atomic Notes", function () {
   })
 
   it("should create an AO profile", async () => {
-    ;({ pid: profile_pid } = await ao.deploy({
-      src: profile,
-      fills: { REGISTRY: registry_pid },
-    }))
-    ok(await ao.updateProfile({ id: profile_pid, profile: prof }))
-    await wait(1000)
-    const _prof = await ao.profile()
-    expect(_prof.DisplayName).to.eql(prof.DisplayName)
+    ;({ pid: profile_pid } = ok(await ao.createProfile({ profile: prof })))
+    expect((await ao.profile()).DisplayName).to.eql(prof.DisplayName)
   })
 
   it("should create a notebook", async () => {

@@ -14,7 +14,12 @@ class Notebook {
 
   async create({
     src = scripts.collection,
-    info: { title, description, thumbnail, banner } = {},
+    info: {
+      title,
+      description,
+      thumbnail = "xQLpZvbtHdEyWWkfcjd_Sirw6S82z2YGOB5cKL8Qxyc",
+      banner = "eXCtpVbcd_jZ0dmU2PZ8focaKxBGECBQ8wMib7sIVPo",
+    } = {},
     bazar = false,
   }) {
     const profileId = this.ao.id
@@ -44,8 +49,8 @@ class Notebook {
           DATECREATED: date,
           LASTUPDATE: date,
           CREATOR: profileId,
-          BANNER: banner ?? "None",
-          THUMBNAIL: thumbnail ?? "None",
+          BANNER: banner,
+          THUMBNAIL: thumbnail,
         },
       })
       if (_err) {
@@ -122,8 +127,8 @@ class Notebook {
   async register({
     name,
     description,
-    thumbnail = "None",
-    banner = "None",
+    thumbnail = "xQLpZvbtHdEyWWkfcjd_Sirw6S82z2YGOB5cKL8Qxyc",
+    banner = "eXCtpVbcd_jZ0dmU2PZ8focaKxBGECBQ8wMib7sIVPo",
     date,
     creator,
     collectionId,

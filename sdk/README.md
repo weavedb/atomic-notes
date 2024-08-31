@@ -253,6 +253,12 @@ const result = await ao.result({ process, message })
 
 ### AO Profile Functions
 
+#### createProfile
+
+```js
+const { pid: id } = await ao.createProfile({ profile }))
+```
+
 #### ids
 
 A list of ids managed by the provided address. `addr` will be `ao.addr` if omitted.
@@ -269,7 +275,6 @@ A profile of the provided id. `id` will be `ao.id` if omitted.
 const profile = await ao.profile({ id })
 ```
 #### updateProfile
-
 
 Update an AO profile.
 

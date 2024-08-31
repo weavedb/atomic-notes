@@ -4,7 +4,7 @@ import { AO } from "../../src/index.js"
 import { wait } from "../../src/utils.js"
 import { expect } from "chai"
 class Src {
-  constructor({ ao, base = "../../lua" }) {
+  constructor({ ao, base = "../../src/lua" }) {
     this.ao = ao
     this.base = base
   }
@@ -34,6 +34,7 @@ const setup = async () => {
   const library = await src.upload("atomic-note-library")
   const registry = await src.upload("registry000")
   const profile = await src.upload("profile000")
+  ao.profile_src = profile
   const collection_registry = await src.upload("collection-registry")
   const collection = await src.upload("collection")
   const atomic_note = await src.upload("atomic-note")
@@ -41,17 +42,18 @@ const setup = async () => {
 
   const wasm = await src.upload("aos-sqlite", "wasm")
   const module = await ao.postModule({ data: await ao.data(wasm) })
+  ao.module = module
 
   const wasm2 = await src.upload("aos", "wasm")
   const module2 = await ao.postModule({ data: await ao.data(wasm2) })
 
   const scheduler = await ao.postScheduler({ url: "http://su" })
-
-  ao.module = module
   ao.scheduler = scheduler
-  const { err: _err, pid: registry_pid } = await ao.deploy({
+
+  const { pid: registry_pid } = await ao.deploy({
     src: registry,
   })
+  ao.registry = registry_pid
   await ao.initRegistry({ registry: registry_pid })
   await wait(1000)
   const { pid: collection_registry_pid } = await ao.deploy({

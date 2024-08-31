@@ -28,6 +28,7 @@ class AO {
     module = "cNlipBptaF9JeFAf4wUmpi43EojNanIBos3EfNrEOWo",
     scheduler = "_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA",
     registry = "SNy4m-DrqxWl01YqGM4sxI8qCni-58re8uuJLvZPypY",
+    profile_src = "uEtSHyK9yDBABomez6ts3LI_8ULvO-rANSgDN_9OzEc",
     arweave = { host: "arweave.net", port: 443, protocol: "https" },
     aoconnect,
   } = {}) {
@@ -51,6 +52,7 @@ class AO {
       this.spawn = spawn
       this.dryrun = dryrun
     }
+    this.profile_src = profile_src
     this.registry = registry
     this.module = module
     this.scheduler = scheduler
@@ -437,9 +439,20 @@ class AO {
     if (err) {
       return { mid, err }
     } else {
-      await wait(1000)
       return { mid, err: null }
     }
+  }
+  async wait(pid, attempts = 5) {
+    let exist = false
+    let err = null
+    while (attempts > 0) {
+      await wait(1000)
+      const { res, err } = await this.dry({ pid, data: "#Inbox" })
+      if (typeof res?.Output === "object") break
+      attempts -= 1
+      if (attempts === 0) err = "timeout"
+    }
+    return { err }
   }
 
   async deploy({
@@ -453,17 +466,65 @@ class AO {
     data,
   }) {
     let err = null
-    const { pid } = await this.spwn({ module, scheduler, jwk, tags, data })
-    await wait(1000)
-    if (!loads) {
-      loads = [{ src, fills }]
-    }
-    for (const v of loads) {
-      const { err: _err } = await this.load({ ...v, pid })
+    const { err: _err, pid } = await this.spwn({
+      module,
+      scheduler,
+      jwk,
+      tags,
+      data,
+    })
+    if (_err) {
       err = _err
-      if (_err) return { err, pid }
+    } else {
+      const { err: _err2 } = await this.wait(pid)
+      if (_err2) {
+        err = _err2
+      } else {
+        if (!loads) loads = [{ src, fills }]
+        for (const v of loads) {
+          const { err: _err } = await this.load({ ...v, pid })
+          err = _err
+          if (_err) return { err, pid }
+        }
+      }
     }
     return { pid, err }
+  }
+
+  async createProfile({
+    registry = this.registry,
+    profile_src = this.profile_src,
+    profile,
+  }) {
+    let err = null
+    let pid = null
+    let mid = null
+    let _profile = null
+    const { err: _err, pid: _pid } = await this.deploy({
+      src: profile_src,
+      fills: { REGISTRY: registry },
+    })
+    if (_err) {
+      err = _err
+    } else {
+      pid = _pid
+      this.id = pid
+      const { err: _err2, mid: _mid } = await this.updateProfile({
+        id: pid,
+        profile,
+      })
+      if (_err2) err = _err2
+      mid = _mid
+      let attempts = 5
+      while (attempts > 0) {
+        await wait(1000)
+        _profile = await this.profile()
+        attempts -= 1
+        if (_profile || attempts === 0) break
+      }
+      if (!_profile) err = "no profile found on registry"
+    }
+    return { err, pid, mid, profile: _profile }
   }
 }
 
