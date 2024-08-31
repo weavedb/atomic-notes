@@ -355,6 +355,7 @@ const { pid: note_pid } = await note.create({
 
 await notebook.addNote(pid) // add to a notebook
 ```
+
 #### Universal Data License
 
 - payment
@@ -393,10 +394,12 @@ const { err } = await note.updateInfo({ title, description, thumbnail })
 const { out: versions } = await note.list()
 ```
 
-### Get Note Content
+### Get Note Content with Metadata
+
+If `version` is omitted, it returns the latest version.
 
 ```js
-const { out: note_data } = await note.get(version)
+const { out: atomic_note } = await note.get(version)
 ```
 
 ### Update New Version
@@ -404,6 +407,9 @@ const { out: note_data } = await note.get(version)
 ```js
 const { err } = await note.update(data, version)
 ```
+
+`version` should be higher than the current version, or it can be `major`, `minor`, or `patch` for automatically bumping the respective part of the current version.
+
 ### Get Editors
 
 ```js

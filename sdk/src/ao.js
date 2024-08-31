@@ -10,6 +10,7 @@ import {
   dryrun,
 } from "@permaweb/aoconnect"
 import { map, prop, is, mergeLeft, assoc } from "ramda"
+
 import {
   searchTag,
   wait,
@@ -451,16 +452,18 @@ class AO {
     tags = [],
     data,
   }) {
+    let err = null
     const { pid } = await this.spwn({ module, scheduler, jwk, tags, data })
     await wait(1000)
     if (!loads) {
       loads = [{ src, fills }]
     }
     for (const v of loads) {
-      const { err } = await this.load({ ...v, pid })
-      if (err) return { err, pid }
+      const { err: _err } = await this.load({ ...v, pid })
+      err = _err
+      if (_err) return { err, pid }
     }
-    return { pid }
+    return { pid, err }
   }
 }
 

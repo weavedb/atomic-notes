@@ -436,13 +436,22 @@ Handlers.add(
    "update",
    Handlers.utils.hasMatchingTag("Action", "Update"),
    function (msg)
-      assert(type(msg.Tags.Version) == "string", 'Version is required!')
+      local ver = msg.Tags.Version
+      assert(type(ver) == "string", 'Version is required!')
       assert(type(msg.Data) == "string", 'Data is required!')
-      assert(semver(msg.Tags.Version) > semver(version), "Version must be higher!")
       assert(is_editor(msg.From), 'sender is not an editor!')
+      if ver == "major" then
+	 version = tostring(semver(version):nextMajor())
+      elseif ver == "minor" then
+	 version = tostring(semver(version):nextMinor())
+      elseif ver == "patch" then
+	 version = tostring(semver(version):nextPatch())
+      else
+	 assert(semver(ver) > semver(version), "Version must be higher!")
+	 version = ver
+      end
       local _patches = dmp.patch_fromText(base64.decode(msg.Data))
       data = dmp.patch_apply(_patches, data)
-      version = msg.Tags.Version
       table.insert(versions, { version = msg.Tags.Version, date = msg.Timestamp, patches = msg.Data, editor = msg.From })
       Handlers.utils.reply("updated!")(msg)
    end
