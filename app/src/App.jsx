@@ -117,7 +117,18 @@ function App() {
           </Flex>
           <Box flex={1} />
           <Flex justify="center" py={6}>
-            <Flex w="100%" maxW="854px" justify="flex-end">
+            <Flex w="100%" maxW="854px" align="center">
+              <Link
+                to="https://github.com/weavedb/atomic-notes"
+                target="_blank"
+              >
+                <Image
+                  src="github.svg"
+                  boxSize="24px"
+                  sx={{ cursor: "pointer", ":hover": { opacity: 0.75 } }}
+                />
+              </Link>
+              <Box flex={1} />
               <Flex justify="flex-end" fontSize="12px">
                 ONLY POSSIBLE ON ⓐ ARWEAVE
               </Flex>

@@ -1,28 +1,67 @@
-import { scripts, action, tag } from "./utils.js"
+import { srcs, action, tag } from "./utils.js"
 import { is } from "ramda"
+import Profile from "./profile.js"
+
 class Notebook {
   constructor({
-    wallet,
-    registry = "TFWDmf8a3_nw43GCm_CuYlYoylHAjCcFGbgHfDaGcsg",
+    registry,
+    registry_src = srcs.bookreg,
     pid,
-    ao,
-  }) {
-    this.ao = ao
+    profile = {},
+    ao = {},
+    ar = {},
+  } = {}) {
+    this.__type__ = "notebook"
+    if (profile?.__type__ === "profile") {
+      this.profile = profile
+    } else {
+      let _profile = typeof profile === "object" ? profile : {}
+      if (!_profile.ao) _profile.ao = ao
+      if (!_profile.ar) _profile.ar = ar
+      this.profile = new Profile(profile)
+    }
+    this.ao = this.profile.ao
+    this.ar = this.ao.ar
     this.registry = registry
     this.pid = pid
+    this.registry_src = registry_src
+  }
+  async init(jwk) {
+    await this.profile.init(jwk)
+    return this
+  }
+
+  async createRegistry({ jwk } = {}) {
+    let err = null
+    let pid = null
+    if (!jwk) {
+      ;({ jwk, err } = await this.ar.checkWallet())
+    }
+    if (!err) {
+      const { err: _err, pid: _pid } = await this.ao.deploy({
+        src: this.registry_src,
+      })
+      if (_err) {
+        err = _err
+      } else {
+        pid = _pid
+        this.registry = _pid
+      }
+    }
+    return { err, pid }
   }
 
   async create({
-    src = scripts.collection,
+    src = srcs.book,
     info: {
       title,
       description,
-      thumbnail = "xQLpZvbtHdEyWWkfcjd_Sirw6S82z2YGOB5cKL8Qxyc",
-      banner = "eXCtpVbcd_jZ0dmU2PZ8focaKxBGECBQ8wMib7sIVPo",
+      thumbnail = srcs.thumb,
+      banner = srcs.banner,
     } = {},
     bazar = false,
   }) {
-    const profileId = this.ao.id
+    const profileId = this.profile.id
     if (!profileId) return { err: "no ao profile id" }
     const date = Date.now()
     let tags = [
@@ -31,7 +70,7 @@ class Notebook {
       tag("Description", description),
       tag("Date-Created", Number(date).toString()),
       tag("Profile-Creator", profileId),
-      tag("Creator", this.ao.addr),
+      tag("Creator", this.ar.addr),
       tag("Collection-Type", "Atomic-Notes"),
     ]
     if (thumbnail && !/^\s*$/.test(thumbnail)) {
@@ -127,8 +166,8 @@ class Notebook {
   async register({
     name,
     description,
-    thumbnail = "xQLpZvbtHdEyWWkfcjd_Sirw6S82z2YGOB5cKL8Qxyc",
-    banner = "eXCtpVbcd_jZ0dmU2PZ8focaKxBGECBQ8wMib7sIVPo",
+    thumbnail = srcs.thumb,
+    banner = srcs.banner,
     date,
     creator,
     collectionId,

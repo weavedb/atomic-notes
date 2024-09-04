@@ -1,5 +1,4 @@
-import Arweave from "arweave"
-import { ArweaveSigner, bundleAndSignData, createData } from "arbundles"
+import AR from "./ar.js"
 import {
   createDataItemSigner,
   connect,
@@ -9,6 +8,7 @@ import {
   spawn,
   dryrun,
 } from "@permaweb/aoconnect"
+
 import { map, prop, is, mergeLeft, assoc } from "ramda"
 
 import {
@@ -21,23 +21,24 @@ import {
   getTag,
   isData,
   getTagVal,
+  srcs,
 } from "./utils.js"
 
 class AO {
   constructor({
-    module = "cNlipBptaF9JeFAf4wUmpi43EojNanIBos3EfNrEOWo",
-    scheduler = "_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA",
-    registry = "SNy4m-DrqxWl01YqGM4sxI8qCni-58re8uuJLvZPypY",
-    profile_src = "uEtSHyK9yDBABomez6ts3LI_8ULvO-rANSgDN_9OzEc",
-    arweave = { host: "arweave.net", port: 443, protocol: "https" },
+    module = srcs.module,
+    scheduler = srcs.scheduler,
     aoconnect,
+    ar = {},
   } = {}) {
-    let _arweave = arweave
-    if (!_arweave.host) _arweave.host = "127.0.0.1"
-    if (!_arweave.protocol)
-      _arweave.protocol = isLocalhost(_arweave.host) ? "http" : "https"
-    if (!_arweave.port) _arweave.port = isLocalhost(_arweave.host) ? 1984 : 443
-    this.toSigner = createDataItemSigner
+    this.__type__ = "ao"
+    if (ar?.__type__ === "ar") {
+      this.ar = ar
+    } else {
+      let _ar = typeof ar === "object" ? ar : {}
+      this.ar = new AR(ar)
+    }
+
     if (aoconnect) {
       const { assign, result, message, spawn, dryrun } = connect(aoconnect)
       this.assign = assign
@@ -52,183 +53,116 @@ class AO {
       this.spawn = spawn
       this.dryrun = dryrun
     }
-    this.profile_src = profile_src
-    this.registry = registry
     this.module = module
     this.scheduler = scheduler
-    this.port = _arweave.port
-    this.arweave = Arweave.init(arweave)
-    this.host = _arweave.host
-    this.protocol = _arweave.protocol
   }
+
   async init(jwk) {
-    this.jwk = jwk
-    this.addr = await this.toAddr(jwk)
-    this.pub = jwk.n
-    this.signer = this.toSigner(jwk)
-    await this.profile()
+    if (!jwk) {
+      ;({ jwk } = await this.ar.checkWallet())
+    }
+    await this.ar.init(jwk)
     return this
   }
-  async mine() {
-    await this.arweave.api.get(`/mine`)
-  }
 
-  async balance(addr = this.addr) {
-    return this.toAR(await this.arweave.wallets.getBalance(addr))
-  }
-
-  async mint(addr, amount = "1.0") {
-    await this.arweave.api.get(`/mint/${addr}/${this.toWinston(amount)}`)
-    await this.mine()
-    return await this.balance(addr)
-  }
-
-  toWinston(ar) {
-    return this.arweave.ar.arToWinston(ar)
-  }
-
-  toAR(w) {
-    return this.arweave.ar.winstonToAr(w)
-  }
-
-  async toAddr(jwk = this.jwk) {
-    return await this.arweave.wallets.jwkToAddress(jwk)
-  }
-
-  async gen(amount, overwrite = false) {
-    const jwk = await this.arweave.wallets.generate()
-    const addr = await this.toAddr(jwk)
-    if (!this.jwk || overwrite) {
-      this.jwk = jwk
-      this.pub = jwk.n
-      this.addr = addr
-      this.signer = this.toSigner(jwk)
+  toSigner(wallet) {
+    if (wallet.test) {
+      return createDataItemSigner(wallet.jwk)
+    } else {
+      return createDataItemSigner(wallet)
     }
-    let bal = "0"
-    if (amount && isLocalhost(this.host)) bal = await this.mint(addr, amount)
-    return { jwk, addr, pub: jwk.n, bal }
   }
 
-  async transfer(ar, target, jwk = this.jwk) {
-    let tx = await this.arweave.createTransaction({
-      target,
-      quantity: this.toWinston(ar),
-    })
-    return await this.postTx(tx, jwk)
+  async postModule({ data, jwk, tags = {}, overwrite = false }) {
+    let err = null
+    if (!jwk) {
+      ;({ jwk, err } = await this.ar.checkWallet())
+    }
+    if (err) {
+      return { err }
+    } else {
+      const _tags = mergeLeft(tags, {
+        "Data-Protocol": "ao",
+        Variant: "ao.TN.1",
+        Type: "Module",
+        "Module-Format": "wasm64-unknown-emscripten-draft_2024_02_15",
+        "Input-Encoding": "JSON-V1",
+        "Output-Encoding": "JSON-V1",
+      })
+      const res = await this.ar.post({ data, jwk, tags: _tags })
+      if (!this.module || overwrite) this.module = res.id
+      return res
+    }
   }
 
-  async bundle(_items, jwk = this.jwk) {
-    const signer = new ArweaveSigner(jwk)
-    const items = _items.map(v => {
-      let tags = []
-      for (const k in v[1] && {}) {
-        if (is(Array)(v[1][k])) {
-          for (const v of v[1][k]) tags.push(tag(k, v))
-        } else {
-          tags.push(tag(k, v[1][k]))
+  async postScheduler({ jwk, url, tags = {}, overwrite = false }) {
+    let err = null
+    if (!jwk) {
+      ;({ jwk } = await this.ar.checkWallet())
+    }
+    if (err) {
+      return { err }
+    } else {
+      const _tags = mergeLeft(tags, {
+        "Data-Protocol": "ao",
+        Variant: "ao.TN.1",
+        Type: "Scheduler-Location",
+        Url: url,
+        "Time-To-Live": "1000000000",
+      })
+      const { res, err: _err } = await this.ar.post({
+        data: "1984",
+        jwk,
+        tags: _tags,
+      })
+      if (_err) {
+        err = _err
+      } else {
+        if (!this.scheduler || overwrite) {
+          this.scheduler = await this.ar.toAddr(jwk)
         }
       }
-      return createData(v[0], signer, { tags, ...(v[2] ?? {}) })
-    })
-    const bundle = await bundleAndSignData(items, signer)
-    const tx = await bundle.toTransaction({}, this.arweave, jwk)
-    await this.postTx(tx, jwk)
-    return { items, tx, id: tx.id }
-  }
-
-  async post({ data, tags = {}, jwk = this.jwk }) {
-    let tx = await this.arweave.createTransaction({ data: data })
-    for (const k in tags) {
-      if (is(Array)(tags[k])) {
-        for (const v of tags[k]) tx.addTag(k, v)
-      } else {
-        tx.addTag(k, tags[k])
-      }
+      return { err, res, scheduler: this.scheduler }
     }
-    return this.postTx(tx, jwk)
-  }
-
-  async postTx(tx, jwk = this.jwk) {
-    await this.arweave.transactions.sign(tx, jwk)
-    await this.arweave.transactions.post(tx)
-    if (isLocalhost(this.host)) await this.mine()
-    return tx.id
-  }
-
-  async tx(txid) {
-    const json = await fetch(
-      `${this.protocol}://${this.host}:${this.port}/graphql`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: query(txid) }),
-      },
-    ).then(r => r.json())
-    return json.data.transactions.edges.map(v => v.node)[0] ?? null
-  }
-
-  async data(txid, string = false) {
-    return await this.arweave.transactions.getData(txid, {
-      decode: true,
-      string,
-    })
-  }
-
-  async postModule({ data, jwk, tags = {} }) {
-    const _tags = mergeLeft(tags, {
-      "Data-Protocol": "ao",
-      Variant: "ao.TN.1",
-      Type: "Module",
-      "Module-Format": "wasm64-unknown-emscripten-draft_2024_02_15",
-      "Input-Encoding": "JSON-V1",
-      "Output-Encoding": "JSON-V1",
-    })
-    return await this.post({ data, jwk, tags: _tags })
-  }
-
-  async postScheduler({ jwk = this.jwk, url, tags = {} }) {
-    const _tags = mergeLeft(tags, {
-      "Data-Protocol": "ao",
-      Variant: "ao.TN.1",
-      Type: "Scheduler-Location",
-      Url: url,
-      "Time-To-Live": "1000000000",
-    })
-    await this.post({ data: "1984", jwk, tags: _tags })
-    this.scheduler = await this.toAddr(jwk)
-    return this.scheduler
   }
 
   async spwn({
     module = this.module,
     scheduler = this.scheduler,
-    jwk = this.jwk,
+    jwk,
     tags = [],
     data,
-  }) {
+  } = {}) {
     let err = null
-    let pid = null
-    try {
-      pid = await this.spawn({
-        module,
-        scheduler,
-        signer: this.toSigner(jwk),
-        tags: [
-          { name: "Memory-Limit", value: "500-mb" },
-          { name: "Compute-Limit", value: "9000000000000" },
-          ...tags,
-        ],
-        data,
-      })
-    } catch (e) {
-      err = e
+    if (!jwk) {
+      ;({ jwk, err } = await this.ar.checkWallet())
     }
-    return { err, pid }
+    if (err) {
+      return { err }
+    } else {
+      let pid = null
+      try {
+        pid = await this.spawn({
+          module,
+          scheduler,
+          signer: this.toSigner(jwk),
+          tags: [
+            { name: "Memory-Limit", value: "500-mb" },
+            { name: "Compute-Limit", value: "9000000000000" },
+            ...tags,
+          ],
+          data,
+        })
+      } catch (e) {
+        err = e
+      }
+      return { err, pid }
+    }
   }
 
   async msg({
     pid,
-    jwk = this.jwk,
+    jwk,
     data,
     action: _action = "Eval",
     tags = {},
@@ -237,74 +171,88 @@ class AO {
     get,
   }) {
     let err = null
-    let mid = null
-    let res = null
-    let out = null
-    let _tags = [action(_action)]
-    for (const k in tags) {
-      if (is(Array)(tags[k])) {
-        for (const v of tags[k]) _tags.push(tag(k, v))
-      } else {
-        _tags.push(tag(k, tags[k]))
-      }
+    if (!jwk) {
+      ;({ jwk, err } = await this.ar.checkWallet())
     }
-    try {
-      mid = await this.message({
-        process: pid,
-        signer: this.toSigner(jwk),
-        tags: _tags,
-        data,
-      })
-      const _res = await this.result({ process: pid, message: mid })
-      res = _res
-      for (const k in check ?? {}) {
-        if (!searchTag(_res, k, check[k])) {
-          err = "something went wrong"
-          break
+    if (err) {
+      return { err }
+    } else {
+      let mid = null
+      let res = null
+      let out = null
+      let _tags = [action(_action)]
+      for (const k in tags) {
+        if (is(Array)(tags[k])) {
+          for (const v of tags[k]) _tags.push(tag(k, v))
+        } else {
+          _tags.push(tag(k, tags[k]))
         }
       }
-      if (checkData) {
-        if (!isData(checkData, _res)) err = "something went wrong"
+      try {
+        mid = await this.message({
+          process: pid,
+          signer: this.toSigner(jwk),
+          tags: _tags,
+          data,
+        })
+        const _res = await this.result({ process: pid, message: mid })
+        res = _res
+        for (const k in check ?? {}) {
+          if (!searchTag(_res, k, check[k])) {
+            err = "something went wrong"
+            break
+          }
+        }
+        if (checkData) {
+          if (!isData(checkData, _res)) err = "something went wrong"
+        }
+        if (!err && get) out = getTagVal(get, res)
+      } catch (e) {
+        err = e
       }
-      if (!err && get) out = getTagVal(get, res)
-    } catch (e) {
-      err = e
+      return { mid, res, err, out }
     }
-    return { mid, res, err, out }
   }
 
-  async asgn({ pid, mid, jwk = this.jwk, check, checkData, get }) {
+  async asgn({ pid, mid, jwk, check, checkData, get }) {
     let err = null
-    let res = null
-    let out = null
-    try {
-      mid = await this.assign({
-        process: pid,
-        message: mid,
-        signer: this.toSigner(jwk),
-      })
-      const _res = await this.result({ process: pid, message: mid })
-      if (!_res) err = "something went wrong"
-      res = _res.Messages[0]
-      for (const k in check ?? {}) {
-        if (!searchTag(_res, k, check[k])) {
-          err = "something went wrong"
-          break
-        }
-      }
-      if (checkData) {
-        if (!isData(checkData, _res)) err = "something went wrong"
-      }
-      if (!err && get) out = getTagVal(get, res)
-    } catch (e) {
-      err = e
+    if (!jwk) {
+      ;({ jwk, err } = await this.ar.checkWallet())
     }
-    return { mid, res, err, out }
+    if (err) {
+      return { err }
+    } else {
+      let res = null
+      let out = null
+      try {
+        mid = await this.assign({
+          process: pid,
+          message: mid,
+          signer: this.toSigner(jwk),
+        })
+        const _res = await this.result({ process: pid, message: mid })
+        if (!_res) err = "something went wrong"
+        res = _res.Messages[0]
+        for (const k in check ?? {}) {
+          if (!searchTag(_res, k, check[k])) {
+            err = "something went wrong"
+            break
+          }
+        }
+        if (checkData) {
+          if (!isData(checkData, _res)) err = "something went wrong"
+        }
+        if (!err && get) out = getTagVal(get, res)
+      } catch (e) {
+        err = e
+      }
+      return { mid, res, err, out }
+    }
   }
 
   async dry({
     pid,
-    jwk = this.jwk,
+    jwk,
     data,
     action: _action = "Eval",
     tags = {},
@@ -313,141 +261,99 @@ class AO {
     get,
   }) {
     let err = null
-    let res
-    let _tags = [action(_action)]
-    let out = null
-    for (const k in tags) {
-      if (is(Array)(tags[k])) {
-        for (const v of tags[k]) _tags.push(tag(k, v))
-      } else {
-        _tags.push(tag(k, tags[k]))
-      }
+    if (!jwk) {
+      ;({ jwk, err } = await this.ar.checkWallet())
     }
-    try {
-      const _res = await this.dryrun({
-        process: pid,
-        signer: this.toSigner(jwk),
-        tags: _tags,
-        data,
-      })
-      res = _res
-      for (const k in check ?? {}) {
-        if (!searchTag(_res, k, check[k])) {
-          err = "something went wrong"
-          break
+    if (err) {
+      return { err }
+    } else {
+      let res
+      let _tags = [action(_action)]
+      let out = null
+      for (const k in tags) {
+        if (is(Array)(tags[k])) {
+          for (const v of tags[k]) _tags.push(tag(k, v))
+        } else {
+          _tags.push(tag(k, tags[k]))
         }
       }
-      if (checkData) {
-        if (!isData(checkData, _res)) err = "something went wrong"
+      try {
+        const _res = await this.dryrun({
+          process: pid,
+          signer: this.toSigner(jwk),
+          tags: _tags,
+          data,
+        })
+        res = _res
+        for (const k in check ?? {}) {
+          if (!searchTag(_res, k, check[k])) {
+            err = "something went wrong"
+            break
+          }
+        }
+        if (checkData) {
+          if (!isData(checkData, _res)) err = "something went wrong"
+        }
+        if (!err && get) out = getTagVal(get, res)
+      } catch (e) {
+        err = e
       }
-      if (!err && get) out = getTagVal(get, res)
-    } catch (e) {
-      err = e
+      return { res, err, out }
     }
-    return { res, err, out }
   }
 
-  async eval({ pid, jwk = this.jwk, data }) {
+  async eval({ pid, jwk, data }) {
     let err = null
-    const {
-      res,
-      mid,
-      err: _err,
-    } = await this.msg({ pid, jwk, data, action: "Eval" })
-    if (_err || typeof res.Output?.data !== "object") {
-      err = "something went wrong"
+    if (!jwk) {
+      ;({ jwk, err } = await this.ar.checkWallet())
     }
-    return { err, mid, res }
-  }
-
-  async initRegistry({ registry, jwk = this.jwk }) {
-    this.registry = registry
-    return await this.msg({
-      pid: registry,
-      jwk,
-      action: "Prepare-Database",
-    })
-  }
-
-  async updateProfile({ jwk, profile, id }) {
-    if (!id) id = this.id ?? (await this.ids())[0]
-    if (!id) return { err: "no profile id" }
-    return await this.msg({
-      pid: id,
-      jwk,
-      data: JSON.stringify(profile),
-      action: "Update-Profile",
-    })
-  }
-
-  async ids({
-    registry = this.registry,
-    addr = this.addr,
-    jwk = this.jwk,
-  } = {}) {
-    const res = await this.dryrun({
-      signer: this.toSigner(jwk),
-      process: registry,
-      tags: [{ name: "Action", value: "Get-Profiles-By-Delegate" }],
-      data: JSON.stringify({ Address: addr }),
-    })
-    const _ids = map(
-      prop("ProfileId"),
-      JSON.parse(res.Messages?.[0]?.Data ?? []),
-    )
-    if (_ids[0] && addr === this.addr) this.id = _ids[0]
-    return _ids
-  }
-
-  async profile({ registry = this.registry, id, jwk = this.jwk } = {}) {
-    if (!id) id = this.id ?? (await this.ids())[0]
-    if (!id) return null
-    const res = await this.dryrun({
-      signer: this.toSigner(jwk),
-      process: registry,
-      tags: [{ name: "Action", value: "Get-Metadata-By-ProfileIds" }],
-      data: JSON.stringify({ ProfileIds: [id] }),
-    })
-    const profile = JSON.parse(res.Messages[0]?.Data ?? [])[0] ?? null
-    return profile
-  }
-
-  async info({ id, registry = this.registry, jwk = this.jwk } = {}) {
-    if (!id) id = this.id ?? (await this.ids())[0]
-    if (!id) return null
-    const res = await this.dryrun({
-      signer: this.toSigner(jwk),
-      process: id,
-      tags: [{ name: "Action", value: "Info" }],
-    })
-    const profile = JSON.parse(res.Messages[0]?.Data ?? null)
-    return profile ? assoc("Id", id, profile) : null
-  }
-
-  async load({ src, fills, pid }) {
-    let _data = await this.data(src, true)
-    for (const k in fills) {
-      let text = fills[k]
-      if (typeof text === "number") text = Number(text).toString()
-      _data = _data.replace(
-        new RegExp(`\<${k}\>`, "g"),
-        text.replace(/'/g, "\\'"),
-      )
-    }
-
-    const { err, res, mid } = await this.eval({ data: _data, pid })
     if (err) {
-      return { mid, err }
+      return { err }
     } else {
-      return { mid, err: null }
+      const {
+        res,
+        mid,
+        err: _err,
+      } = await this.msg({ pid, jwk, data, action: "Eval" })
+      if (_err || typeof res.Output?.data !== "object") {
+        err = "something went wrong"
+      }
+      return { err, mid, res }
     }
   }
+
+  async load({ src, fills, pid, jwk }) {
+    let err = null
+    if (!jwk) {
+      ;({ jwk, err } = await this.ar.checkWallet())
+    }
+    if (err) {
+      return { err }
+    } else {
+      let _data = await this.ar.data(src, true)
+      for (const k in fills) {
+        let text = fills[k]
+        if (typeof text === "number") text = Number(text).toString()
+        _data = _data.replace(
+          new RegExp(`\<${k}\>`, "g"),
+          text.replace(/'/g, "\\'"),
+        )
+      }
+      const { err, res, mid } = await this.eval({ data: _data, pid, jwk })
+      if (err) {
+        return { mid, err, res }
+      } else {
+        return { mid, err: null, res }
+      }
+    }
+  }
+
   async wait(pid, attempts = 5) {
     let exist = false
     let err = null
     while (attempts > 0) {
       await wait(1000)
-      const { res, err } = await this.dry({ pid, data: "#Inbox" })
+      const { res, err: _err } = await this.dry({ pid, data: "#Inbox" })
       if (typeof res?.Output === "object") break
       attempts -= 1
       if (attempts === 0) err = "timeout"
@@ -461,70 +367,41 @@ class AO {
     fills = {},
     module = this.module,
     scheduler = this.scheduler,
-    jwk = this.jwk,
+    jwk,
     tags = [],
     data,
   }) {
     let err = null
-    const { err: _err, pid } = await this.spwn({
-      module,
-      scheduler,
-      jwk,
-      tags,
-      data,
-    })
-    if (_err) {
-      err = _err
+    if (!jwk) {
+      ;({ jwk, err } = await this.ar.checkWallet())
+    }
+    if (err) {
+      return { err }
     } else {
-      const { err: _err2 } = await this.wait(pid)
-      if (_err2) {
-        err = _err2
+      const { err: _err, pid } = await this.spwn({
+        module,
+        scheduler,
+        jwk,
+        tags,
+        data,
+      })
+      if (_err) {
+        err = _err
       } else {
-        if (!loads) loads = [{ src, fills }]
-        for (const v of loads) {
-          const { err: _err } = await this.load({ ...v, pid })
-          err = _err
-          if (_err) return { err, pid }
+        const { err: _err2 } = await this.wait(pid)
+        if (_err2) {
+          err = _err2
+        } else {
+          if (!loads) loads = [{ src, fills }]
+          for (const v of loads) {
+            const { err: _err, res } = await this.load({ ...v, pid })
+            err = _err
+            if (_err) return { err, pid }
+          }
         }
       }
+      return { pid, err }
     }
-    return { pid, err }
-  }
-
-  async createProfile({
-    registry = this.registry,
-    profile_src = this.profile_src,
-    profile,
-  }) {
-    let err = null
-    let pid = null
-    let mid = null
-    let _profile = null
-    const { err: _err, pid: _pid } = await this.deploy({
-      src: profile_src,
-      fills: { REGISTRY: registry },
-    })
-    if (_err) {
-      err = _err
-    } else {
-      pid = _pid
-      this.id = pid
-      const { err: _err2, mid: _mid } = await this.updateProfile({
-        id: pid,
-        profile,
-      })
-      if (_err2) err = _err2
-      mid = _mid
-      let attempts = 5
-      while (attempts > 0) {
-        await wait(1000)
-        _profile = await this.profile()
-        attempts -= 1
-        if (_profile || attempts === 0) break
-      }
-      if (!_profile) err = "no profile found on registry"
-    }
-    return { err, pid, mid, profile: _profile }
   }
 }
 

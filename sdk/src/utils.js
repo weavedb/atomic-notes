@@ -154,14 +154,24 @@ const getTagVal = (get, res) => {
   return out
 }
 
-const scripts = {
-  "atomic-note-library": "XnV_WEZVaw9D_GiDPg6kydbIhErdTYm6GKlSO1pyfsI",
-  collection: "NKISXnq5XseLQd_u-lfO6ThBLuikLoontY47UlONrB4",
-  "atomic-note": "8ItY-41YrV5D286SpqNH2DGbVO4kWpcY5Rcs7w2SCC0",
+const srcs = {
+  notelib: "XnV_WEZVaw9D_GiDPg6kydbIhErdTYm6GKlSO1pyfsI",
+  book: "NKISXnq5XseLQd_u-lfO6ThBLuikLoontY47UlONrB4",
+  note: "8ItY-41YrV5D286SpqNH2DGbVO4kWpcY5Rcs7w2SCC0",
+  bookreg: "TFWDmf8a3_nw43GCm_CuYlYoylHAjCcFGbgHfDaGcsg",
+  thumb: "xQLpZvbtHdEyWWkfcjd_Sirw6S82z2YGOB5cKL8Qxyc",
+  banner: "eXCtpVbcd_jZ0dmU2PZ8focaKxBGECBQ8wMib7sIVPo",
+  proxy: "0uboI80S6vMxJD9Yn41Wdwnp9uAHEi4XLGQhBrp3qSQ",
+  render: "yXXAop3Yxm8QlZRzP46oRxZjCBp88YTpoSTPlTr4TcQ",
+  module: "cNlipBptaF9JeFAf4wUmpi43EojNanIBos3EfNrEOWo",
+  scheduler: "_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA",
+  registry: "SNy4m-DrqxWl01YqGM4sxI8qCni-58re8uuJLvZPypY",
+  profile: "uEtSHyK9yDBABomez6ts3LI_8ULvO-rANSgDN_9OzEc",
+  registry_src: "kBk-wRbK5aIZVqDJEzWhjYb5gnydHafrFG3wgItBvuI",
 }
 
 export {
-  scripts,
+  srcs,
   getTagVal,
   isData,
   query,
