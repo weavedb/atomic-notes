@@ -21,7 +21,7 @@ import {
 } from "@chakra-ui/react"
 import { useParams } from "react-router-dom"
 import { Link } from "react-router-dom"
-import { Notebook } from "atomic-notes"
+import { AO, Notebook } from "atomic-notes"
 
 import {
   ltags,
@@ -120,6 +120,7 @@ function App(a) {
   const [newEditor, setNewEditor] = useState("")
   const [newEditorProfile, setNewEditorProfile] = useState(null)
   const [registered, setRegistered] = useState([])
+
   useEffect(() => {
     ;(async () => setNotes((await lf.getItem("notes")) ?? []))()
   }, [])
@@ -143,7 +144,7 @@ function App(a) {
             )(await getNotes(info.Assets)),
           )
           setInitNote(true)
-          const book = new Notebook({ pid, wallet: window.arweaveWallet })
+          const book = await new Notebook({ pid }).init()
           const { res, error } = await book.get(info.Creator)
           if (!error) {
             setRegistered(pluck("Id")(res.Collections || []))
@@ -438,30 +439,19 @@ function App(a) {
                         if (!ok || updatingArticle) return
                         if (await badWallet(t, address)) return
                         setUpdatingArticle(true)
-                        const arweave = Arweave.init({
-                          host: "arweave.net",
-                          port: 443,
-                          protocol: "https",
-                        })
+                        const notebook = await new Notebook({
+                          pid: pid === "new" ? null : pid,
+                        }).init()
                         let to = false
                         try {
                           let _thumb = thumbnail
                           if (thumb8) {
-                            const data = new Uint8Array(thumb8.data)
-                            const transaction = await arweave.createTransaction(
-                              {
-                                data,
-                              },
-                            )
-                            transaction.addTag(
-                              "Content-Type",
-                              thumb8.image.type,
-                            )
-                            await arweave.transactions.sign(transaction)
-                            const response =
-                              await arweave.transactions.post(transaction)
-                            if (response.status === 200) {
-                              _thumb = transaction.id
+                            const { id: txid, err } = await notebook.ao.post({
+                              data: new Uint8Array(thumb8.data),
+                              tags: { "Content-Type": thumb8.image.type },
+                            })
+                            if (!err) {
+                              _thumb = txid
                               setThumbnail(_thumb)
                               setThumb64(null)
                               setThumb8(null)
@@ -473,21 +463,12 @@ function App(a) {
                           }
                           let _banner = banner
                           if (banner8) {
-                            const data = new Uint8Array(banner8.data)
-                            const transaction = await arweave.createTransaction(
-                              {
-                                data,
-                              },
-                            )
-                            transaction.addTag(
-                              "Content-Type",
-                              banner8.image.type,
-                            )
-                            await arweave.transactions.sign(transaction)
-                            const response =
-                              await arweave.transactions.post(transaction)
-                            if (response.status === 200) {
-                              _banner = transaction.id
+                            const { id: txid, err } = await notebook.ao.post({
+                              data: new Uint8Array(banner8.data),
+                              tags: { "Content-Type": banner8.image.type },
+                            })
+                            if (!err) {
+                              _banner = txid
                               setBanner(_banner)
                               setBanner64(null)
                               setBanner8(null)
@@ -498,149 +479,34 @@ function App(a) {
                             }
                           }
                           if (pid === "new") {
-                            let token = await fetch("./collection.lua").then(
-                              r => r.text(),
-                            )
-                            token = token.replace(
-                              /\<NAME\>/g,
-                              title.replace(/'/g, "\\'"),
-                            )
-                            token = token.replace(
-                              /\<DESCRIPTION\>/g,
-                              desc.replace(/'/g, "\\'"),
-                            )
-                            const date = Date.now()
-                            token = token.replace(/\<DATECREATED\>/g, date)
-                            token = token.replace(/\<LASTUPDATE\>/g, date)
-                            const prid = await getProfileId(address)
-                            if (!prid) {
-                              alert("AO Profile not found")
-                              setUpdatingArticle(false)
-                              return
-                            }
-                            token = token.replace(
-                              /\<CREATOR\>/g,
-                              prid ?? address,
-                            )
-                            token = token.replace(/\<BANNER\>/g, _banner)
-                            token = token.replace(/\<THUMBNAIL\>/g, _thumb)
-                            const pub = new Notebook({
-                              wallet: window.arweaveWallet,
+                            const { err: _err, pid } = await notebook.create({
+                              info: {
+                                title,
+                                description: desc,
+                                thumbnail: _thumb,
+                                banner: _banner,
+                              },
+                              bazar,
                             })
-                            let tags = [
-                              tag("Title", title),
-                              tag("Description", desc),
-                              tag("Thumbnail", _thumb),
-                              tag("Date-Created", Number(date).toString()),
-                              action("Add-Collection"),
-                              tag("Profile-Creator", prid),
-                              tag("Creator", address),
-                              tag("Collection-Type", "Atomic-Notes"),
-                            ]
-                            if (!/^\s*$/.test(_thumb)) {
-                              tags.push(tag("Thumbnail", _thumb))
-                            }
-                            if (!/^\s*$/.test(_banner)) {
-                              tags.push(tag("Banner", _banner))
-                            }
-
-                            const { error, pid } = await pub.spawn(tags)
-                            if (error) {
-                              alert("something went wrong")
-                            } else {
-                              await wait(5000)
-                              const { error, res } = await pub.eval(token)
-                              if (error) {
-                                alert("something went wrong")
-                              } else {
-                                to = true
-                                const { error: error3, res: res3 } =
-                                  await pub.add(prid)
-                                if (error3) {
-                                  alert("something went wrong")
-                                } else {
-                                  if (bazar) {
-                                    let tags2 = [
-                                      tag("Name", title),
-                                      tag("Description", desc),
-                                      tag("Thumbnail", _thumb),
-                                      tag("Banner", _banner),
-                                      tag(
-                                        "DateCreated",
-                                        Number(date).toString(),
-                                      ),
-                                      action("Add-Collection"),
-                                      tag("Creator", prid),
-                                      tag("CollectionId", pid),
-                                    ]
-
-                                    const { error: error4, res: res4 } =
-                                      await pub.register(tags2)
-                                    if (error4) {
-                                      alert("something went wrong")
-                                    } else {
-                                      setTimeout(async () => {
-                                        navigate(`/b/${pid}`)
-                                        setUpdatingArticle(false)
-                                      }, 2000)
-                                    }
-                                  } else {
-                                    setTimeout(async () => {
-                                      navigate(`/b/${pid}`)
-                                      setUpdatingArticle(false)
-                                    }, 2000)
-                                  }
-                                }
-                              }
-                            }
-                          } else {
-                            const wait = ms =>
-                              new Promise(res => setTimeout(() => res(), ms))
-                            let tokens = [
-                              `Name = '${title.replace(/'/g, "\\'")}'`,
-                              `Description = '${desc.replace(/'/g, "\\'")}'`,
-                              `Thumbnail = '${_thumb}'`,
-                              `Banner = '${_banner}'`,
-                            ]
-                            const book = new Notebook({
-                              wallet: window.arweaveWallet,
-                              pid,
-                            })
-                            const { error, res } = await book.eval(
-                              tokens.join("\n"),
-                            )
-                            if (error) {
+                            if (_err) {
                               err(t)
                             } else {
-                              if (bazar) {
-                                let tags2 = [
-                                  tag("Name", title),
-                                  tag("Description", desc),
-                                  tag("Thumbnail", _thumb),
-                                  tag("Banner", _banner),
-                                  tag("DateCreated", metadata.DateCreated),
-                                  action("Add-Collection"),
-                                  tag("Creator", profile.ProfileId),
-                                  tag("CollectionId", pid),
-                                ]
-
-                                const { error: error4, res: res4 } =
-                                  await book.register(tags2)
-                                if (error4) {
-                                  alert("something went wrong")
-                                } else {
-                                  setTimeout(async () => {
-                                    navigate(`/b/${pid}`)
-                                    setUpdatingArticle(false)
-                                  }, 2000)
-                                }
-                              } else {
-                                setTimeout(async () => {
-                                  const { res: info } = await book.info("Info")
-                                  console.log(info)
-                                  msg(t, "Notebook info updated!")
-                                }, 2000)
-                              }
+                              navigate(`/b/${pid}`)
+                              setUpdatingArticle(false)
+                            }
+                          } else {
+                            const { err: _err, res } =
+                              await notebook.updateInfo({
+                                title,
+                                description: desc,
+                                thumbnail: _thumb,
+                                banner: _banner,
+                              })
+                            if (_err) {
+                              err(t)
+                            } else {
+                              setUpdatingArticle(false)
+                              msg(t, "Notebook info updated!")
                             }
                           }
                         } catch (e) {

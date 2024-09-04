@@ -1,27 +1,45 @@
-import { scripts, getTag, action, tag, wait, udl } from "./utils.js"
+import { srcs, getTag, action, tag, wait, udl } from "./utils.js"
+import Profile from "./profile.js"
 
 class Note {
   constructor({
-    wallet,
-    proxy = "0uboI80S6vMxJD9Yn41Wdwnp9uAHEi4XLGQhBrp3qSQ",
-    render_with = "yXXAop3Yxm8QlZRzP46oRxZjCBp88YTpoSTPlTr4TcQ",
-    ao,
+    proxy = srcs.proxy,
+    render_with = srcs.render,
     pid,
-  }) {
+    profile = {},
+    ao = {},
+    ar = {},
+  } = {}) {
+    this.__type__ = "note"
+    if (profile?.__type__ === "profile") {
+      this.profile = profile
+    } else {
+      let _profile = typeof profile === "object" ? profile : {}
+      if (!_profile.ao) _profile.ao = ao
+      if (!_profile.ar) _profile.ar = ar
+      this.profile = new Profile(profile)
+    }
+    this.ao = this.profile.ao
+    this.ar = this.ao.ar
     this.render_with = render_with
-    this.ao = ao
     this.pid = pid
     this.proxy = proxy
   }
+
+  async init(jwk) {
+    await this.profile.init(jwk)
+    return this
+  }
+
   async create({
-    src = scripts["atomic-note"],
-    library = scripts["atomic-note-library"],
+    src = srcs.note,
+    library = srcs.notelib,
     data,
     info: { title, description, thumbnail, banner },
     token: { fraction = "1" },
     udl: { payment, access, derivations, commercial, training },
   }) {
-    const profileId = this.ao.id
+    const profileId = this.profile.id
     if (!profileId) return { err: "no ao profile id" }
     const date = Date.now()
     let tags = [
@@ -32,7 +50,7 @@ class Note {
       tag("Implements", "ANS-110"),
       tag("Type", "blog-post"),
       tag("Asset-Type", "Atomic-Note"),
-      tag("Render-With", "yXXAop3Yxm8QlZRzP46oRxZjCBp88YTpoSTPlTr4TcQ"),
+      tag("Render-With", srcs.render),
       tag("Content-Type", "text/markdown"),
       ...udl({ payment, access, derivations, commercial, training }),
     ]
@@ -72,7 +90,7 @@ class Note {
         if (_err2) {
           err = _err2
         } else {
-          const { err: _err3 } = await this.init()
+          const { err: _err3 } = await this.assignData()
           if (_err3) {
             err = _err3
           } else {
@@ -96,7 +114,7 @@ class Note {
     })
   }
 
-  async init() {
+  async assignData() {
     return await this.ao.asgn({
       pid: this.proxy,
       mid: this.pid,

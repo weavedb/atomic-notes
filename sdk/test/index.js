@@ -1,15 +1,8 @@
 import { expect } from "chai"
-import { Notebook, Note, AO } from "../src/index.js"
+import { AR, Notebook, Note, AO, Profile } from "../src/index.js"
 import { Src, setup, ok, fail } from "./lib/utils.js"
 import { wait } from "../src/utils.js"
 
-const aoconnect = {
-  MU_URL: "http://localhost:4002",
-  CU_URL: "http://localhost:4004",
-  GATEWAY_URL: "http://localhost:4000",
-}
-
-const arweave = { port: 4000 }
 const v1 = "# this is markdown 1"
 const v2 = "# this is markdown 2"
 const v3 = "# this is markdown 3"
@@ -34,46 +27,81 @@ const prof = {
 
 describe("Atomic Notes", function () {
   this.timeout(0)
-  let registry,
-    profile,
-    module,
-    scheduler,
-    collection_registry,
-    collection,
-    atomic_note,
-    proxy,
-    library,
-    module2,
-    registry_pid,
-    collection_registry_pid,
-    ao
-  let profile_pid, notebook, notebook_pid, note, note_pid, ao2, note2
+  let collection, atomic_note, ao, opt, library, profile, ar
+  let profile_pid, notebook, notebook_pid, note, note_pid, ar2, note2
 
   before(async () => {
-    ;({
-      library,
-      registry,
-      profile,
-      collection_registry,
-      collection,
-      atomic_note,
-      proxy,
-      module2,
-      module,
-      scheduler,
-      registry_pid,
-      collection_registry_pid,
-      ao,
-    } = await setup())
+    ;({ library, opt, collection, atomic_note, ao, ar, profile } =
+      await setup())
+  })
+
+  it("should auto-load ArConnect wallet", async () => {
+    const _jwk = ar.jwk
+    const arconnect = new AR(opt.ar)
+    const { addr, jwk, pub } = await arconnect.gen("10")
+    globalThis.window = {
+      arweaveWallet: {
+        walletName: "ArConnect",
+        test: true,
+        jwk,
+        connect: async () => {},
+        getActiveAddress: async () => addr,
+        getActivePublicKey: async () => pub,
+        sign: async tx => {
+          await arconnect.arweave.transactions.sign(tx, jwk)
+          return tx
+        },
+      },
+    }
+    globalThis.arweaveWallet = globalThis.window.arweaveWallet
+
+    const ar2 = new AR(opt.ar)
+    expect((await ar2.checkWallet()).addr).to.eql(addr)
+
+    const ar3 = new AR(opt.ar)
+    const { addr: addr2, jwk: jwk2, pub: pub2 } = await ar3.gen()
+
+    const ar4 = new AR(opt.ar)
+    expect((await ar4.balance()) * 1).to.eql(10)
+    const ar5 = new AR(opt.ar)
+    await ar5.transfer("5", ar3.addr)
+    expect((await ar5.balance()) * 1).to.eql(5)
+
+    const pr6 = new Profile({ ...opt.profile, ao })
+    await pr6.createProfile({ profile: prof })
+    expect((await pr6.profile()).DisplayName).to.eql(prof.DisplayName)
+
+    const pr7 = await new Profile({ ...opt.profile, ao }).init(arweaveWallet)
+    globalThis.window = {
+      arweaveWallet: {
+        walletName: "ArConnect",
+        test: true,
+        jwk,
+        connect: async () => {},
+        getActiveAddress: async () => addr2,
+        getActivePublicKey: async () => pub2,
+        sign: async tx => {
+          await arconnect.arweave.transactions.sign(tx, jwk2)
+          return tx
+        },
+      },
+    }
+    globalThis.arweaveWallet = globalThis.window.arweaveWallet
+    expect((await pr7.createProfile({ profile: prof })).err).to.eql(
+      "the wrong wallet",
+    )
+    await pr7.init(arweaveWallet)
+    expect((await pr7.createProfile({ profile: prof })).err).to.eql(null)
+    await ar.init(_jwk)
   })
 
   it("should create an AO profile", async () => {
-    ;({ pid: profile_pid } = ok(await ao.createProfile({ profile: prof })))
-    expect((await ao.profile()).DisplayName).to.eql(prof.DisplayName)
+    ;({ pid: profile_pid } = ok(await profile.createProfile({ profile: prof })))
+    expect((await profile.profile()).DisplayName).to.eql(prof.DisplayName)
   })
 
   it("should create a notebook", async () => {
-    notebook = new Notebook({ registry: collection_registry_pid, ao })
+    notebook = new Notebook({ ...opt.notebook, profile })
     ;({ pid: notebook_pid } = ok(
       await notebook.create({
         src: collection,
@@ -81,7 +109,7 @@ describe("Atomic Notes", function () {
         bazar: true,
       }),
     ))
-    expect((await notebook.get(ao.id)).out.Collections[0].Id).to.eql(
+    expect((await notebook.get(profile.id)).out.Collections[0].Id).to.eql(
       notebook_pid,
     )
     expect((await notebook.info()).out.Name).to.eql("title")
@@ -93,10 +121,7 @@ describe("Atomic Notes", function () {
   })
 
   it("should create a note", async () => {
-    const { pid: proxy_pid } = ok(
-      await ao.deploy({ src: proxy, module: module2 }),
-    )
-    note = new Note({ proxy: proxy_pid, ao })
+    note = new Note({ ...opt.note, profile })
     ;({ pid: note_pid } = ok(
       await note.create({
         library,
@@ -162,21 +187,23 @@ describe("Atomic Notes", function () {
 
   it("should add an editor", async () => {
     expect((await note.get("0.0.1")).out.data).to.eql(v1)
-    expect((await note.editors()).out).to.eql([ao.addr])
-    ao2 = new AO({ arweave, aoconnect })
-    await ao2.gen("10")
-    await ao2.transfer("5", ao.addr)
-    note2 = new Note({ pid: note_pid, ao: ao2 })
-    ok(await note.addEditor(ao2.addr))
-    expect((await note.editors()).out).to.eql([ao.addr, ao2.addr])
+    expect((await note.editors()).out).to.eql([ar.addr])
+    ar2 = new AR(opt.ar)
+    await ar2.gen("10")
+    await ar2.transfer("5", ar.addr)
+    const _ao2 = new AO({ ...opt.ao, ar: ar2 })
+    const _pr2 = new Profile({ ...opt.profile, ao: _ao2 })
+    note2 = new Note({ pid: note_pid, ...opt.note, profile: _pr2 })
+    ok(await note.addEditor(ar2.addr))
+    expect((await note.editors()).out).to.eql([ar.addr, ar2.addr])
     ok(await note2.update(v3, "0.0.3"))
     expect((await note.get()).out.data).to.eql(v3)
     expect((await note.list()).out[2].version).to.eql("0.0.3")
   })
 
   it("should remove an editor", async () => {
-    ok(await note.removeEditor(ao2.addr))
-    expect((await note.editors()).out).to.eql([ao.addr])
+    ok(await note.removeEditor(ar2.addr))
+    expect((await note.editors()).out).to.eql([ar.addr])
     fail(await note2.update(v4, "0.0.4"))
     expect((await note.get()).out.data).to.eql(v3)
   })
@@ -191,21 +218,22 @@ describe("Atomic Notes", function () {
   })
 
   it("should return the correct notebook info", async () => {
-    const info = await ao.info()
+    const info = await profile.info()
     expect(info.Collections[0].Id).to.eql(notebook_pid)
     expect(info.Assets[0].Id).to.eql(note_pid)
-    expect(info.Owner).to.eql(ao.addr)
-    expect(info.Id).to.eql(ao.id)
+    expect(info.Owner).to.eql(ar.addr)
+    expect(info.Id).to.eql(profile.id)
   })
 
-  it("should init AO with an existing jwk", async () => {
-    const ao3 = await new AO({
-      arweave,
-      aoconnect,
-      registry: registry_pid,
-    }).init(ao.jwk)
-    expect(ao3.id).to.eql(ao.id)
-    expect(ao3.jwk).to.eql(ao.jwk)
-    expect(ao3.addr).to.eql(ao.addr)
+  it("should init AR with an existing jwk", async () => {
+    const _ar = await new AR(opt.ar).init(ar.jwk)
+    expect(_ar.jwk).to.eql(ar.jwk)
+    expect(_ar.addr).to.eql(ar.addr)
+    const _ao = new AO({ ...opt.ao, ar: _ar })
+    expect(_ao.ar.jwk).to.eql(ar.jwk)
+    expect(_ao.ar.addr).to.eql(ar.addr)
+    const _pr = new Profile({ ...opt.pr, ao: _ao })
+    expect(_pr.ar.jwk).to.eql(ar.jwk)
+    expect(_pr.ar.addr).to.eql(ar.addr)
   })
 })

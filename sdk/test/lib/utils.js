@@ -1,11 +1,12 @@
 import { readFileSync } from "fs"
 import { resolve } from "path"
-import { AO } from "../../src/index.js"
+import { Profile, AR, AO, Notebook } from "../../src/index.js"
 import { wait } from "../../src/utils.js"
 import { expect } from "chai"
+
 class Src {
-  constructor({ ao, base = "../../src/lua" }) {
-    this.ao = ao
+  constructor({ ar, base = "../../src/lua" }) {
+    this.ar = ar
     this.base = base
   }
   async upload(file, ext = "lua") {
@@ -13,7 +14,8 @@ class Src {
       resolve(import.meta.dirname, `${this.base}/${file}.${ext}`),
       ext === "wasm" ? null : "utf8",
     )
-    return await this.ao.post({ data })
+    const res = await this.ar.post({ data })
+    return res.err ? null : res.id
   }
 }
 
@@ -22,60 +24,66 @@ const aoconnect = {
   CU_URL: "http://localhost:4004",
   GATEWAY_URL: "http://localhost:4000",
 }
+
 const arweave = { port: 4000 }
+
+import { createDataItemSigner, connect } from "@permaweb/aoconnect"
 
 const setup = async () => {
   console.error = () => {}
   console.warn = () => {}
-  const ao = new AO({ aoconnect, arweave })
-  await ao.gen("10")
-  const src = new Src({ ao })
-
+  const ar = new AR(arweave)
+  await ar.gen("10")
+  const src = new Src({ ar })
   const library = await src.upload("atomic-note-library")
-  const registry = await src.upload("registry000")
-  const profile = await src.upload("profile000")
-  ao.profile_src = profile
-  const collection_registry = await src.upload("collection-registry")
+  const registry_src = await src.upload("registry000")
+  const profile_src = await src.upload("profile000")
+  const collection_registry_src = await src.upload("collection-registry")
   const collection = await src.upload("collection")
   const atomic_note = await src.upload("atomic-note")
   const proxy = await src.upload("proxy")
-
   const wasm = await src.upload("aos-sqlite", "wasm")
-  const module = await ao.postModule({ data: await ao.data(wasm) })
-  ao.module = module
-
   const wasm2 = await src.upload("aos", "wasm")
-  const module2 = await ao.postModule({ data: await ao.data(wasm2) })
 
-  const scheduler = await ao.postScheduler({ url: "http://su" })
-  ao.scheduler = scheduler
-
-  const { pid: registry_pid } = await ao.deploy({
-    src: registry,
-  })
-  ao.registry = registry_pid
-  await ao.initRegistry({ registry: registry_pid })
-  await wait(1000)
-  const { pid: collection_registry_pid } = await ao.deploy({
-    src: collection_registry,
+  const ao = new AO({ aoconnect, ar })
+  const { id: module } = await ao.postModule({
+    data: await ar.data(wasm),
+    overwrite: true,
   })
 
-  return {
-    collection_registry_pid,
-    registry_pid,
-    library,
-    registry,
+  const { id: module2 } = await ao.postModule({ data: await ar.data(wasm2) })
+  const { scheduler } = await ao.postScheduler({
+    url: "http://su",
+    overwrite: true,
+  })
+  const profile = new Profile({ profile_src, registry_src, ao })
+  await profile.createRegistry({})
+  await profile.initRegistry({})
+  const notebook = new Notebook({
+    registry_src: collection_registry_src,
     profile,
-    collection_registry,
-    collection,
-    atomic_note,
-    proxy,
-    module,
-    module2,
-    scheduler,
-    ao,
+  })
+  const { err, pid: collection_registry_pid } = await notebook.createRegistry()
+  const { pid: proxy_pid } = await ao.deploy({ src: proxy, module: module2 })
+
+  let opt = {
+    ar: { ...arweave },
+    profile: {
+      registry_src,
+      registry: profile.registry,
+      profile_src,
+    },
+    ao: {
+      module,
+      scheduler,
+      aoconnect,
+    },
+    note: { proxy: proxy_pid },
+    notebook: { registry: collection_registry_pid },
   }
+  return { opt, library, collection, atomic_note, profile, ao, ar }
 }
+
 const ok = obj => {
   expect(obj.err).to.eql(null)
   return obj
