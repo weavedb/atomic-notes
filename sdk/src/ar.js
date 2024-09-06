@@ -4,10 +4,11 @@ import { tag, query, isLocalhost } from "./utils.js"
 import { is } from "ramda"
 
 class AR {
-  constructor({ host, port, protocol } = {}) {
+  constructor({ host, port = 443, protocol } = {}) {
     this.__type__ = "ar"
     let _arweave = { host, port, protocol }
-    if (!_arweave.host) _arweave.host = "127.0.0.1"
+    if (!_arweave.host)
+      _arweave.host = port === 443 ? "arweave.net" : "127.0.0.1"
     if (!_arweave.protocol)
       _arweave.protocol = isLocalhost(_arweave.host) ? "http" : "https"
     if (!_arweave.port) _arweave.port = isLocalhost(_arweave.host) ? 1984 : 443

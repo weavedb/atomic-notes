@@ -27,12 +27,11 @@ const prof = {
 
 describe("Atomic Notes", function () {
   this.timeout(0)
-  let collection, atomic_note, ao, opt, library, profile, ar
+  let ao, opt, profile, ar
   let profile_pid, notebook, notebook_pid, note, note_pid, ar2, note2
 
   before(async () => {
-    ;({ library, opt, collection, atomic_note, ao, ar, profile } =
-      await setup())
+    ;({ opt, ao, ar, profile } = await setup())
   })
 
   it("should auto-load ArConnect wallet", async () => {
@@ -104,7 +103,6 @@ describe("Atomic Notes", function () {
     notebook = new Notebook({ ...opt.notebook, profile })
     ;({ pid: notebook_pid } = ok(
       await notebook.create({
-        src: collection,
         info: { title: "title", description: "desc" },
         bazar: true,
       }),
@@ -124,8 +122,6 @@ describe("Atomic Notes", function () {
     note = new Note({ ...opt.note, profile })
     ;({ pid: note_pid } = ok(
       await note.create({
-        library,
-        src: atomic_note,
         data: v1,
         info: note_tags,
         token: { fraction: "100" },

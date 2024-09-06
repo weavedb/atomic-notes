@@ -1,6 +1,6 @@
 import { dryrun } from "@permaweb/aoconnect"
 import lf from "localforage"
-import { fromPairs, map, prop } from "ramda"
+import { fromPairs, map, prop, includes } from "ramda"
 const getArticles = async ({ limit, skip } = {}) => {
   let tags = [{ name: "Action", value: "List" }]
   if (limit) tags.push({ name: "limit", value: limit.toString() })
@@ -232,7 +232,26 @@ const getPFP = profile =>
   profile.ProfileImage === "None"
     ? "/arweave.png"
     : `https://arweave.net/${profile.ProfileImage}`
+
+let env = { ar: {}, ao: {}, profile: {}, note: {}, notebook: {} }
+for (const k in import.meta.env) {
+  if (k.match(/^VITE_/)) {
+    const k2 = k.replace(/^VITE_/, "").toLowerCase()
+    const k3 = k2.split("_")
+    if (
+      includes(k3[0], ["ar", "ao", "profile", "note", "notebook"]) &&
+      import.meta.env[k].match(/^\s*$/) === null
+    ) {
+      env[k3[0]][k3.slice(1).join("_")] = import.meta.env[k]
+    }
+  }
+}
+
+let opt = { ar: {}, ao: {}, profile: {}, note: {}, notebook: {} }
+opt.ar = env.ar
+
 export {
+  opt,
   err,
   msg,
   gTag,
