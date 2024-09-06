@@ -61,7 +61,11 @@ class AO {
     if (!jwk) {
       ;({ jwk } = await this.ar.checkWallet())
     }
-    await this.ar.init(jwk)
+    if (jwk === true) {
+      await this.ar.gen("100")
+    } else {
+      await this.ar.init(jwk)
+    }
     return this
   }
 
@@ -88,6 +92,8 @@ class AO {
         "Module-Format": "wasm64-unknown-emscripten-draft_2024_02_15",
         "Input-Encoding": "JSON-V1",
         "Output-Encoding": "JSON-V1",
+        "Memory-Limit": "500-mb",
+        "Compute-Limit": "9000000000000",
       })
       const res = await this.ar.post({ data, jwk, tags: _tags })
       if (!this.module || overwrite) this.module = res.id
@@ -97,6 +103,8 @@ class AO {
 
   async postScheduler({ jwk, url, tags = {}, overwrite = false }) {
     let err = null
+    let mid = null
+    let scheduler = null
     if (!jwk) {
       ;({ jwk } = await this.ar.checkWallet())
     }
@@ -108,9 +116,13 @@ class AO {
         Variant: "ao.TN.1",
         Type: "Scheduler-Location",
         Url: url,
-        "Time-To-Live": "1000000000",
+        "Time-To-Live": "3600000",
       })
-      const { res, err: _err } = await this.ar.post({
+      const {
+        id,
+        res,
+        err: _err,
+      } = await this.ar.post({
         data: "1984",
         jwk,
         tags: _tags,
@@ -118,11 +130,13 @@ class AO {
       if (_err) {
         err = _err
       } else {
+        mid = id
+        scheduler = await this.ar.toAddr(jwk)
         if (!this.scheduler || overwrite) {
-          this.scheduler = await this.ar.toAddr(jwk)
+          this.scheduler = scheduler
         }
       }
-      return { err, res, scheduler: this.scheduler }
+      return { mid, err, res, scheduler }
     }
   }
 
@@ -130,7 +144,7 @@ class AO {
     module = this.module,
     scheduler = this.scheduler,
     jwk,
-    tags = [],
+    tags = {},
     data,
   } = {}) {
     let err = null
@@ -142,15 +156,19 @@ class AO {
     } else {
       let pid = null
       try {
+        let _tags = []
+        for (const k in tags) {
+          if (is(Array)(tags[k])) {
+            for (const v of tags[k]) _tags.push(tag(k, v))
+          } else {
+            _tags.push(tag(k, tags[k]))
+          }
+        }
         pid = await this.spawn({
           module,
           scheduler,
           signer: this.toSigner(jwk),
-          tags: [
-            { name: "Memory-Limit", value: "500-mb" },
-            { name: "Compute-Limit", value: "9000000000000" },
-            ...tags,
-          ],
+          tags: _tags,
           data,
         })
       } catch (e) {
@@ -368,7 +386,7 @@ class AO {
     module = this.module,
     scheduler = this.scheduler,
     jwk,
-    tags = [],
+    tags = {},
     data,
   }) {
     let err = null

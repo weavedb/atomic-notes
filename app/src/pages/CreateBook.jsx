@@ -21,7 +21,7 @@ import {
 } from "@chakra-ui/react"
 import { useParams } from "react-router-dom"
 import { Link } from "react-router-dom"
-import { AO, Notebook } from "atomic-notes"
+import { Notebook } from "atomic-notes"
 
 import {
   ltags,
@@ -38,6 +38,7 @@ import {
   validAddress,
   err,
   msg,
+  opt,
 } from "../lib/utils"
 
 import {
@@ -144,11 +145,9 @@ function App(a) {
             )(await getNotes(info.Assets)),
           )
           setInitNote(true)
-          const book = await new Notebook({ pid }).init()
-          const { res, error } = await book.get(info.Creator)
-          if (!error) {
-            setRegistered(pluck("Id")(res.Collections || []))
-          }
+          const book = await new Notebook({ pid }).init(true)
+          const { out, err } = await book.get(info.Creator)
+          if (!err) setRegistered(pluck("Id")(out.Collections || []))
         }
       } else {
         setInitNote(true)
@@ -446,7 +445,7 @@ function App(a) {
                         try {
                           let _thumb = thumbnail
                           if (thumb8) {
-                            const { id: txid, err } = await notebook.ao.post({
+                            const { id: txid, err } = await notebook.ar.post({
                               data: new Uint8Array(thumb8.data),
                               tags: { "Content-Type": thumb8.image.type },
                             })
@@ -463,7 +462,7 @@ function App(a) {
                           }
                           let _banner = banner
                           if (banner8) {
-                            const { id: txid, err } = await notebook.ao.post({
+                            const { id: txid, err } = await notebook.ar.post({
                               data: new Uint8Array(banner8.data),
                               tags: { "Content-Type": banner8.image.type },
                             })

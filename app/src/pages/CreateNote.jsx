@@ -2023,19 +2023,16 @@ function AtomicNote(a) {
                               let prog = 0
                               setProgress(prog)
                               setUpdatingArticle(true)
+                              const note = await new Note({
+                                pid: pid === "new" ? null : pid,
+                              }).init()
                               const arweave = Arweave.init({
                                 host: "arweave.net",
                                 port: 443,
                                 protocol: "https",
                               })
                               let to = false
-                              let _phases = [
-                                "spawning a process",
-                                "waiting for 5 seconds",
-                                "uploading the lua contract",
-                                "authorizing the user",
-                                "initializing the note",
-                              ]
+                              let _phases = ["craeting a note"]
                               if (thumb8)
                                 _phases.unshift("uploading the thumbnail")
                               if (pub !== "None")
@@ -2047,19 +2044,12 @@ function AtomicNote(a) {
                                 if (thumb8) {
                                   setPhase("uploading the thumbnail")
                                   const data = new Uint8Array(thumb8.data)
-                                  const transaction =
-                                    await arweave.createTransaction({
-                                      data,
-                                    })
-                                  transaction.addTag(
-                                    "Content-Type",
-                                    thumb8.image.type,
-                                  )
-                                  await arweave.transactions.sign(transaction)
-                                  const response =
-                                    await arweave.transactions.post(transaction)
-                                  if (response.status === 200) {
-                                    _thumb = transaction.id
+                                  const { id: txid, err } = await note.ar.post({
+                                    data: new Uint8Array(thumb8.data),
+                                    tags: { "Content-Type": thumb8.image.type },
+                                  })
+                                  if (!err) {
+                                    _thumb = txid
                                     setThumbnail(_thumb)
                                     setThumb64(null)
                                     setThumb8(null)
@@ -2070,172 +2060,94 @@ function AtomicNote(a) {
                                   }
                                   setProgress(++prog)
                                 }
-                                let token = await fetch(
-                                  "./atomic-asset.lua",
-                                ).then(r => r.text())
-                                token = token.replace(
-                                  /\<NAME\>/g,
-                                  title.replace(/'/g, "\\'"),
-                                )
-                                token = token.replace(/\<TICKER\>/g, "ATOMIC")
-                                token = token.replace(/\<DENOMINATION\>/g, "1")
-                                const prid = await getProfileId(address)
-                                token = token.replace(
-                                  /\<CREATOR\>/g,
-                                  prid ?? address,
-                                )
-                                token = token.replace(/\<THUMBNAIL\>/g, _thumb)
-                                token = token.replace(/\<DESCRIPTION\>/g, desc)
-                                const date = Date.now()
-                                token = token.replace(/\<DATECREATED\>/g, date)
-
-                                const note = new Note({
-                                  wallet: window.arweaveWallet,
-                                })
-                                let tags = [
-                                  tag("Title", title),
-                                  tag("Description", desc),
-                                  tag("Date-Created", Number(date).toString()),
-                                  tag("Implements", "ANS-110"),
-                                  tag(
-                                    "License",
-                                    "dE0rmDfl9_OWjkDznNEXHaSO_JohJkRolvMzaCroUdw",
-                                  ),
-                                  tag(
-                                    "Currency",
-                                    "xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10",
-                                  ),
-                                  tag("Asset-Type", "Atomic-Note"),
-                                ]
-                                if (!/^\s*$/.test(_thumb)) {
-                                  tags.push(tag("Thumbnail", _thumb))
-                                }
-                                if (prid) tags.push(tag("Creator", prid))
-                                tags.push(
-                                  tag("Payment-Mode", paymentsMap[payment]),
-                                )
-                                if (payment === "single") {
-                                  tags.push(tag("Payment-Address", recipient))
-                                }
                                 let _fraction = "1"
                                 if (isFractional === "yes") {
                                   _fraction = Number(fraction).toString()
                                 }
-                                token = token.replace(/\<BALANCE\>/g, _fraction)
-                                let _access = accessesMap[access]
-                                if (access === "one-time")
-                                  _access += "-" + accessFee
-                                tags.push(tag("Access-Fee", _access))
-
-                                let _derivations = allowsMap[derivations]
-                                if (derivations === "allowed") {
-                                  if (derivationTerm === "revenue") {
-                                    _derivations += `-${dtMap[derivationTerm].split(" ").join("-")}-${derivationShare}`
-                                  } else if (
-                                    derivationTerm === "monthly" ||
-                                    derivationTerm === "one-time"
-                                  ) {
-                                    _derivations += `-${dtMap[derivationTerm].split(" ").join("-")}-${derivationFee}`
-                                  } else {
-                                    _derivations += `-${dtMap[derivationTerm].split(" ").join("-")}-0`
-                                  }
-                                }
-                                tags.push(tag("Derivations", _derivations))
-                                let _commercial = allowsMap[commercial]
-                                if (commercial === "allowed") {
-                                  if (commercialTerm === "revenue") {
-                                    _commercial += `-${ctMap[commercialTerm].split(" ").join("-")}-${commercialShare}`
-                                  } else {
-                                    _commercial += `-${ctMap[commercialTerm].split(" ").join("-")}-${commercialFee}`
-                                  }
-                                }
-                                tags.push(tag("Commercial-Use", _commercial))
-                                let _training = allowsMap[training]
-                                if (training === "allowed") {
-                                  _training += `-${ttMap[trainingTerm].split(" ").join("-")}-${trainingFee}`
-                                }
-                                tags.push(tag("Data-Model-Training", _training))
-                                tags.push(
-                                  tag(
-                                    "Render-With",
-                                    "yXXAop3Yxm8QlZRzP46oRxZjCBp88YTpoSTPlTr4TcQ",
-                                  ),
-                                )
-                                setPhase("spawning a process")
-                                const { error, pid } = await note.spawn(
-                                  md,
-                                  tags,
-                                )
+                                setPhase("creating a note")
                                 setProgress(++prog)
-                                if (error) {
+                                console.log({
+                                  data: md,
+                                  info: {
+                                    title,
+                                    description: desc,
+                                    thumbnail: _thumb,
+                                  },
+                                  token: { fraction: _fraction },
+                                  udl: {
+                                    payment: { mode: payment, recipient },
+                                    access: { mode: access, fee: accessFee },
+                                    derivations: {
+                                      mode: derivations,
+                                      term: derivationTerm,
+                                      share: derivationShare,
+                                      fee: derivationFee,
+                                    },
+                                    commercial: {
+                                      mode: commercial,
+                                      term: commercialTerm,
+                                    },
+                                    training: {
+                                      mode: training,
+                                      term: trainingTerm,
+                                    },
+                                  },
+                                })
+                                const { err: _err, pid } = await note.create({
+                                  data: md,
+                                  info: {
+                                    title,
+                                    description: desc,
+                                    thumbnail: _thumb,
+                                  },
+                                  token: { fraction: _fraction },
+                                  udl: {
+                                    payment: { mode: payment, recipient },
+                                    access: { mode: access, fee: accessFee },
+                                    derivations: {
+                                      mode: derivations,
+                                      term: derivationTerm,
+                                      share: derivationShare,
+                                      fee: derivationFee,
+                                    },
+                                    commercial: {
+                                      mode: commercial,
+                                      term: commercialTerm,
+                                    },
+                                    training: {
+                                      mode: training,
+                                      term: trainingTerm,
+                                    },
+                                  },
+                                })
+                                if (_err) {
                                   err(t)
                                 } else {
-                                  setPhase("waiting for 5 seconds")
-                                  await wait(5000)
-                                  setProgress(++prog)
-                                  let data = await fetch(
-                                    "./atomic-note.lua",
-                                  ).then(r => r.text())
-                                  data += "\n" + token
-                                  setPhase("uploading the Lua contract")
-                                  const { error, res } = await note.eval(data)
-                                  setProgress(++prog)
-                                  if (error) {
-                                    err(t)
-                                  } else {
-                                    setPhase("authorizing the user")
-                                    const { error: error1, res: res1 } =
-                                      await note.allow()
-                                    if (error1) {
-                                      err(t)
-                                      setPhase("initializing the note")
-                                    } else {
-                                      const { error: error2, res: res2 } =
-                                        await note.init()
-                                      setProgress(++prog)
-                                      if (error2) {
-                                        err(t)
-                                      } else {
-                                        let _notes =
-                                          (await lf.getItem("notes")) ?? []
-                                        _notes.unshift({
-                                          id: pid,
-                                          title: title,
-                                          date,
-                                        })
-                                        await lf.setItem("notes", _notes)
-                                        setNotes(_notes)
-                                        to = true
-                                        if (prid) {
-                                          setPhase(
-                                            "adding the note to your AO profile",
-                                          )
-                                          const { error: error3, res: res3 } =
-                                            await note.add(prid)
-                                          setProgress(++prog)
-                                        }
-                                        if (pub !== "None") {
-                                          setPhase(
-                                            "adding the note to the collection",
-                                          )
-                                          const book = new Notebook({
-                                            wallet: window.arweaveWallet,
-                                            pid: pub,
-                                          })
-                                          const { res: res4, error: error4 } =
-                                            await book.update(pid)
-                                          setProgress(++prog)
-                                        }
-                                        setPhase("finishing up")
-                                        setTimeout(() => {
-                                          setTab("Info")
-                                          setUpdatingArticle(false)
-                                          navigate(`/n/${pid}`)
-                                          msg(t, "Note craeted!")
-                                        }, 2000)
-                                      }
-                                    }
+                                  let _notes = (await lf.getItem("notes")) ?? []
+                                  _notes.unshift({
+                                    id: pid,
+                                    title: title,
+                                    date,
+                                  })
+                                  await lf.setItem("notes", _notes)
+                                  setNotes(_notes)
+                                  to = true
+                                  if (pub !== "None") {
+                                    setPhase(
+                                      "adding the note to the collection",
+                                    )
+                                    const book = await new Notebook({
+                                      pid: pub,
+                                    }).init()
+                                    const { res: res4, error: error4 } =
+                                      await book.addNote(pid)
+                                    setProgress(++prog)
                                   }
+                                  setPhase("finishing up")
+                                  setTab("Info")
+                                  setUpdatingArticle(false)
+                                  navigate(`/n/${pid}`)
+                                  msg(t, "Note craeted!")
                                 }
                               } catch (e) {
                                 console.log(e)

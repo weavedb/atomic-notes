@@ -65,7 +65,6 @@ const setup = async () => {
   })
   const { err, pid: collection_registry_pid } = await notebook.createRegistry()
   const { pid: proxy_pid } = await ao.deploy({ src: proxy, module: module2 })
-
   let opt = {
     ar: { ...arweave },
     profile: {
@@ -78,10 +77,13 @@ const setup = async () => {
       scheduler,
       aoconnect,
     },
-    note: { proxy: proxy_pid },
-    notebook: { registry: collection_registry_pid },
+    note: { proxy: proxy_pid, note_src: atomic_note, notelib_src: library },
+    notebook: {
+      notebook_src: collection,
+      registry: collection_registry_pid,
+    },
   }
-  return { opt, library, collection, atomic_note, profile, ao, ar }
+  return { opt, profile, ao, ar }
 }
 
 const ok = obj => {

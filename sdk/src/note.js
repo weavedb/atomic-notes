@@ -5,6 +5,8 @@ class Note {
   constructor({
     proxy = srcs.proxy,
     render_with = srcs.render,
+    note_src = srcs.note,
+    notelib_src = srcs.notelib,
     pid,
     profile = {},
     ao = {},
@@ -22,6 +24,8 @@ class Note {
     this.ao = this.profile.ao
     this.ar = this.ao.ar
     this.render_with = render_with
+    this.note_src = note_src
+    this.notelib_src = notelib_src
     this.pid = pid
     this.proxy = proxy
   }
@@ -32,30 +36,30 @@ class Note {
   }
 
   async create({
-    src = srcs.note,
-    library = srcs.notelib,
+    src = this.note_src,
+    library = this.notelib_src,
     data,
-    info: { title, description, thumbnail, banner },
+    info: { title, description, thumbnail },
     token: { fraction = "1" },
     udl: { payment, access, derivations, commercial, training },
   }) {
     const profileId = this.profile.id
     if (!profileId) return { err: "no ao profile id" }
     const date = Date.now()
-    let tags = [
-      action("Add-Uploaded-Asset"),
-      tag("Title", title),
-      tag("Description", description),
-      tag("Date-Created", Number(date).toString()),
-      tag("Implements", "ANS-110"),
-      tag("Type", "blog-post"),
-      tag("Asset-Type", "Atomic-Note"),
-      tag("Render-With", srcs.render),
-      tag("Content-Type", "text/markdown"),
+    let tags = {
+      Action: "Add-Uploaded-Asset",
+      Title: title,
+      Description: description,
+      "Date-Created": Number(date).toString(),
+      Implements: "ANS-110",
+      Type: "blog-post",
+      "Asset-Type": "Atomic-Note",
+      "Render-With": this.render_with,
+      "Content-Type": "text/markdown",
       ...udl({ payment, access, derivations, commercial, training }),
-    ]
-    if (!/^\s*$/.test(thumbnail)) tags.push(tag("Thumbnail", thumbnail))
-    if (profileId) tags.push(tag("Creator", profileId))
+    }
+    if (!/^\s*$/.test(thumbnail)) tags["Thumbnail"] = thumbnail
+    if (profileId) tags["Creator"] = profileId
     let err = null
     try {
       const balance =

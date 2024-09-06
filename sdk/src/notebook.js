@@ -4,8 +4,11 @@ import Profile from "./profile.js"
 
 class Notebook {
   constructor({
-    registry,
-    registry_src = srcs.bookreg,
+    registry = srcs.bookreg,
+    registry_src = srcs.bookreg_src,
+    thumbnail = srcs.thumb,
+    banner = srcs.banner,
+    notebook_src = srcs.book,
     pid,
     profile = {},
     ao = {},
@@ -25,6 +28,9 @@ class Notebook {
     this.registry = registry
     this.pid = pid
     this.registry_src = registry_src
+    this.thumbnail = thumbnail
+    this.banner = banner
+    this.notebook_src = notebook_src
   }
   async init(jwk) {
     await this.profile.init(jwk)
@@ -52,31 +58,31 @@ class Notebook {
   }
 
   async create({
-    src = srcs.book,
+    src = this.notebook_src,
     info: {
       title,
       description,
-      thumbnail = srcs.thumb,
-      banner = srcs.banner,
+      thumbnail = this.thumbnail,
+      banner = this.banner,
     } = {},
     bazar = false,
   }) {
     const profileId = this.profile.id
     if (!profileId) return { err: "no ao profile id" }
     const date = Date.now()
-    let tags = [
-      action("Add-Collection"),
-      tag("Title", title),
-      tag("Description", description),
-      tag("Date-Created", Number(date).toString()),
-      tag("Profile-Creator", profileId),
-      tag("Creator", this.ar.addr),
-      tag("Collection-Type", "Atomic-Notes"),
-    ]
-    if (thumbnail && !/^\s*$/.test(thumbnail)) {
-      tags.push(tag("Thumbnail", thumbnail))
+    let tags = {
+      Action: "Add-Collection",
+      Title: title,
+      Description: description,
+      "Date-Created": Number(date).toString(),
+      "Profile-Creator": profileId,
+      Creator: this.ar.addr,
+      "Collection-Type": "Atomic-Notes",
     }
-    if (banner && !/^\s*$/.test(banner)) tags.push(tag("Banner", banner))
+    if (thumbnail && !/^\s*$/.test(thumbnail)) {
+      tags["Thumbnail"] = thumbnail
+    }
+    if (banner && !/^\s*$/.test(banner)) tags["Banner"] = banner
     let err = null
     try {
       const { pid, err: _err } = await this.ao.deploy({
@@ -166,8 +172,8 @@ class Notebook {
   async register({
     name,
     description,
-    thumbnail = srcs.thumb,
-    banner = srcs.banner,
+    thumbnail = this.thumbnail,
+    banner = this.banner,
     date,
     creator,
     collectionId,
