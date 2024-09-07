@@ -4,12 +4,12 @@ import { Link } from "react-router-dom"
 import { useState, useEffect } from "react"
 import Header from "../components/Header"
 import NoteCard from "../components/NoteCard"
-import { AddIcon, EditIcon } from "@chakra-ui/icons"
 import lf from "localforage"
 import {
   getBooks,
   getNotes,
   getInfo,
+  getBookInfo,
   getAddr,
   getProf,
   ltags,
@@ -18,6 +18,7 @@ import {
   msg,
   err,
   getPFP,
+  opt,
 } from "../lib/utils"
 import dayjs from "dayjs"
 import {
@@ -54,6 +55,7 @@ import {
   clone,
   difference,
 } from "ramda"
+
 function User({}) {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -116,7 +118,7 @@ function User({}) {
         setBookMap(bookmap)
       }
       for (let v of books) {
-        const info = await getInfo(v.id)
+        const info = await getBookInfo(v.id)
         if (info) await lf.setItem(`notebook-${v.id}`, info)
         let exists = []
         for (let k in notemap) {
@@ -141,17 +143,6 @@ function User({}) {
       }
     })()
   }, [books])
-  /*
-  useEffect(() => {
-    ;(async () => {
-      let assetmap = {}
-      for (let v of notes) {
-        assetmap[v.id] = await getInfo(v.id)
-        setAssetMap(assetmap)
-      }
-    })()
-  }, [notes])
-  */
   const isCreator = id === profile?.ProfileId
   return (
     <>
@@ -180,7 +171,7 @@ function User({}) {
                       {!isCreator ? null : (
                         <Link
                           target="_blank"
-                          to={`https://ao-bazar.arweave.net/#/profile/${profile.ProfileId}`}
+                          to={`https://bazar.arweave.net/#/profile/${profile.ProfileId}`}
                         >
                           <Button
                             title="Edit"
@@ -225,13 +216,13 @@ function User({}) {
                       }
                       const addToNotebook = v3 => async () => {
                         if (await badWallet(t, address)) return
-                        const book = new Notebook({
-                          wallet: window.arweaveWallet,
+                        const book = await new Notebook({
+                          ...opt.notebook,
                           pid: v3,
-                        })
-                        const { res, error } = await book.update(v.id)
-                        const status = tags(res?.Tags || []).Status
-                        if (status === "Success") {
+                        }).init(arweaveWallet)
+
+                        const { err: _err } = await book.addNote(v.id)
+                        if (!_err) {
                           let _map = clone(notemap)
                           let _bmap = clone(bookmap)
                           _map[v.id] ??= []

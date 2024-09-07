@@ -57,13 +57,6 @@ import {
 } from "ramda"
 
 import dayjs from "dayjs"
-import {
-  createDataItemSigner,
-  message,
-  dryrun,
-  result,
-} from "@permaweb/aoconnect"
-
 import { defaultProfile, getProfile, getArticles, ao } from "../lib/utils"
 import { circleNotch } from "../lib/svgs.jsx"
 
@@ -145,9 +138,9 @@ function App(a) {
             )(await getNotes(info.Assets)),
           )
           setInitNote(true)
-          const book = await new Notebook({ pid }).init(true)
-          const { out, err } = await book.get(info.Creator)
-          if (!err) setRegistered(pluck("Id")(out.Collections || []))
+          const book = new Notebook({ ...opt.notebook, pid })
+          const out = await book.get(info.Creator)
+          if (out) setRegistered(pluck("Id")(out.Collections || []))
         }
       } else {
         setInitNote(true)
@@ -160,16 +153,10 @@ function App(a) {
       if (address) {
         const _profile = await getAoProfile(address)
         setAoProfile(_profile)
-        if (_profile.ProfileId) {
-          const info = await dryrun({
-            process: _profile.ProfileId,
-            tags: [action("Info")],
-          })
-          try {
-            const data = JSON.parse(info?.Messages?.[0]?.Data)
-            const ids = pluck("Id", data.Assets)
-            setNotes(data.Collections)
-          } catch (e) {}
+        if (_profile?.ProfileId) {
+          const data = await getInfo(_profile.ProfileId)
+          const ids = pluck("Id", data.Assets)
+          setNotes(data.Collections)
         }
       }
     })()
@@ -439,6 +426,7 @@ function App(a) {
                         if (await badWallet(t, address)) return
                         setUpdatingArticle(true)
                         const notebook = await new Notebook({
+                          ...opt.notebook,
                           pid: pid === "new" ? null : pid,
                         }).init()
                         let to = false
@@ -478,6 +466,7 @@ function App(a) {
                             }
                           }
                           if (pid === "new") {
+                            console.log(notebook)
                             const { err: _err, pid } = await notebook.create({
                               info: {
                                 title,
@@ -487,6 +476,7 @@ function App(a) {
                               },
                               bazar,
                             })
+                            console.log(_err, pid)
                             if (_err) {
                               err(t)
                             } else {
@@ -504,6 +494,7 @@ function App(a) {
                             if (_err) {
                               err(t)
                             } else {
+                              navigate(`/b/${pid}`)
                               setUpdatingArticle(false)
                               msg(t, "Notebook info updated!")
                             }

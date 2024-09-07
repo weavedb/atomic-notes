@@ -9,6 +9,7 @@ import "../github-markdown.css"
 import markdownIt from "markdown-it"
 import { toHtml } from "hast-util-to-html"
 import { common, createStarryNight } from "@wooorm/starry-night"
+
 import {
   AttachmentIcon,
   DownloadIcon,
@@ -24,6 +25,7 @@ import {
   EditIcon,
   CopyIcon,
 } from "@chakra-ui/icons"
+
 import {
   Spinner,
   AbsoluteCenter,
@@ -66,9 +68,10 @@ import {
   Image,
   useToast,
 } from "@chakra-ui/react"
+
 import { useParams } from "react-router-dom"
 import { Link } from "react-router-dom"
-import { Note, Notebook } from "atomic-notes"
+import { Note, Notebook, Profile } from "atomic-notes"
 const action = value => tag("Action", value)
 const tag = (name, value) => ({ name, value })
 import {
@@ -110,8 +113,14 @@ import {
   msg,
   err,
   getPFP,
+  opt,
+  graphql_url,
+  getProfileId,
+  getAoProfile,
+  getAoProfiles,
 } from "../lib/utils"
 import { circleNotch } from "../lib/svgs.jsx"
+
 import {
   diffSourcePlugin,
   MDXEditor,
@@ -121,6 +130,7 @@ import {
 const allPlugins = diffMarkdown => [
   diffSourcePlugin({ viewMode: "source", diffMarkdown }),
 ]
+
 const getProcess = async pid => {
   const query = `query {
     transactions(ids: ["${pid}"]) {
@@ -133,7 +143,7 @@ const getProcess = async pid => {
         }
     }
 }`
-  const res = await fetch("https://arweave.net/graphql", {
+  const res = await fetch(graphql_url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ query }),
@@ -148,6 +158,7 @@ const getProcess = async pid => {
     return null
   }
 }
+
 const limit = 10
 const getHTML = async md => {
   try {
@@ -180,54 +191,6 @@ const getHTML = async md => {
   return null
 }
 
-const getAoProfile = async address => {
-  let pr = await getProfileId(address)
-  const prid = await getProfileId(address)
-  if (prid) {
-    const _res2 = await dryrun({
-      process: "SNy4m-DrqxWl01YqGM4sxI8qCni-58re8uuJLvZPypY",
-      tags: [action("Get-Metadata-By-ProfileIds")],
-      data: JSON.stringify({ ProfileIds: [prid] }),
-    })
-    if (_res2?.Messages?.[0]?.Data) {
-      const profiles = JSON.parse(_res2.Messages[0].Data)
-      pr = fromPairs(profiles.map(obj => [obj.ProfileId, obj]))[prid]
-    }
-  }
-  return pr
-}
-
-const getAoProfiles = async ids => {
-  let prs = {}
-  try {
-    const _res2 = await dryrun({
-      process: "SNy4m-DrqxWl01YqGM4sxI8qCni-58re8uuJLvZPypY",
-      tags: [action("Get-Metadata-By-ProfileIds")],
-      data: JSON.stringify({ ProfileIds: ids }),
-    })
-    if (_res2?.Messages?.[0]?.Data) {
-      const profiles = JSON.parse(_res2.Messages[0].Data)
-      prs = fromPairs(profiles.map(obj => [obj.ProfileId, obj]))
-    }
-  } catch (e) {}
-  return prs
-}
-
-const getProfileId = async address => {
-  let pr = null
-  const _res = await dryrun({
-    process: "SNy4m-DrqxWl01YqGM4sxI8qCni-58re8uuJLvZPypY",
-    tags: [action("Get-Profiles-By-Delegate")],
-    data: JSON.stringify({ Address: address }),
-  })
-  if (_res?.Messages?.[0]?.Data) {
-    const profile = JSON.parse(_res.Messages[0].Data)
-    if (profile[0]) {
-      pr = profile[0].ProfileId
-    }
-  }
-  return pr
-}
 const steps = [
   { description: "Atomic Note Info", title: "Step 1" },
   { description: "Ownership Tokens", title: "Step 2" },
@@ -264,7 +227,7 @@ function AtomicNote(a) {
   const [uploadingArweave, setUploadingArweave] = useState(false)
   const [updatingArticle, setUpdatingArticle] = useState(false)
   const [progress, setProgress] = useState(0)
-  const [phases, setPhases] = useState(0)
+  const [phases, setPhases] = useState(2)
   const [phase, setPhase] = useState("")
   const [updatingProf, setUpdatingProf] = useState(false)
   const [editorInit, setEditorInit] = useState(false)
@@ -373,18 +336,18 @@ function AtomicNote(a) {
   ]
   const ttMap = fromPairs(tTerms.map(({ key, val }) => [key, val]))
   const getInfo = async () => {
-    const note = new Note({ pid })
-    const { error, res } = await note.get()
-    if (!error) {
-      setCurrentMD(await getHTML(res.data))
-      setCurrentVersion(res.version)
-      const { error: error2, res: list } = await note.list()
+    const note = new Note({ ...opt.note, pid })
+    const out = await note.get()
+    if (out) {
+      setCurrentMD(await getHTML(out.data))
+      setCurrentVersion(out.version)
+      const list = await note.list()
       setVersions(reverse(list))
-      const { res: _editors } = await note.editors()
+      const _editors = await note.editors()
       setEditors(_editors)
       setMetadata(await getProcess(pid))
-      const { erro: error3, res: info } = await note.info()
-      if (!error3) {
+      const info = await note.info()
+      if (info) {
         setThumbnail(info.Thumbnail ?? "")
         setDesc(info.Description ?? "")
         setTitle(info.Name ?? "")
@@ -517,8 +480,13 @@ function AtomicNote(a) {
   const tabs2 = ["Markdown", "Preview"]
   const tabs3 = ["Note", "Tokens", "License"]
 
+  const ok_info =
+    !/^\s*$/.test(title) &&
+    (thumb64 || thumbnail === "" || validAddress(thumbnail))
+
   const ok =
     !/^\s*$/.test(title) &&
+    !/^\s*$/.test(md) &&
     (thumb64 || thumbnail === "" || validAddress(thumbnail))
   const ok_editor = validAddress(newEditor)
   const ok_profile = !/^\s*$/.test(name)
@@ -854,17 +822,15 @@ function AtomicNote(a) {
                                 }
                                 setUploadingArweave(true)
                                 try {
-                                  const note = new Note({
-                                    wallet: window.arweaveWallet,
+                                  const note = await new Note({
+                                    ...opt.note,
                                     pid,
-                                  })
-                                  const { res: patches } =
-                                    await note.patches(md)
-                                  const { error, res } = await note.update(
-                                    patches,
+                                  }).init()
+                                  const { err: _err } = await note.update(
+                                    md,
                                     version,
                                   )
-                                  if (!error) {
+                                  if (!_err) {
                                     setChanged(false)
                                     const _draft = {
                                       title: editTitle,
@@ -883,6 +849,7 @@ function AtomicNote(a) {
                                     await getInfo()
                                     setTab("Info")
                                     msg(t, `New version v ${version} uploaded!`)
+                                    navigate(`/n/${pid}`)
                                   } else {
                                     err(t)
                                   }
@@ -1007,7 +974,7 @@ function AtomicNote(a) {
                                         display="frex"
                                         alignItems="center"
                                         target="_blank"
-                                        href={`https://ao-bazar.arweave.net/#/profile/${newEditorProfile.ProfileId}`}
+                                        href={`https://bazar.arweave.net/#/profile/${newEditorProfile.ProfileId}`}
                                       >
                                         <Image
                                           title={newEditorProfile.ProfileId}
@@ -1043,19 +1010,19 @@ function AtomicNote(a) {
                                 onClick={async () => {
                                   if (!ok_editor) return
                                   if (await badWallet(t, address)) return
-                                  const note = new Note({
-                                    wallet: window.arweaveWallet,
+                                  const note = await new Note({
+                                    ...opt.note,
                                     pid,
-                                  })
-                                  const { error, res } =
+                                  }).init()
+                                  const { err: _err } =
                                     await note.addEditor(newEditor)
-                                  if (error) {
+                                  if (_err) {
                                     err(t)
                                     return
                                   }
                                   setNewEditor("")
                                   setNewEditorProfile(null)
-                                  const { res: _editors } = await note.editors()
+                                  const _editors = await note.editors()
                                   setEditors(_editors)
                                   msg(t, "Editor added!")
                                 }}
@@ -1086,7 +1053,7 @@ function AtomicNote(a) {
                                             mr={3}
                                             as="a"
                                             target="_blank"
-                                            href={`https://ao-bazar.arweave.net/#/profile/${aoProfiles[v].ProfileId}`}
+                                            href={`https://bazar.arweave.net/#/profile/${aoProfiles[v].ProfileId}`}
                                           >
                                             {aoProfiles[v].Username}
                                           </Box>
@@ -1139,17 +1106,17 @@ function AtomicNote(a) {
                                             ) {
                                               if (await badWallet(t, address))
                                                 return
-                                              const note = new Note({
-                                                wallet: window.arweaveWallet,
+                                              const note = await new Note({
+                                                ...opt.note,
                                                 pid,
-                                              })
-                                              const { error, res } =
+                                              }).init()
+                                              const { err: _err } =
                                                 await note.removeEditor(v)
-                                              if (error) {
+                                              if (_err) {
                                                 err(t)
                                                 return
                                               }
-                                              const { res: _editors } =
+                                              const _editors =
                                                 await note.editors()
                                               setEditors(_editors)
                                               msg(t, "Editor removed!")
@@ -1385,9 +1352,9 @@ function AtomicNote(a) {
                             mt={5}
                             w="100%"
                             sx={{
-                              opacity: ok ? 1 : 0.5,
+                              opacity: ok_info ? 1 : 0.5,
                               borderRadius: "3px",
-                              cursor: ok ? "pointer" : "default",
+                              cursor: ok_info ? "pointer" : "default",
                               border: "1px solid #222326",
                               ":hover": { bg: "#f6f6f7" },
                               bg: "white",
@@ -1395,32 +1362,24 @@ function AtomicNote(a) {
                             onClick={async () => {
                               const wait = ms =>
                                 new Promise(res => setTimeout(() => res(), ms))
-                              if (!ok || updatingArticle) return
+                              if (!ok_info || updatingArticle) return
                               if (await badWallet(t, address)) return
                               setUpdatingArticle(true)
-                              const arweave = Arweave.init({
-                                host: "arweave.net",
-                                port: 443,
-                                protocol: "https",
-                              })
+                              const note = await new Note({
+                                pid,
+                                ...opt.note,
+                              }).init()
                               let to = false
                               try {
                                 let _thumb = thumbnail
                                 if (thumb8) {
                                   const data = new Uint8Array(thumb8.data)
-                                  const transaction =
-                                    await arweave.createTransaction({
-                                      data,
-                                    })
-                                  transaction.addTag(
-                                    "Content-Type",
-                                    thumb8.image.type,
-                                  )
-                                  await arweave.transactions.sign(transaction)
-                                  const response =
-                                    await arweave.transactions.post(transaction)
-                                  if (response.status === 200) {
-                                    _thumb = transaction.id
+                                  const { id: txid, err } = await note.ar.post({
+                                    data: new Uint8Array(thumb8.data),
+                                    tags: { "Content-Type": thumb8.image.type },
+                                  })
+                                  if (!err) {
+                                    _thumb = txid
                                     setThumbnail(_thumb)
                                     setThumb64(null)
                                     setThumb8(null)
@@ -1430,27 +1389,16 @@ function AtomicNote(a) {
                                     return
                                   }
                                 }
-                                let tokens = [
-                                  `Name = '${title.replace(/'/g, "\\'")}'`,
-                                  `Description = '${desc.replace(/'/g, "\\'")}'`,
-                                  `Thumbnail = '${_thumb}'`,
-                                ]
-                                const note = new Note({
-                                  wallet: window.arweaveWallet,
-                                  pid,
+                                const { err: _err } = await note.updateInfo({
+                                  title,
+                                  description: desc,
+                                  _thumb,
                                 })
-                                const { error, res } = await note.eval(
-                                  tokens.join("\n"),
-                                )
-                                if (error) {
+                                if (_err) {
                                   err(t)
                                 } else {
-                                  setTimeout(async () => {
-                                    const { res: info } =
-                                      await note.info("Info")
-                                    console.log(info)
-                                    msg(t, "Note info updated!")
-                                  }, 2000)
+                                  const info = await note.info("Info")
+                                  msg(t, "Note info updated!")
                                 }
                               } catch (e) {
                                 console.log(e)
@@ -2024,13 +1972,9 @@ function AtomicNote(a) {
                               setProgress(prog)
                               setUpdatingArticle(true)
                               const note = await new Note({
+                                ...opt.note,
                                 pid: pid === "new" ? null : pid,
                               }).init()
-                              const arweave = Arweave.init({
-                                host: "arweave.net",
-                                port: 443,
-                                protocol: "https",
-                              })
                               let to = false
                               let _phases = ["craeting a note"]
                               if (thumb8)
@@ -2066,33 +2010,6 @@ function AtomicNote(a) {
                                 }
                                 setPhase("creating a note")
                                 setProgress(++prog)
-                                console.log({
-                                  data: md,
-                                  info: {
-                                    title,
-                                    description: desc,
-                                    thumbnail: _thumb,
-                                  },
-                                  token: { fraction: _fraction },
-                                  udl: {
-                                    payment: { mode: payment, recipient },
-                                    access: { mode: access, fee: accessFee },
-                                    derivations: {
-                                      mode: derivations,
-                                      term: derivationTerm,
-                                      share: derivationShare,
-                                      fee: derivationFee,
-                                    },
-                                    commercial: {
-                                      mode: commercial,
-                                      term: commercialTerm,
-                                    },
-                                    training: {
-                                      mode: training,
-                                      term: trainingTerm,
-                                    },
-                                  },
-                                })
                                 const { err: _err, pid } = await note.create({
                                   data: md,
                                   info: {
@@ -2137,9 +2054,10 @@ function AtomicNote(a) {
                                       "adding the note to the collection",
                                     )
                                     const book = await new Notebook({
+                                      ...opt.notebook,
                                       pid: pub,
                                     }).init()
-                                    const { res: res4, error: error4 } =
+                                    const { out: res4, error: error4 } =
                                       await book.addNote(pid)
                                     setProgress(++prog)
                                   }
@@ -2252,18 +2170,19 @@ function AtomicNote(a) {
                                               setTab("Info")
                                               setTab4("Main")
                                             } else {
-                                              const note = new Note({
-                                                wallet: window.arweaveWallet,
+                                              const note = await new Note({
+                                                ...opt.note,
                                                 pid,
-                                              })
-                                              const { error, res } =
-                                                await note.get(v.version)
-                                              if (error) {
+                                              }).init()
+                                              const out = await note.get(
+                                                v.version,
+                                              )
+                                              if (!out) {
                                                 err(t)
                                                 return
                                               }
                                               setSelectedMD(
-                                                await getHTML(res.data),
+                                                await getHTML(out.data),
                                               )
                                               setSelectedVersion(v.version)
                                               setTab("Info")
@@ -2297,13 +2216,14 @@ function AtomicNote(a) {
                                             border: "1px solid #999",
                                           }}
                                           onClick={async () => {
-                                            const note = new Note({
-                                              wallet: window.arweaveWallet,
+                                            const note = await new Note({
+                                              ...opt.note,
                                               pid,
-                                            })
-                                            const { error, res } =
-                                              await note.get(v.version)
-                                            if (error) {
+                                            }).init()
+                                            const out = await note.get(
+                                              v.version,
+                                            )
+                                            if (!out) {
                                               err(t)
                                               return
                                             }
@@ -2311,9 +2231,9 @@ function AtomicNote(a) {
                                             ref.current?.setMarkdown("")
                                             setChanged(false)
                                             setEditorInit(false)
-                                            ref.current?.setMarkdown(res.data)
+                                            ref.current?.setMarkdown(out.data)
                                             setDraftID(Date.now())
-                                            setMD(res.data)
+                                            setMD(out.data)
                                             setTab("Edit")
                                             msg(
                                               t,

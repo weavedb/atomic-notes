@@ -1,6 +1,77 @@
 import { dryrun } from "@permaweb/aoconnect"
 import lf from "localforage"
-import { fromPairs, map, prop, includes } from "ramda"
+import { fromPairs, map, prop, includes, clone } from "ramda"
+import { AR, Profile, Notebook, Note } from "atomic-notes"
+
+let graphql_url = "https://arweave.net/graphql"
+
+const genOpt = () => {
+  let env = { ar: {}, ao: {}, profile: {}, note: {}, notebook: {} }
+  for (const k in import.meta.env) {
+    if (k.match(/^VITE_/)) {
+      const k2 = k.replace(/^VITE_/, "").toLowerCase()
+      const k3 = k2.split("_")
+      if (
+        includes(k3[0], ["ar", "ao", "profile", "note", "notebook"]) &&
+        import.meta.env[k].match(/^\s*$/) === null
+      ) {
+        env[k3[0]][k3.slice(1).join("_")] = import.meta.env[k]
+      }
+    }
+  }
+  let link = {
+    ar: [],
+    ao: ["module", "scheduler"],
+    profile: ["registry", "src"],
+    note: ["proxy", "src", "lib_src"],
+    notebook: ["registry", "src"],
+  }
+  let namemap = {
+    ar: {},
+    ao: {},
+    profile: { src: "profile_src" },
+    note: { src: "note_src", lib_src: "notelib_src" },
+    notebook: { src: "notebook_src" },
+  }
+  let opt = { ar: {}, ao: {}, profile: {}, note: {}, notebook: {} }
+  opt.ar = env.ar
+  for (const k in link) {
+    for (const v of link[k]) {
+      if (env[k][v]) opt[k][namemap[k][v] ?? v] = env[k][v]
+    }
+  }
+  if (env.ao.mu || env.ao.cu || env.ao.gateway) {
+    opt.ao.aoconnect = {}
+    if (env.ao.mu) opt.ao.aoconnect.MU_URL = env.ao.mu
+    if (env.ao.cu) opt.ao.aoconnect.CU_URL = env.ao.cu
+    if (env.ao.gateway) opt.ao.aoconnect.GATEWAY_URL = env.ao.gateway
+  }
+
+  const _ar = clone(opt.ar)
+  const _ao = clone(opt.ao)
+  const _profile = clone(opt.profile)
+  const _note = clone(opt.ntoe)
+  const _notebook = clone(opt.ntoebook)
+
+  opt.ao.ar = _ar
+
+  opt.profile.ao = _ao
+  opt.profile.ar = _ar
+
+  opt.notebook.ao = _ao
+  opt.notebook.ar = _ar
+  opt.notebook.profile = _profile
+
+  opt.note.ao = _ao
+  opt.note.ar = _ar
+  opt.note.profile = _profile
+  return opt
+}
+
+const opt = genOpt()
+const _ar = new AR(opt.ar)
+
+graphql_url = `${_ar.protocol}://${_ar.host}:${_ar.port}/graphql`
 const getArticles = async ({ limit, skip } = {}) => {
   let tags = [{ name: "Action", value: "List" }]
   if (limit) tags.push({ name: "limit", value: limit.toString() })
@@ -46,61 +117,34 @@ const action = value => tag("Action", value)
 const tag = (name, value) => ({ name, value })
 const wait = ms => new Promise(res => setTimeout(() => res(), ms))
 
-const getAoProf = async prid => {
-  let pr = null
-  const _res2 = await dryrun({
-    process: "SNy4m-DrqxWl01YqGM4sxI8qCni-58re8uuJLvZPypY",
-    tags: [action("Get-Metadata-By-ProfileIds")],
-    data: JSON.stringify({ ProfileIds: [prid] }),
-  })
-  if (_res2?.Messages?.[0]?.Data) {
-    const profiles = JSON.parse(_res2.Messages[0].Data)
-    pr = fromPairs(profiles.map(obj => [obj.ProfileId, obj]))[prid]
-  }
-  return pr
+const getInfo = async prid => {
+  const prof = new Profile(opt.profile)
+  return await prof.info({ id: prid })
 }
 
-const getInfo = async prid => {
-  const res = await dryrun({
-    process: prid,
-    tags: [action("Info")],
-  })
-  try {
-    return JSON.parse(res?.Messages?.[0]?.Data)
-  } catch (e) {}
-  return null
+const getBookInfo = async pid => {
+  const book = new Notebook({ pid, ...opt.notebook })
+  return await book.info()
 }
 
 const getAoProfile = async address => {
-  let pr = await getProfileId(address)
+  let prof = null
   const prid = await getProfileId(address)
   if (prid) {
-    const _res2 = await dryrun({
-      process: "SNy4m-DrqxWl01YqGM4sxI8qCni-58re8uuJLvZPypY",
-      tags: [action("Get-Metadata-By-ProfileIds")],
-      data: JSON.stringify({ ProfileIds: [prid] }),
-    })
-    if (_res2?.Messages?.[0]?.Data) {
-      const profiles = JSON.parse(_res2.Messages[0].Data)
-      pr = fromPairs(profiles.map(obj => [obj.ProfileId, obj]))[prid]
-    }
+    const _prof = new Profile(opt.profile)
+    prof = await _prof.profile({ id: prid })
   }
-  return pr
+  return prof
 }
+
 const getProfileId = async address => {
-  let pr = null
-  const _res = await dryrun({
-    process: "SNy4m-DrqxWl01YqGM4sxI8qCni-58re8uuJLvZPypY",
-    tags: [action("Get-Profiles-By-Delegate")],
-    data: JSON.stringify({ Address: address }),
-  })
-  if (_res?.Messages?.[0]?.Data) {
-    const profile = JSON.parse(_res.Messages[0].Data)
-    if (profile[0]) {
-      pr = profile[0].ProfileId
-    }
-  }
-  return pr
+  const prof = new Profile(opt.profile)
+  return (await prof.ids({ addr: address }))[0] ?? null
+}
+
+const getAoProfiles = async ids => {
+  const prof = new Profile({ ...opt.profile })
+  return await prof.profiles({ ids })
 }
 
 const getProf = ({ address, setAddress, setProfile, setInit, t }) => {
@@ -119,9 +163,22 @@ const getProf = ({ address, setAddress, setProfile, setInit, t }) => {
         await lf.setItem(`profile-${address}`, _profile)
         if (!isCache) msg(t, "Wallet Connected!")
       } else {
+        const prof = await new Profile(opt.profile).init()
+        /*
+        console.log(
+          await prof.createProfile({
+            profile: {
+              DisplayName: "Atomic Notes",
+              UserName: "anote",
+              ProfileImage: "None",
+              Description: "Permaweb Hacker",
+              CoverImage: "None",
+            },
+          }),
+        )*/
         err(
           t,
-          "Wallet Connected!",
+          "No Profile Found!",
           "You have no AO profile. Create one on BazAR.",
         )
         await lf.removeItem(`address`)
@@ -154,7 +211,7 @@ const getNotes = async pids => {
         }
     }
 }`
-  const res = await fetch("https://arweave.net/graphql", {
+  const res = await fetch(graphql_url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ query }),
@@ -173,7 +230,7 @@ const getBooks = async pids => {
         }
     }
 }`
-  const res = await fetch("https://arweave.net/graphql", {
+  const res = await fetch(graphql_url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ query }),
@@ -228,27 +285,11 @@ const err = (
   description,
   status = "success",
 ) => msg(t, title, description, "error")
+
 const getPFP = profile =>
   profile.ProfileImage === "None"
     ? "/arweave.png"
     : `https://arweave.net/${profile.ProfileImage}`
-
-let env = { ar: {}, ao: {}, profile: {}, note: {}, notebook: {} }
-for (const k in import.meta.env) {
-  if (k.match(/^VITE_/)) {
-    const k2 = k.replace(/^VITE_/, "").toLowerCase()
-    const k3 = k2.split("_")
-    if (
-      includes(k3[0], ["ar", "ao", "profile", "note", "notebook"]) &&
-      import.meta.env[k].match(/^\s*$/) === null
-    ) {
-      env[k3[0]][k3.slice(1).join("_")] = import.meta.env[k]
-    }
-  }
-}
-
-let opt = { ar: {}, ao: {}, profile: {}, note: {}, notebook: {} }
-opt.ar = env.ar
 
 export {
   opt,
@@ -275,7 +316,9 @@ export {
   arweave_logo,
   action,
   tag,
-  getAoProf,
   getInfo,
+  getBookInfo,
   getPFP,
+  graphql_url,
+  getAoProfiles,
 }

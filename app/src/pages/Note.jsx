@@ -2,24 +2,14 @@ import { useState, useEffect } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { useToast, Flex, Box, Image, Spinner } from "@chakra-ui/react"
 import markdownIt from "markdown-it"
-import { Note, Notebook } from "atomic-notes"
+import { Profile, Note, Notebook } from "atomic-notes"
 import { toHtml } from "hast-util-to-html"
 import "../github-markdown.css"
 import { common, createStarryNight } from "@wooorm/starry-night"
 import { Link } from "react-router-dom"
-import { dryrun } from "@permaweb/aoconnect"
-import { circleNotch } from "../lib/svgs.jsx"
 import Header from "../components/Header"
 import NoteCard from "../components/NoteCard"
-import {
-  msg,
-  err,
-  getAoProf,
-  getNotes,
-  tags,
-  getAddr,
-  getProf,
-} from "../lib/utils"
+import { msg, err, getNotes, tags, getAddr, getProf, opt } from "../lib/utils"
 
 function Article(a) {
   const { id } = useParams()
@@ -41,9 +31,9 @@ function Article(a) {
   )
   useEffect(() => {
     ;(async () => {
-      const _note = new Note({ pid: id })
-      const { error, res } = await _note.info()
-      if (!error) {
+      const _note = new Note({ ...opt.note, pid: id })
+      const res = await _note.info()
+      if (res) {
         setNote({
           id: id,
           title: res.Name,
@@ -53,26 +43,26 @@ function Article(a) {
         })
         let pubmap = {}
         for (let v of res.Collections || []) {
-          const nb = new Note({ pid: v })
-          const { error: error2, res: info } = await nb.info()
-          if (!error2) pubmap[v] = info
+          const nb = new Note({ ...opt.note, pid: v })
+          const info = await nb.info()
+          if (info) pubmap[v] = info
         }
         setPubmap(pubmap)
       }
     })()
   }, [md])
+
   useEffect(() => {
     ;(async () => {
       try {
-        const result = await dryrun({
-          process: id,
-          tags: [{ name: "Action", value: "Get" }],
-        })
-        const _article = tags(result.Messages[0].Tags || [])["Data"]
-        if (_article) {
+        const note = new Note({ pid: id, ...opt.note })
+        const out = await note.get()
+        if (out) {
+          const _article = out.data
           try {
             const creator = tags((await getNotes([id]))[0]?.tags).Creator
-            setuser(await getAoProf(creator))
+            const _prof = new Profile(opt.profile)
+            setuser(await _prof.profile({ id: creator }))
           } catch (e) {}
           const text = _article
           const starryNight = await createStarryNight(common)

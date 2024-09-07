@@ -23,30 +23,39 @@ class AR {
   }
 
   async init(jwk) {
+    let isGen = false
     if (!jwk && typeof window === "object" && window.arweaveWallet) {
       jwk = window.arweaveWallet
     }
-    this.jwk = jwk
-    const isWallet = this.isArConnect(this.jwk)
-    if (isWallet) {
-      try {
-        await arweaveWallet.connect([
-          "ACCESS_ADDRESS",
-          "ACCESS_PUBLIC_KEY",
-          "SIGN_TRANSACTION",
-        ])
-        this.addr = await arweaveWallet.getActiveAddress()
-        this.pub = await arweaveWallet.getActivePublicKey()
-        this.isWallet = true
-      } catch (e) {
-        this.isWallet = false
-        this.addr = null
-        this.pub = null
-        this.jwk = null
-      }
+    if (!jwk) {
+      isGen = true
     } else {
-      this.addr = await this.toAddr(jwk)
-      this.pub = jwk.n
+      this.jwk = jwk
+      const isWallet = this.isArConnect(this.jwk)
+      if (isWallet) {
+        try {
+          await arweaveWallet.connect([
+            "ACCESS_ADDRESS",
+            "ACCESS_PUBLIC_KEY",
+            "SIGN_TRANSACTION",
+          ])
+          this.addr = await arweaveWallet.getActiveAddress()
+          this.pub = await arweaveWallet.getActivePublicKey()
+          this.isWallet = true
+        } catch (e) {
+          isGen = true
+        }
+      } else {
+        this.addr = await this.toAddr(jwk)
+        this.pub = jwk.n
+      }
+    }
+    if (isGen) {
+      this.isWallet = false
+      this.addr = null
+      this.pub = null
+      this.jwk = null
+      await this.gen("100")
     }
     return this
   }
@@ -62,7 +71,15 @@ class AR {
     let pub = null
     let existWallet = typeof window === "object" && window.arweaveWallet
     let isJwkWallet = this.isArConnect(this.jwk)
-    if (this.jwk && !isJwkWallet) {
+    if (!this.jwk) {
+      if (this._jwk) {
+        jwk = this._jwk
+        pub = this._jwk.n
+        addr = await this.toAddr(jwk)
+      } else {
+        ;({ jwk, addr, pub } = await this.gen("100", false))
+      }
+    } else if (this.jwk && !isJwkWallet) {
       jwk = this.jwk
       addr = this.addr
       pub = this.pub
@@ -122,10 +139,12 @@ class AR {
     }
   }
 
-  async gen(amount, overwrite = false) {
+  async gen(amount, overwrite) {
     const jwk = await this.arweave.wallets.generate()
     const addr = await this.toAddr(jwk)
-    if (!this.jwk || overwrite) {
+    if (overwrite === false) {
+      this._jwk = jwk
+    } else if (!this.jwk || overwrite) {
       this.jwk = jwk
       this.pub = jwk.n
       this.addr = addr
@@ -179,7 +198,7 @@ class AR {
     }
   }
 
-  async post({ data, tags = {}, jwk }) {
+  async post({ data = "1984", tags = {}, jwk }) {
     let err = null
     if (!jwk) {
       ;({ err, jwk } = await this.checkWallet())

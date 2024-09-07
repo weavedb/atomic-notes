@@ -1,14 +1,13 @@
 import { useNavigate, useParams } from "react-router-dom"
-import { EditIcon, DeleteIcon } from "@chakra-ui/icons"
 import { Link } from "react-router-dom"
 import { useState, useEffect } from "react"
 import { Notebook } from "atomic-notes"
 import Header from "../components/Header"
 import NoteCard from "../components/NoteCard"
 import {
-  getBooks,
-  getNotes,
   getInfo,
+  getNotes,
+  getBookInfo,
   getAddr,
   getProf,
   ltags,
@@ -17,6 +16,7 @@ import {
   msg,
   err,
   getPFP,
+  opt,
 } from "../lib/utils"
 import dayjs from "dayjs"
 import {
@@ -55,20 +55,9 @@ function User({}) {
     [address],
   )
 
-  /*
   useEffect(() => {
     ;(async () => {
-      let assetmap = {}
-      for (let v of notes) {
-        assetmap[v.id] = await getInfo(v.id)
-        setAssetMap(assetmap)
-      }
-    })()
-  }, [notes])
-*/
-  useEffect(() => {
-    ;(async () => {
-      const info = await getInfo(id)
+      const info = await getBookInfo(id)
       if (info) {
         setBook(info)
         setNotes(
@@ -179,13 +168,15 @@ function User({}) {
                             "Would you like to remove the note from this notebook?",
                           )
                         ) {
-                          const book = new Notebook({
-                            wallet: window.arweaveWallet,
+                          const book = await new Notebook({
+                            ...opt.notebook,
                             pid: id,
-                          })
-                          const { res, error } = await book.update(v.id, true)
-                          const status = tags(res?.Tags || []).Status
-                          if (status === "Success") {
+                          }).init(arweaveWallet)
+                          const { err: _err } = await book.removeNote(
+                            v.id,
+                            true,
+                          )
+                          if (!_err) {
                             let _notes = clone(notes)
                             setNotes(reject(v2 => v2.id === v.id)(_notes))
                           } else {

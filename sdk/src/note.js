@@ -129,22 +129,24 @@ class Note {
   async get(version) {
     let tags = {}
     if (version) tags.Version = version
-    return await this.ao.dry({
+    const { err, out } = await this.ao.dry({
       action: "Get",
       pid: this.pid,
       check: { Data: true },
       tags,
       get: { obj: { version: "Version", data: "Data", date: "Date" } },
     })
+    return out ?? null
   }
 
   async info() {
-    return await this.ao.dry({
+    const { err, out } = await this.ao.dry({
       pid: this.pid,
       action: "Info",
       checkData: true,
       get: { data: true, json: true },
     })
+    return out ?? null
   }
 
   async updateInfo({ title, description, thumbnail }) {
@@ -163,34 +165,41 @@ class Note {
   }
 
   async list() {
-    return await this.ao.dry({
+    const { err, out } = await this.ao.dry({
       pid: this.pid,
       action: "List",
       check: { Versions: true },
       get: { name: "Versions", json: true },
     })
+    return out ?? null
   }
 
   async update(data, version) {
     let err = null
-    const { err: _err, out: patches } = await this.patches(data)
-    if (_err) {
-      err = _err
+    let res = null
+    const patches = await this.patches(data)
+    if (!patches) {
+      err = "something went wrong"
     } else {
-      const { err: _err2 } = await this.updateVersion(patches, version)
-      if (_err2) err = _err2
+      const { res: _res, err: _err } = await this.updateVersion(
+        patches,
+        version,
+      )
+      if (_err) err = _err
+      res = _res
     }
-    return { err }
+    return { err, res }
   }
 
   async patches(data) {
-    return await this.ao.dry({
+    const { err, out } = await this.ao.dry({
       pid: this.pid,
       action: "Patches",
       data,
       check: { Patches: true },
       get: "Patches",
     })
+    return out ?? null
   }
 
   async updateVersion(patches, version) {
@@ -213,12 +222,13 @@ class Note {
   }
 
   async editors() {
-    return await this.ao.dry({
+    const { err, out } = await this.ao.dry({
       pid: this.pid,
       action: "Editors",
       check: { Editors: true },
       get: { name: "Editors", json: true },
     })
+    return err ? null : out
   }
 
   async addEditor(editor) {

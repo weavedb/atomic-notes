@@ -130,14 +130,28 @@ class Profile {
     } else {
       if (!id) id = this.id ?? (await this.ids())[0]
       if (!id) return null
-      const res = await this.ao.dryrun({
-        signer: this.ao.toSigner(jwk),
-        process: registry,
-        tags: [{ name: "Action", value: "Get-Metadata-By-ProfileIds" }],
-        data: JSON.stringify({ ProfileIds: [id] }),
+      const profiles = await this.profiles({ registry, ids: [id], jwk })
+      return !profiles ? null : (profiles[0] ?? null)
+    }
+  }
+
+  async profiles({ registry = this.registry, ids, jwk } = {}) {
+    let err = null
+    if (!jwk) {
+      ;({ jwk, err } = await this.ar.checkWallet())
+    }
+    if (err) {
+      return null
+    } else {
+      if (!ids) ids = await this.ids()
+      if (ids.length === []) return null
+      const { out, err: _err } = await this.ao.dry({
+        pid: registry,
+        action: "Get-Metadata-By-ProfileIds",
+        data: JSON.stringify({ ProfileIds: ids }),
+        get: { data: true, json: true },
       })
-      const data = res.Messages[0]?.Data
-      return data ? JSON.parse(data)[0] ?? null : null
+      return _err ? null : out
     }
   }
 

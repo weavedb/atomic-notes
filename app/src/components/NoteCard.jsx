@@ -102,8 +102,10 @@ const NoteCard = ({
               {profile.DisplayName}
             </Text>
           </Flex>
+
           {map(v => (
             <Tag
+              mr={2}
               colorScheme="gray"
               size="sm"
               sx={{

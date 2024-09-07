@@ -76,15 +76,15 @@ const query = txid => `query {
 const isLocalhost = v => includes(v, ["localhost", "127.0.0.1"])
 
 const udl = ({ payment, access, derivations, commercial, training }) => {
-  let tags = [
-    tag("License", "dE0rmDfl9_OWjkDznNEXHaSO_JohJkRolvMzaCroUdw"),
-    tag("Currency", "xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10"),
-  ]
-  tags.push(tag("Payment-Mode", paymentsMap[payment.mode]))
+  let tags = {
+    License: "dE0rmDfl9_OWjkDznNEXHaSO_JohJkRolvMzaCroUdw",
+    Currency: "xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10",
+  }
+  tags["Payment-Mode"] = paymentsMap[payment.mode]
   if (payment === "single") tags.push(tag("Payment-Address", payment.recipient))
   let _access = accessesMap[access.mode]
   if (access === "one-time") _access += "-" + access.fee
-  tags.push(tag("Access-Fee", _access))
+  tags["Access-Fee"] = _access
 
   let _derivations = allowsMap[derivations.mode]
   if (derivations.mode === "allowed") {
@@ -99,7 +99,7 @@ const udl = ({ payment, access, derivations, commercial, training }) => {
       _derivations += `-${dtMap[derivations.term].split(" ").join("-")}-0`
     }
   }
-  tags.push(tag("Derivations", _derivations))
+  tags["Derivations"] = _derivations
   let _commercial = allowsMap[commercial.mode]
   if (commercial === "allowed") {
     if (commercial.term === "revenue") {
@@ -108,12 +108,12 @@ const udl = ({ payment, access, derivations, commercial, training }) => {
       _commercial += `-${ctMap[commercial.term].split(" ").join("-")}-${commercial.fee}`
     }
   }
-  tags.push(tag("Commercial-Use", _commercial))
+  tags["Commercial-Use"] = _commercial
   let _training = allowsMap[training.mode]
   if (training === "allowed") {
     _training += `-${ttMap[training.term].split(" ").join("-")}-${training.fee}`
   }
-  tags.push(tag("Data-Model-Training", _training))
+  tags["Data-Model-Training"] = _training
   return tags
 }
 
@@ -159,6 +159,7 @@ const srcs = {
   book: "NKISXnq5XseLQd_u-lfO6ThBLuikLoontY47UlONrB4",
   note: "8ItY-41YrV5D286SpqNH2DGbVO4kWpcY5Rcs7w2SCC0",
   bookreg: "TFWDmf8a3_nw43GCm_CuYlYoylHAjCcFGbgHfDaGcsg",
+  bookreg_src: "4Bm1snpCEHIxYMDdAxiFf6ar81gKQHvElDFeDZbSnJU",
   thumb: "xQLpZvbtHdEyWWkfcjd_Sirw6S82z2YGOB5cKL8Qxyc",
   banner: "eXCtpVbcd_jZ0dmU2PZ8focaKxBGECBQ8wMib7sIVPo",
   proxy: "0uboI80S6vMxJD9Yn41Wdwnp9uAHEi4XLGQhBrp3qSQ",
