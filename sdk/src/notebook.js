@@ -141,23 +141,25 @@ class Notebook {
     if (new_info.length === 0) return { err: "empty info" }
     return this.ao.eval({ pid: this.pid, data: new_info.join("\n") })
   }
-  async info() {
-    return await this.ao.dry({
-      pid: this.pid,
+  async info(pid = this.pid) {
+    const { err, out } = await this.ao.dry({
+      pid,
       action: "Info",
       checkData: true,
       get: { data: true, json: true },
     })
+    return out ?? null
   }
 
   async get(creator) {
-    return await this.ao.dry({
+    const { err, out } = await this.ao.dry({
       pid: this.registry,
       action: "Get-Collections-By-User",
       tags: { Creator: creator },
       checkData: true,
       get: { data: true, json: true },
     })
+    return out ?? null
   }
 
   async add(creator) {

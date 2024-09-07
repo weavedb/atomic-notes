@@ -58,14 +58,7 @@ class AO {
   }
 
   async init(jwk) {
-    if (!jwk) {
-      ;({ jwk } = await this.ar.checkWallet())
-    }
-    if (jwk === true) {
-      await this.ar.gen("100")
-    } else {
-      await this.ar.init(jwk)
-    }
+    await this.ar.init(jwk)
     return this
   }
 
@@ -77,67 +70,156 @@ class AO {
     }
   }
 
-  async postModule({ data, jwk, tags = {}, overwrite = false }) {
+  async pipe({ jwk, fns, out = {} }) {
+    let res = []
+    let nextArgs = fns[0].args ?? {}
+    let i = 0
     let err = null
-    if (!jwk) {
-      ;({ jwk, err } = await this.ar.checkWallet())
+    let pid = null
+    let mid = null
+    let id = null
+    const copy = ({ _in, out, args, from, to, pid, mid, id }) => {
+      const _from = from.split(".")
+      const _to = to.split(".")
+      let target = null
+      let field = null
+      let val = null
+      if (_to[0] === "args") {
+        target = args
+        field = _to.slice(1).join(".")
+      } else if (_to[0] === "out") {
+        target = out
+        field = _to.slice(1).join(".")
+      } else {
+        target = out
+        field = _to.join(".")
+      }
+      if (from === "in") {
+        val = _in
+      } else if (from === "mid") {
+        val = mid
+      } else if (from === "id") {
+        val = id
+      } else if (from === "pid") {
+        val = pid
+      } else if (_from[0] === "args") {
+        val = args[_from.slice(1).join(".")] ?? null
+      } else if (_from[0] === "out") {
+        val = out[_from.slice(1).join(".")] ?? null
+      } else if (_from[0] === "in") {
+        val = _in[_from.slice(1).join(".")] ?? null
+      } else {
+        val = _in[from] ?? null
+      }
+      if (target) target[field] = val
     }
-    if (err) {
-      return { err }
-    } else {
-      const _tags = mergeLeft(tags, {
-        "Data-Protocol": "ao",
-        Variant: "ao.TN.1",
-        Type: "Module",
-        "Module-Format": "wasm64-unknown-emscripten-draft_2024_02_15",
-        "Input-Encoding": "JSON-V1",
-        "Output-Encoding": "JSON-V1",
-        "Memory-Limit": "500-mb",
-        "Compute-Limit": "9000000000000",
-      })
-      const res = await this.ar.post({ data, jwk, tags: _tags })
-      if (!this.module || overwrite) this.module = res.id
-      return res
+    for (let v of fns) {
+      let _fn = (v.fn ?? this.msg).bind(v.bind ?? this)
+      const _res = await _fn({ jwk, ...nextArgs })
+      res.push(_res)
+      if (_res.err) {
+        err = _res.err
+        break
+      }
+      if (typeof v.err === "function") {
+        const _err = await v.err({
+          jwk,
+          res: _res.res,
+          args: nextArgs,
+          out,
+          pid,
+          in: _res.out,
+          mid,
+          id,
+        })
+        if (_err) {
+          err = _err
+          break
+        }
+      }
+      if (_res.pid) pid = _res.pid
+      if (_res.mid) mid = _res.mid
+      if (_res.id) id = _res.id
+      if (_res.jwk) jwk = _res.jwk
+      nextArgs = fns[i + 1]?.args ?? {}
+      if (typeof v.then === "function") {
+        const _err = await v.then({
+          jwk,
+          res: _res.res,
+          args: nextArgs,
+          out,
+          pid,
+          in: _res.out,
+          mid,
+          id,
+        })
+        if (_err) {
+          err = _err
+          break
+        }
+      } else if (is(Object, v.then)) {
+        for (const k in v.then) {
+          copy({
+            _in: _res.out,
+            out,
+            args: nextArgs,
+            pid,
+            mid,
+            from: v.then[k],
+            to: k,
+            id,
+          })
+        }
+      }
+      i++
     }
+    return { err, res, out, pid, mid, id }
+  }
+
+  async postModule({ data, jwk, tags = {}, overwrite = false }) {
+    const _tags = mergeLeft(tags, {
+      "Data-Protocol": "ao",
+      Variant: "ao.TN.1",
+      Type: "Module",
+      "Module-Format": "wasm64-unknown-emscripten-draft_2024_02_15",
+      "Input-Encoding": "JSON-V1",
+      "Output-Encoding": "JSON-V1",
+      "Memory-Limit": "500-mb",
+      "Compute-Limit": "9000000000000",
+    })
+
+    let fns = [
+      ...(!jwk ? [{ fn: this.ar.checkWallet, bind: this.ar }] : []),
+      {
+        fn: this.ar.post,
+        bind: this.ar,
+        args: { data, tags: _tags },
+        then: ({ id }) => {
+          if (!this.module || overwrite) this.module = id
+        },
+      },
+    ]
+    return await this.pipe({ jwk, fns })
   }
 
   async postScheduler({ jwk, url, tags = {}, overwrite = false }) {
-    let err = null
-    let mid = null
-    let scheduler = null
-    if (!jwk) {
-      ;({ jwk } = await this.ar.checkWallet())
+    const _tags = mergeLeft(tags, {
+      "Data-Protocol": "ao",
+      Variant: "ao.TN.1",
+      Type: "Scheduler-Location",
+      Url: url,
+      "Time-To-Live": "3600000",
+    })
+    const then = async ({ jwk, out }) => {
+      out.scheduler = await this.ar.toAddr(jwk)
+      if (!this.scheduler || overwrite) this.scheduler = out.scheduler
     }
-    if (err) {
-      return { err }
-    } else {
-      const _tags = mergeLeft(tags, {
-        "Data-Protocol": "ao",
-        Variant: "ao.TN.1",
-        Type: "Scheduler-Location",
-        Url: url,
-        "Time-To-Live": "3600000",
-      })
-      const {
-        id,
-        res,
-        err: _err,
-      } = await this.ar.post({
-        data: "1984",
-        jwk,
-        tags: _tags,
-      })
-      if (_err) {
-        err = _err
-      } else {
-        mid = id
-        scheduler = await this.ar.toAddr(jwk)
-        if (!this.scheduler || overwrite) {
-          this.scheduler = scheduler
-        }
-      }
-      return { mid, err, res, scheduler }
-    }
+    let fns = [
+      ...(!jwk ? [{ fn: this.ar.checkWallet, bind: this.ar }] : []),
+      { fn: this.ar.post, bind: this.ar, args: { tags: _tags }, then },
+    ]
+    const res = await this.pipe({ jwk, fns })
+    return { scheduler: res.out.scheduler, ...res }
   }
 
   async spwn({
@@ -321,35 +403,29 @@ class AO {
   }
 
   async eval({ pid, jwk, data }) {
-    let err = null
-    if (!jwk) {
-      ;({ jwk, err } = await this.ar.checkWallet())
-    }
-    if (err) {
-      return { err }
-    } else {
-      const {
-        res,
-        mid,
-        err: _err,
-      } = await this.msg({ pid, jwk, data, action: "Eval" })
-      if (_err || typeof res.Output?.data !== "object") {
-        err = "something went wrong"
-      }
-      return { err, mid, res }
-    }
+    let fns = [
+      ...(!jwk ? [{ fn: this.ar.checkWallet, bind: this.ar }] : []),
+      {
+        fn: this.msg,
+        args: {
+          pid,
+          data,
+          action: "Eval",
+        },
+        err: ({ res }) => typeof res?.Output?.data !== "object",
+      },
+    ]
+    return await this.pipe({ jwk, fns })
   }
 
-  async load({ src, fills, pid, jwk }) {
+  async transform({ src, fills }) {
     let err = null
-    if (!jwk) {
-      ;({ jwk, err } = await this.ar.checkWallet())
-    }
-    if (err) {
-      return { err }
+    let out = null
+    let _data = await this.ar.data(src, true)
+    if (!_data) {
+      err = "data doesn't exist"
     } else {
-      let _data = await this.ar.data(src, true)
-      for (const k in fills) {
+      for (const k in fills ?? {}) {
         let text = fills[k]
         if (typeof text === "number") text = Number(text).toString()
         _data = _data.replace(
@@ -357,16 +433,21 @@ class AO {
           text.replace(/'/g, "\\'"),
         )
       }
-      const { err, res, mid } = await this.eval({ data: _data, pid, jwk })
-      if (err) {
-        return { mid, err, res }
-      } else {
-        return { mid, err: null, res }
-      }
+      out = _data
     }
+    return { err, out }
   }
 
-  async wait(pid, attempts = 5) {
+  async load({ src, fills, pid, jwk }) {
+    let fns = [
+      ...(!jwk ? [{ fn: this.ar.checkWallet, bind: this.ar }] : []),
+      { fn: this.transform, args: { src, fills }, then: { "args.data": "in" } },
+      { fn: this.eval, args: { pid } },
+    ]
+    return await this.pipe({ jwk, fns })
+  }
+
+  async wait({ pid, attempts = 5 }) {
     let exist = false
     let err = null
     while (attempts > 0) {
@@ -389,37 +470,19 @@ class AO {
     tags = {},
     data,
   }) {
-    let err = null
-    if (!jwk) {
-      ;({ jwk, err } = await this.ar.checkWallet())
+    let fns = [
+      ...(!jwk ? [{ fn: this.ar.checkWallet, bind: this.ar }] : []),
+      {
+        fn: this.spwn,
+        args: { module, scheduler, tags, data },
+        then: { "args.pid": "pid" },
+      },
+      { fn: this.wait, then: { "args.pid": "pid" } },
+    ]
+    for (const v of !loads ? [{ src, fills }] : loads) {
+      fns.push({ fn: this.load, args: v, then: { "args.pid": "pid" } })
     }
-    if (err) {
-      return { err }
-    } else {
-      const { err: _err, pid } = await this.spwn({
-        module,
-        scheduler,
-        jwk,
-        tags,
-        data,
-      })
-      if (_err) {
-        err = _err
-      } else {
-        const { err: _err2 } = await this.wait(pid)
-        if (_err2) {
-          err = _err2
-        } else {
-          if (!loads) loads = [{ src, fills }]
-          for (const v of loads) {
-            const { err: _err, res } = await this.load({ ...v, pid })
-            err = _err
-            if (_err) return { err, pid }
-          }
-        }
-      }
-      return { pid, err }
-    }
+    return await this.pipe({ jwk, fns })
   }
 }
 
