@@ -71,7 +71,7 @@ import {
 
 import { useParams } from "react-router-dom"
 import { Link } from "react-router-dom"
-import { Note, Notebook, Profile } from "atomic-notes"
+import { Note, Notebook, Profile } from "aonote"
 const action = value => tag("Action", value)
 const tag = (name, value) => ({ name, value })
 import {
@@ -91,12 +91,6 @@ import {
   prop,
 } from "ramda"
 import dayjs from "dayjs"
-import {
-  createDataItemSigner,
-  message,
-  dryrun,
-  result,
-} from "@permaweb/aoconnect"
 
 import {
   defaultProfile,
@@ -205,6 +199,7 @@ function AtomicNote(a) {
   const fileInputRef = useRef(null)
   const fileInputRef2 = useRef(null)
 
+  const [uploadStats, setUploadStats] = useState(null)
   const [address, setAddress] = useState(null)
   const [profile, setProfile] = useState(null)
   const [init, setInit] = useState(false)
@@ -226,9 +221,6 @@ function AtomicNote(a) {
   const [metadata, setMetadata] = useState(null)
   const [uploadingArweave, setUploadingArweave] = useState(false)
   const [updatingArticle, setUpdatingArticle] = useState(false)
-  const [progress, setProgress] = useState(0)
-  const [phases, setPhases] = useState(2)
-  const [phase, setPhase] = useState("")
   const [updatingProf, setUpdatingProf] = useState(false)
   const [editorInit, setEditorInit] = useState(false)
   const [aoProfile, setAoProfile] = useState(null)
@@ -1364,6 +1356,7 @@ function AtomicNote(a) {
                                 new Promise(res => setTimeout(() => res(), ms))
                               if (!ok_info || updatingArticle) return
                               if (await badWallet(t, address)) return
+                              setUploadStats(null)
                               setUpdatingArticle(true)
                               const note = await new Note({
                                 pid,
@@ -1372,24 +1365,17 @@ function AtomicNote(a) {
                               let to = false
                               try {
                                 let _thumb = thumbnail
+                                let thumbnail_data = null
+                                let thumbnail_type = null
                                 if (thumb8) {
-                                  const data = new Uint8Array(thumb8.data)
-                                  const { id: txid, err } = await note.ar.post({
-                                    data: new Uint8Array(thumb8.data),
-                                    tags: { "Content-Type": thumb8.image.type },
-                                  })
-                                  if (!err) {
-                                    _thumb = txid
-                                    setThumbnail(_thumb)
-                                    setThumb64(null)
-                                    setThumb8(null)
-                                  } else {
-                                    err(t)
-                                    setUpdatingArticle(false)
-                                    return
-                                  }
+                                  _thumb = null
+                                  thumbnail_data = thumb8.data
+                                  thumbnail_type = thumb8.image.type
                                 }
                                 const { err: _err } = await note.updateInfo({
+                                  cb: ({ i, fns }) => {
+                                    setUploadStats([i, fns.length])
+                                  },
                                   title,
                                   description: desc,
                                   _thumb,
@@ -1397,6 +1383,13 @@ function AtomicNote(a) {
                                 if (_err) {
                                   err(t)
                                 } else {
+                                  let stats = uploadStats ?? [0, 0]
+                                  setUploadStats([stats[1], stats[1]])
+                                  if (thumb8) {
+                                    setThumbnail(_thumb)
+                                    setThumb64(null)
+                                    setThumb8(null)
+                                  }
                                   const info = await note.info("Info")
                                   msg(t, "Note info updated!")
                                 }
@@ -1407,7 +1400,22 @@ function AtomicNote(a) {
                               setUpdatingArticle(to)
                             }}
                           >
-                            {updatingArticle ? circleNotch : "Update Note Info"}
+                            {updatingArticle ? (
+                              <Flex align="center">
+                                {circleNotch}
+                                <Flex ml={3} align="center">
+                                  {uploadStats ? (
+                                    <Box>
+                                      {uploadStats[0]} / {uploadStats[1]}
+                                    </Box>
+                                  ) : (
+                                    "preparing..."
+                                  )}
+                                </Flex>
+                              </Flex>
+                            ) : (
+                              "Update Note Info"
+                            )}
                           </Button>
                         </>
                       )}
@@ -1967,55 +1975,37 @@ function AtomicNote(a) {
                                 new Promise(res => setTimeout(() => res(), ms))
                               if (!ok3 || updatingArticle) return
                               if (await badWallet(t, address)) return
-                              setPhase("preparing")
-                              let prog = 0
-                              setProgress(prog)
+                              setUploadStats(null)
                               setUpdatingArticle(true)
                               const note = await new Note({
                                 ...opt.note,
                                 pid: pid === "new" ? null : pid,
                               }).init()
                               let to = false
-                              let _phases = ["craeting a note"]
-                              if (thumb8)
-                                _phases.unshift("uploading the thumbnail")
-                              if (pub !== "None")
-                                _phases.push("adding to the collection")
-                              _phases.push("finishing up")
-                              setPhases(_phases.length)
                               try {
                                 let _thumb = thumbnail
+                                let thumbnail_data = null
+                                let thumbnail_type = null
                                 if (thumb8) {
-                                  setPhase("uploading the thumbnail")
-                                  const data = new Uint8Array(thumb8.data)
-                                  const { id: txid, err } = await note.ar.post({
-                                    data: new Uint8Array(thumb8.data),
-                                    tags: { "Content-Type": thumb8.image.type },
-                                  })
-                                  if (!err) {
-                                    _thumb = txid
-                                    setThumbnail(_thumb)
-                                    setThumb64(null)
-                                    setThumb8(null)
-                                  } else {
-                                    err(t)
-                                    setUpdatingArticle(false)
-                                    return
-                                  }
-                                  setProgress(++prog)
+                                  _thumb = null
+                                  thumbnail_data = thumb8.data
+                                  thumbnail_type = thumb8.image.type
                                 }
                                 let _fraction = "1"
                                 if (isFractional === "yes") {
                                   _fraction = Number(fraction).toString()
                                 }
-                                setPhase("creating a note")
-                                setProgress(++prog)
                                 const { err: _err, pid } = await note.create({
+                                  cb: ({ i, fns }) => {
+                                    setUploadStats([i, fns.length])
+                                  },
                                   data: md,
                                   info: {
                                     title,
                                     description: desc,
                                     thumbnail: _thumb,
+                                    thumbnail_data,
+                                    thumbnail_type,
                                   },
                                   token: { fraction: _fraction },
                                   udl: {
@@ -2050,19 +2040,16 @@ function AtomicNote(a) {
                                   setNotes(_notes)
                                   to = true
                                   if (pub !== "None") {
-                                    setPhase(
-                                      "adding the note to the collection",
-                                    )
                                     const book = await new Notebook({
                                       ...opt.notebook,
                                       pid: pub,
                                     }).init()
                                     const { out: res4, error: error4 } =
                                       await book.addNote(pid)
-                                    setProgress(++prog)
                                   }
-                                  setPhase("finishing up")
                                   setTab("Info")
+                                  let stats = uploadStats ?? [0, 0]
+                                  setUploadStats([stats[1], stats[1]])
                                   setUpdatingArticle(false)
                                   navigate(`/n/${pid}`)
                                   msg(t, "Note craeted!")
@@ -2077,9 +2064,15 @@ function AtomicNote(a) {
                             {updatingArticle ? (
                               <Flex>
                                 {circleNotch}
-                                <Box ml={2}>
-                                  {phase}... ({progress + 1} / {phases})
-                                </Box>
+                                <Flex ml={3} align="center">
+                                  {uploadStats ? (
+                                    <Box>
+                                      {uploadStats[0]} / {uploadStats[1]}
+                                    </Box>
+                                  ) : (
+                                    "preparing..."
+                                  )}
+                                </Flex>
                               </Flex>
                             ) : (
                               "Create New Atomic Note"

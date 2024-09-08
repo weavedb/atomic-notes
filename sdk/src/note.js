@@ -1,4 +1,4 @@
-import { srcs, getTag, action, tag, wait, udl } from "./utils.js"
+import { srcs, wait, udl } from "./utils.js"
 import Profile from "./profile.js"
 
 class Note {
@@ -36,15 +36,17 @@ class Note {
   }
 
   async create({
+    jwk,
     src = this.note_src,
     library = this.notelib_src,
     data,
-    info: { title, description, thumbnail },
+    info: { title, description, thumbnail, thumbnail_data, thumbnail_type },
     token: { fraction = "1" },
     udl: { payment, access, derivations, commercial, training },
+    cb,
   }) {
-    const profileId = this.profile.id
-    if (!profileId) return { err: "no ao profile id" }
+    const creator = this.profile.id
+    if (!creator) return { err: "no ao profile id" }
     const date = Date.now()
     let tags = {
       Action: "Add-Uploaded-Asset",
@@ -59,61 +61,52 @@ class Note {
       ...udl({ payment, access, derivations, commercial, training }),
     }
     if (!/^\s*$/.test(thumbnail)) tags["Thumbnail"] = thumbnail
-    if (profileId) tags["Creator"] = profileId
-    let err = null
-    try {
-      const balance =
-        typeof fraction === "number"
-          ? Number(fraction * 1).toString()
-          : fraction
-      const { pid, err: _err } = await this.ao.deploy({
-        loads: [
-          { src: library },
-          {
-            src,
-            fills: {
-              NAME: title,
-              CREATOR: profileId,
-              TICKER: "ATOMIC",
-              DENOMINATION: "1",
-              DESCRIPTION: description,
-              THUMBNAIL: thumbnail ?? "None",
-              DATECREATED: date,
-              BALANCE: balance,
-            },
-          },
-        ],
-        tags,
-        data,
-      })
-      if (_err) {
-        err = _err
-      } else {
-        this.pid = pid
-        const { err: _err2 } = await this.allow()
-        if (_err2) {
-          err = _err2
-        } else {
-          const { err: _err3 } = await this.assignData()
-          if (_err3) {
-            err = _err3
-          } else {
-            const { err: _err4 } = await this.add(profileId)
-            if (_err4) err = _err4
-          }
-        }
-      }
-    } catch (e) {
-      err = e
-      console.log(e)
+    if (creator) tags["Creator"] = creator
+    const balance =
+      typeof fraction === "number" ? Number(fraction * 1).toString() : fraction
+    const fills = {
+      NAME: title,
+      CREATOR: creator,
+      TICKER: "ATOMIC",
+      DENOMINATION: "1",
+      DESCRIPTION: description,
+      THUMBNAIL: thumbnail ?? "None",
+      DATECREATED: date,
+      BALANCE: balance,
     }
-    return { err, pid: this.pid }
+
+    let fns = [
+      {
+        fn: "deploy",
+        args: { loads: [{ src: library }, { src, fills }], tags, data },
+        then: ({ pid }) => {
+          this.pid = pid
+        },
+      },
+      { fn: this.allow, bind: this },
+      { fn: this.assignData, bind: this },
+      { fn: this.add, bind: this, args: { id: creator } },
+    ]
+    if (!thumbnail && thumbnail_data && thumbnail_type) {
+      fns.unshift({
+        fn: "post",
+        args: {
+          data: new Uint8Array(thumbnail_data),
+          tags: { "Content-Type": thumbnail_type },
+        },
+        then: ({ args, id }) => {
+          args.loads[1].fills.THUMBNAIL = id
+          args.tags.Thumbnail = id
+        },
+      })
+    }
+    return this.ao.pipe({ jwk, fns, cb })
   }
 
   async allow() {
     return await this.ao.msg({
       pid: this.proxy,
-      action: "Allow",
+      act: "Allow",
       checkData: "allowed!",
     })
   }
@@ -130,7 +123,7 @@ class Note {
     let tags = {}
     if (version) tags.Version = version
     const { err, out } = await this.ao.dry({
-      action: "Get",
+      act: "Get",
       pid: this.pid,
       check: { Data: true },
       tags,
@@ -142,14 +135,22 @@ class Note {
   async info() {
     const { err, out } = await this.ao.dry({
       pid: this.pid,
-      action: "Info",
+      act: "Info",
       checkData: true,
       get: { data: true, json: true },
     })
     return out ?? null
   }
 
-  async updateInfo({ title, description, thumbnail }) {
+  async updateInfo({
+    title,
+    description,
+    thumbnail,
+    thumbnail_data,
+    thumbnail_type,
+    jwk,
+    cb,
+  }) {
     let info_map = {
       Name: title,
       Description: description,
@@ -160,14 +161,34 @@ class Note {
       if (info_map[k])
         new_info.push(`${k} = '${info_map[k].replace(/'/g, "\\'")}'`)
     }
-    if (new_info.length === 0) return { err: "empty info" }
-    return this.ao.eval({ pid: this.pid, data: new_info.join("\n") })
+    const isThumbnail = !thumbnail && thumbnail_data && thumbnail_type
+    if (new_info.length === 0 && !isThumbnail) return { err: "empty info" }
+    let fns = [
+      { fn: "eval", args: { pid: this.pid, data: new_info.join("\n") } },
+    ]
+    let images = 0
+    if (isThumbnail) {
+      images++
+      fns.unshift({
+        fn: "post",
+        args: {
+          data: new Uint8Array(thumbnail_data),
+          tags: { "Content-Type": thumbnail_type },
+        },
+        then: ({ args, id, out }) => {
+          images--
+          out.thumbnail = id
+          if (images === 0) args.data += `\nThumbnail = '${id}'`
+        },
+      })
+    }
+    return await this.ao.pipe({ jwk, fns, cb })
   }
 
   async list() {
     const { err, out } = await this.ao.dry({
       pid: this.pid,
-      action: "List",
+      act: "List",
       check: { Versions: true },
       get: { name: "Versions", json: true },
     })
@@ -194,7 +215,7 @@ class Note {
   async patches(data) {
     const { err, out } = await this.ao.dry({
       pid: this.pid,
-      action: "Patches",
+      act: "Patches",
       data,
       check: { Patches: true },
       get: "Patches",
@@ -205,18 +226,18 @@ class Note {
   async updateVersion(patches, version) {
     return await this.ao.msg({
       pid: this.pid,
-      action: "Update",
+      act: "Update",
       tags: { Version: version },
       data: patches,
       checkData: "updated!",
     })
   }
 
-  async add(creator) {
+  async add({ id }) {
     return await this.ao.msg({
       pid: this.pid,
-      action: "Add-Asset-To-Profile",
-      tags: { ProfileProcess: creator },
+      act: "Add-Asset-To-Profile",
+      tags: { ProfileProcess: id },
       check: { Action: "Add-Uploaded-Asset" },
     })
   }
@@ -224,7 +245,7 @@ class Note {
   async editors() {
     const { err, out } = await this.ao.dry({
       pid: this.pid,
-      action: "Editors",
+      act: "Editors",
       check: { Editors: true },
       get: { name: "Editors", json: true },
     })
@@ -234,7 +255,7 @@ class Note {
   async addEditor(editor) {
     return await this.ao.msg({
       pid: this.pid,
-      action: "Add-Editor",
+      act: "Add-Editor",
       tags: { Editor: editor },
       checkData: "editor added!",
       get: { name: "Editors", json: true },
@@ -244,7 +265,7 @@ class Note {
   async removeEditor(editor) {
     return await this.ao.msg({
       pid: this.pid,
-      action: "Remove-Editor",
+      act: "Remove-Editor",
       tags: { Editor: editor },
       checkData: "editor removed!",
       get: { name: "Editors", json: true },

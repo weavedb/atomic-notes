@@ -32,6 +32,13 @@ import { createDataItemSigner, connect } from "@permaweb/aoconnect"
 const setup = async () => {
   console.error = () => {}
   console.warn = () => {}
+  const thumbnail = readFileSync(
+    resolve(import.meta.dirname, `../assets/thumbnail.png`),
+  )
+  const banner = readFileSync(
+    resolve(import.meta.dirname, `../assets/banner.png`),
+  )
+
   const ar = new AR(arweave)
   await ar.gen("10")
   const src = new Src({ ar })
@@ -58,7 +65,6 @@ const setup = async () => {
   })
   const profile = new Profile({ profile_src, registry_src, ao })
   await profile.createRegistry({})
-  await profile.initRegistry({})
   const notebook = new Notebook({
     registry_src: collection_registry_src,
     profile,
@@ -83,7 +89,7 @@ const setup = async () => {
       registry: collection_registry_pid,
     },
   }
-  return { opt, profile, ao, ar }
+  return { opt, profile, ao, ar, thumbnail, banner }
 }
 
 const ok = obj => {

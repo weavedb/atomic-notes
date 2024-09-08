@@ -1,7 +1,7 @@
 import { useNavigate, useParams } from "react-router-dom"
 import { Link } from "react-router-dom"
 import { useState, useEffect } from "react"
-import { Notebook } from "atomic-notes"
+import { Notebook } from "aonote"
 import Header from "../components/Header"
 import NoteCard from "../components/NoteCard"
 import {
@@ -17,6 +17,7 @@ import {
   err,
   getPFP,
   opt,
+  gateway_url,
 } from "../lib/utils"
 import dayjs from "dayjs"
 import {
@@ -89,7 +90,7 @@ function User({}) {
                 mt={4}
                 mb={8}
                 sx={{
-                  backgroundImage: `url(https://arweave.net/${book.Banner})`,
+                  backgroundImage: `url(${gateway_url}/${book.Banner})`,
                   backgroundSize: "cover",
                   backgroundPosition: "center",
                 }}
@@ -101,7 +102,7 @@ function User({}) {
                       <Avatar
                         mr={2}
                         name={book.Name}
-                        src={`https://arweave.net/${book.Thumbnail}`}
+                        src={`${gateway_url}/${book.Thumbnail}`}
                         size="xl"
                       />
                       <Box>
@@ -171,7 +172,7 @@ function User({}) {
                           const book = await new Notebook({
                             ...opt.notebook,
                             pid: id,
-                          }).init(arweaveWallet)
+                          }).init()
                           const { err: _err } = await book.removeNote(
                             v.id,
                             true,

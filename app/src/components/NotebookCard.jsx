@@ -21,7 +21,7 @@ import {
   Avatar,
   Heading,
 } from "@chakra-ui/react"
-import { validAddress } from "../lib/utils"
+import { validAddress, gateway_url } from "../lib/utils"
 import { Link } from "react-router-dom"
 import { DeleteIcon, AddIcon, EditIcon } from "@chakra-ui/icons"
 import dayjs from "dayjs"
@@ -75,7 +75,7 @@ const NotebookCard = ({
                   backgroundImage:
                     note.thumb64 ??
                     (note.thumbnail
-                      ? `url(https://arweave.net/${note.thumbnail})`
+                      ? `url(${gateway_url}/${note.thumbnail})`
                       : ""),
                   backgroundSize: "cover",
                   backgroundPosition: "center",
@@ -101,7 +101,7 @@ const NotebookCard = ({
             ) : !note.thumbnail ? null : (
               <Avatar
                 mr={4}
-                src={`https://arweave.net/${note.thumbnail}`}
+                src={`${gateway_url}/${note.thumbnail}`}
                 size="xl"
               />
             )}

@@ -1,6 +1,6 @@
 {
-  "name": "atomic-notes",
-  "version": "0.5.1",
+  "name": "aonote",
+  "version": "0.5.7",
   "description": "",
   "type": "module",
   "main": "dist/cjs/index.js",

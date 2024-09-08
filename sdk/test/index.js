@@ -13,8 +13,6 @@ const v6 = "# this is markdown 6"
 const note_tags = {
   title: "title",
   description: "desc",
-  thumbnail: "None",
-  banner: "None",
 }
 
 const prof = {
@@ -27,11 +25,11 @@ const prof = {
 
 describe("Atomic Notes", function () {
   this.timeout(0)
-  let ao, opt, profile, ar
+  let ao, opt, profile, ar, thumbnail, banner
   let profile_pid, notebook, notebook_pid, note, note_pid, ar2, note2
 
   before(async () => {
-    ;({ opt, ao, ar, profile } = await setup())
+    ;({ thumbnail, banner, opt, ao, ar, profile } = await setup())
   })
 
   it("should auto-load ArConnect wallet", async () => {
@@ -104,7 +102,14 @@ describe("Atomic Notes", function () {
     notebook = new Notebook({ ...opt.notebook, profile })
     ;({ pid: notebook_pid } = ok(
       await notebook.create({
-        info: { title: "title", description: "desc" },
+        info: {
+          title: "title",
+          description: "desc",
+          thumbnail_data: thumbnail,
+          thumbnail_type: "image/png",
+          banner_data: banner,
+          banner_type: "image/png",
+        },
         bazar: true,
       }),
     ))
@@ -115,7 +120,15 @@ describe("Atomic Notes", function () {
   })
 
   it("should update a notebook", async () => {
-    ok(await notebook.updateInfo({ title: "title2" }))
+    ok(
+      await notebook.updateInfo({
+        title: "title2",
+        thumbnail_data: thumbnail,
+        thumbnail_type: "image/png",
+        banner_data: banner,
+        banner_type: "image/png",
+      }),
+    )
     expect((await notebook.info()).Name).to.eql("title2")
   })
 
@@ -124,7 +137,11 @@ describe("Atomic Notes", function () {
     ;({ pid: note_pid } = ok(
       await note.create({
         data: v1,
-        info: note_tags,
+        info: {
+          ...note_tags,
+          thumbnail_data: thumbnail,
+          thumbnail_type: "image/png",
+        },
         token: { fraction: "100" },
         udl: {
           payment: { mode: "single", recipient: ao.addr },
@@ -150,7 +167,13 @@ describe("Atomic Notes", function () {
   })
 
   it("should update a note", async () => {
-    ok(await note.updateInfo({ title: "title2" }))
+    ok(
+      await note.updateInfo({
+        title: "title2",
+        thumbnail_data: thumbnail,
+        thumbnail_type: "image/png",
+      }),
+    )
     expect((await note.info()).Name).to.eql("title2")
   })
 

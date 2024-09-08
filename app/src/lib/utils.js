@@ -1,9 +1,12 @@
 import { dryrun } from "@permaweb/aoconnect"
 import lf from "localforage"
 import { fromPairs, map, prop, includes, clone } from "ramda"
-import { AR, Profile, Notebook, Note } from "atomic-notes"
+import { AR, Profile, Notebook, Note } from "aonote"
 
 let graphql_url = "https://arweave.net/graphql"
+let default_thumbnail = "kzD3ypzytsrjzEc6-y-7me7RfM26hOGMu635cHsW5ac"
+let default_banner = "VSUEfEu_PDF9hVOCPIme8rKeQNIV_t4dAjbecSUeA3I"
+let gateway_url = "https://arweave.net"
 
 const genOpt = () => {
   let env = { ar: {}, ao: {}, profile: {}, note: {}, notebook: {} }
@@ -46,6 +49,14 @@ const genOpt = () => {
     if (env.ao.cu) opt.ao.aoconnect.CU_URL = env.ao.cu
     if (env.ao.gateway) opt.ao.aoconnect.GATEWAY_URL = env.ao.gateway
   }
+  if (import.meta.env.VITE_THUMBNAIL) {
+    opt.note.thumbnail = import.meta.env.VITE_THUMBNAIL
+    opt.notebook.thumbnail = import.meta.env.VITE_THUMBNAIL
+  }
+  if (import.meta.env.VITE_BANNER) {
+    opt.note.banner = import.meta.env.VITE_BANNER
+    opt.notebook.banner = import.meta.env.VITE_BANNER
+  }
 
   const _ar = clone(opt.ar)
   const _ao = clone(opt.ao)
@@ -69,9 +80,14 @@ const genOpt = () => {
 }
 
 const opt = genOpt()
-const _ar = new AR(opt.ar)
 
-graphql_url = `${_ar.protocol}://${_ar.host}:${_ar.port}/graphql`
+const _nb = new Notebook(opt.notebook)
+
+graphql_url = `${_nb.ar.protocol}://${_nb.ar.host}:${_nb.ar.port}/graphql`
+gateway_url = `${_nb.ar.protocol}://${_nb.ar.host}:${_nb.ar.port}`
+default_thumbnail = _nb.thumbnail
+default_banner = _nb.banner
+
 const getArticles = async ({ limit, skip } = {}) => {
   let tags = [{ name: "Action", value: "List" }]
   if (limit) tags.push({ name: "limit", value: limit.toString() })
@@ -164,18 +180,6 @@ const getProf = ({ address, setAddress, setProfile, setInit, t }) => {
         if (!isCache) msg(t, "Wallet Connected!")
       } else {
         const prof = await new Profile(opt.profile).init()
-        /*
-        console.log(
-          await prof.createProfile({
-            profile: {
-              DisplayName: "Atomic Notes",
-              UserName: "anote",
-              ProfileImage: "None",
-              Description: "Permaweb Hacker",
-              CoverImage: "None",
-            },
-          }),
-        )*/
         err(
           t,
           "No Profile Found!",
@@ -289,9 +293,11 @@ const err = (
 const getPFP = profile =>
   profile.ProfileImage === "None"
     ? "/arweave.png"
-    : `https://arweave.net/${profile.ProfileImage}`
+    : `${gateway_url}/${profile.ProfileImage}`
 
 export {
+  default_thumbnail,
+  default_banner,
   opt,
   err,
   msg,
@@ -320,5 +326,6 @@ export {
   getBookInfo,
   getPFP,
   graphql_url,
+  gateway_url,
   getAoProfiles,
 }

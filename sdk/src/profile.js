@@ -1,5 +1,5 @@
 import AO from "./ao.js"
-import { map, prop, is, mergeLeft, assoc } from "ramda"
+import { map, prop, assoc } from "ramda"
 
 import {
   searchTag,
@@ -27,7 +27,7 @@ class Profile {
       this.ao = ao
     } else {
       let _ao = typeof ao === "object" ? ao : {}
-      if (!_ao.ar) _ao.ar = ar
+      _ao.ar ??= ar
       this.ao = new AO(ao)
     }
     this.ar = this.ao.ar
@@ -43,136 +43,120 @@ class Profile {
   }
 
   async createRegistry({ jwk } = {}) {
-    let err = null
-    let pid = null
-    if (!jwk) {
-      ;({ jwk, err } = await this.ar.checkWallet())
-    }
-    if (!err) {
-      const { err: _err, pid: _pid } = await this.ao.deploy({
-        src: this.registry_src,
-      })
-      if (_err) {
-        err = _err
-      } else {
-        pid = _pid
-        this.registry = _pid
-      }
-    }
-    return { err, pid }
+    const fns = [
+      {
+        fn: this.ao.deploy,
+        args: { src: this.registry_src },
+        then: ({ pid }) => {
+          this.registry = pid
+        },
+      },
+      { fn: this.initRegistry, bind: this },
+    ]
+    return await this.ao.pipe({ jwk, fns })
   }
 
   async initRegistry({ registry = this.registry, jwk } = {}) {
-    let err = null
-    if (!jwk) {
-      ;({ jwk, err } = await this.ar.checkWallet())
-    }
-    if (err) {
-      return { err }
-    } else {
-      if (!this.registry) this.registry = registry
-      return await this.ao.msg({
+    const fn = {
+      args: {
         pid: registry,
-        jwk,
-        action: "Prepare-Database",
+        act: "Prepare-Database",
         check: { Status: "Success" },
-      })
+      },
+      then: () => {
+        this.registry ??= registry
+      },
     }
+    return await this.ao.pipe({ jwk, fns: [fn] })
   }
 
   async updateProfile({ jwk, profile, id }) {
     let err = null
-    if (!jwk) {
-      ;({ jwk, err } = await this.ar.checkWallet())
-    }
-    if (err) {
-      return { err }
-    } else {
-      if (!id) id = this.id ?? (await this.ids())[0]
-      if (!id) return { err: "no profile id" }
-      return await this.ao.msg({
-        pid: id,
-        jwk,
-        data: JSON.stringify(profile),
-        action: "Update-Profile",
-      })
-    }
+    ;({ jwk, err } = await this.ar.checkWallet({ jwk }))
+    if (err) return { err }
+    id ??= this.id ?? (await this.ids())[0]
+    if (!id) return { err: "no profile id" }
+    return await this.ao.msg({
+      pid: id,
+      jwk,
+      data: JSON.stringify(profile),
+      act: "Update-Profile",
+    })
   }
 
   async ids({ registry = this.registry, addr = this.ar.addr, jwk } = {}) {
-    let err = null
-    if (!jwk) {
-      ;({ jwk, err } = await this.ar.checkWallet())
-    }
-    if (err) {
-      return []
-    } else {
-      const res = await this.ao.dryrun({
-        signer: this.ao.toSigner(jwk),
-        process: registry,
-        tags: [{ name: "Action", value: "Get-Profiles-By-Delegate" }],
+    const fn = {
+      fn: this.ao.dry,
+      args: {
+        pid: registry,
+        act: "Get-Profiles-By-Delegate",
         data: JSON.stringify({ Address: addr }),
-      })
-      const data = res.Messages?.[0]?.Data
-      const _ids = map(prop("ProfileId"), data ? JSON.parse(data) : [])
-      if (_ids[0] && addr === this.ar.addr) this.id = _ids[0]
-      return _ids
+        get: { data: true, json: true },
+      },
+      then: ({ inp, args }) => {
+        const _ids = map(prop("ProfileId"), inp ?? [])
+        if (_ids[0] && addr === this.ar.addr) this.id = _ids[0]
+        return _ids
+      },
     }
+    return await this.ao.pipe({ jwk, fns: [fn] })
   }
 
   async profile({ registry = this.registry, id, jwk } = {}) {
     let err = null
-    if (!jwk) {
-      ;({ jwk, err } = await this.ar.checkWallet())
-    }
-    if (err) {
-      return null
-    } else {
-      if (!id) id = this.id ?? (await this.ids())[0]
-      if (!id) return null
-      const profiles = await this.profiles({ registry, ids: [id], jwk })
-      return !profiles ? null : (profiles[0] ?? null)
-    }
+    ;({ jwk, err } = await this.ar.checkWallet({ jwk }))
+    if (err) return null
+    id ??= this.id ?? (await this.ids())[0]
+    if (!id) return null
+    const profiles = await this.profiles({ registry, ids: [id], jwk })
+    return !profiles ? null : (profiles[0] ?? null)
   }
 
   async profiles({ registry = this.registry, ids, jwk } = {}) {
     let err = null
-    if (!jwk) {
-      ;({ jwk, err } = await this.ar.checkWallet())
-    }
-    if (err) {
-      return null
-    } else {
-      if (!ids) ids = await this.ids()
-      if (ids.length === []) return null
-      const { out, err: _err } = await this.ao.dry({
+    ;({ jwk, err } = await this.ar.checkWallet({ jwk }))
+    if (err) return null
+    if (!ids) ids = await this.ids()
+    if (ids.length === []) return null
+    const fn = {
+      fn: this.ao.dry,
+      args: {
         pid: registry,
-        action: "Get-Metadata-By-ProfileIds",
+        act: "Get-Metadata-By-ProfileIds",
         data: JSON.stringify({ ProfileIds: ids }),
         get: { data: true, json: true },
-      })
-      return _err ? null : out
+      },
+      then: ({ inp }) => inp,
     }
+    return await this.ao.pipe({ jwk, fns: [fn] })
   }
 
   async info({ id, registry = this.registry, jwk } = {}) {
     let err = null
-    if (!jwk) {
-      ;({ jwk, err } = await this.ar.checkWallet())
+    ;({ jwk, err } = await this.ar.checkWallet({ jwk }))
+    if (err) return null
+    if (!id) id = this.id ?? (await this.ids())[0]
+    if (!id) return null
+    const fn = {
+      fn: this.ao.dry,
+      args: { pid: id, act: "Info", get: { json: true, data: true } },
+      then: ({ inp: profile }) => (profile ? assoc("Id", id, profile) : null),
     }
-    if (err) {
-      return null
-    } else {
-      if (!id) id = this.id ?? (await this.ids())[0]
-      if (!id) return null
-      const res = await this.ao.dryrun({
-        signer: this.ao.toSigner(jwk),
-        process: id,
-        tags: [{ name: "Action", value: "Info" }],
-      })
-      const profile = JSON.parse(res.Messages[0]?.Data ?? null)
-      return profile ? assoc("Id", id, profile) : null
+    return await this.ao.pipe({ jwk, fns: [fn] })
+  }
+
+  async checkProfile({ jwk }) {
+    let out = null
+    let err = null
+    let attempts = 5
+    while (attempts > 0) {
+      await wait(1000)
+      out = await this.profile({ jwk })
+      attempts -= 1
+      if (out || attempts === 0) break
     }
+    if (!out) err = "no profile found on registry"
+    return { err, out }
   }
 
   async createProfile({
@@ -181,48 +165,19 @@ class Profile {
     profile,
     jwk,
   }) {
-    let err = null
-    if (!jwk) {
-      ;({ jwk, err } = await this.ar.checkWallet())
-    }
-    if (err) {
-      return { err }
-    } else {
-      let pid = null
-      let mid = null
-      let _profile = null
-      const { err: _err, pid: _pid } = await this.ao.deploy({
-        src: profile_src,
-        fills: { REGISTRY: registry },
-        jwk,
-      })
-      if (_err) {
-        err = _err
-      } else {
-        pid = _pid
-        this.id = pid
-        const {
-          res,
-          err: _err2,
-          mid: _mid,
-        } = await this.updateProfile({
-          id: pid,
-          profile,
-          jwk,
-        })
-        if (_err2) err = _err2
-        mid = _mid
-        let attempts = 5
-        while (attempts > 0) {
-          await wait(1000)
-          _profile = await this.profile({ jwk })
-          attempts -= 1
-          if (_profile || attempts === 0) break
-        }
-        if (!_profile) err = "no profile found on registry"
-      }
-      return { err, pid, mid, profile: _profile }
-    }
+    const fns = [
+      {
+        fn: this.ao.deploy,
+        args: { src: profile_src, fills: { REGISTRY: registry } },
+        then: ({ pid, args }) => {
+          this.id = pid
+          args.id = pid
+        },
+      },
+      { fn: this.updateProfile, bind: this, args: { profile } },
+      { fn: this.checkProfile, bind: this, then: { "_.profile": "in" } },
+    ]
+    return await this.ao.pipe({ jwk, fns })
   }
 }
 

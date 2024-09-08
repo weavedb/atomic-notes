@@ -21,8 +21,7 @@ import {
   Avatar,
   Heading,
 } from "@chakra-ui/react"
-import { validAddress } from "../lib/utils"
-import { getPFP } from "../lib/utils"
+import { validAddress, getPFP, gateway_url } from "../lib/utils"
 import { Link } from "react-router-dom"
 import { DeleteIcon, AddIcon, EditIcon } from "@chakra-ui/icons"
 import dayjs from "dayjs"
@@ -179,7 +178,7 @@ const NoteCard = ({
                   AO
                 </Button>
               </Link>
-              <Link target="_blank" to={`https://arweave.net/${note.id}`}>
+              <Link target="_blank" to={`${gateway_url}/${note.id}`}>
                 <Button
                   ml={3}
                   title="Edit"
@@ -279,9 +278,7 @@ const NoteCard = ({
             borderRadius: "5px",
             backgroundImage:
               note.thumb64 ??
-              (note.thumbnail
-                ? `url(https://arweave.net/${note.thumbnail})`
-                : ""),
+              (note.thumbnail ? `url(${gateway_url}/${note.thumbnail})` : ""),
             backgroundSize: "cover",
             backgroundPosition: "center",
             cursor: "pointer",
@@ -311,7 +308,7 @@ const NoteCard = ({
           sx={{
             borderRadius: "5px",
             backgroundImage: note.thumbnail
-              ? `url(https://arweave.net/${note.thumbnail})`
+              ? `url(${gateway_url}/${note.thumbnail})`
               : "",
             backgroundSize: note.thumbnail ? "cover" : "50px",
             backgroundPosition: "center",

@@ -64,10 +64,10 @@ class AR {
     await this.arweave.api.get(`/mine`)
   }
 
-  async checkWallet() {
+  async checkWallet({ jwk } = {}) {
+    if (jwk) return { err: null, jwk }
     let err = null
     let addr = null
-    let jwk = null
     let pub = null
     let existWallet = typeof window === "object" && window.arweaveWallet
     let isJwkWallet = this.isArConnect(this.jwk)
@@ -129,9 +129,7 @@ class AR {
   }
 
   async toAddr(jwk) {
-    if (!jwk) {
-      ;({ jwk } = await this.checkWallet())
-    }
+    ;({ jwk } = await this.checkWallet({ jwk }))
     if (this.isArConnect(jwk)) {
       return await jwk.getActiveAddress()
     } else {
@@ -157,9 +155,7 @@ class AR {
 
   async transfer(ar, target, jwk) {
     let err = null
-    if (!jwk) {
-      ;({ jwk, err } = await this.checkWallet())
-    }
+    ;({ jwk, err } = await this.checkWallet({ jwk }))
     if (err) {
       return { err }
     } else {
@@ -173,9 +169,7 @@ class AR {
 
   async bundle(_items, jwk) {
     let err = null
-    if (!jwk) {
-      ;({ jwk, err } = await this.checkWallet())
-    }
+    ;({ jwk, err } = await this.checkWallet({ jwk }))
     if (err) {
       return { err }
     } else {
@@ -200,9 +194,7 @@ class AR {
 
   async post({ data = "1984", tags = {}, jwk }) {
     let err = null
-    if (!jwk) {
-      ;({ err, jwk } = await this.checkWallet())
-    }
+    ;({ err, jwk } = await this.checkWallet({ jwk }))
     if (err) {
       return { err }
     } else {
@@ -221,9 +213,7 @@ class AR {
   async postTx(tx, jwk) {
     let err = null
     let res = null
-    if (!jwk) {
-      ;({ err, jwk } = await this.checkWallet())
-    }
+    ;({ err, jwk } = await this.checkWallet({ jwk }))
     if (!err) {
       if (jwk?.walletName === "ArConnect") {
         tx = await jwk.sign(tx)
