@@ -21,7 +21,7 @@ import {
 } from "@chakra-ui/react"
 import { useParams } from "react-router-dom"
 import { Link } from "react-router-dom"
-import { Notebook } from "atomic-notes"
+import { Notebook } from "aonote"
 
 import {
   ltags,
@@ -39,6 +39,9 @@ import {
   err,
   msg,
   opt,
+  default_thumbnail,
+  default_banner,
+  gateway_url,
 } from "../lib/utils"
 
 import {
@@ -76,7 +79,7 @@ function App(a) {
     () => getProf({ address, setProfile, setInit, setAddress, t }),
     [address],
   )
-
+  const [uploadStats, setUploadStats] = useState(null)
   const [metadata, setMetadata] = useState(null)
 
   const [updatingArticle, setUpdatingArticle] = useState(false)
@@ -92,18 +95,14 @@ function App(a) {
   const [title, setTitle] = useState("")
   const [bazar, setBazar] = useState(false)
   const [desc, setDesc] = useState("")
-  const [banner, setBanner] = useState(
-    "eXCtpVbcd_jZ0dmU2PZ8focaKxBGECBQ8wMib7sIVPo",
-  )
+  const [banner, setBanner] = useState(default_banner)
   const [banner64, setBanner64] = useState(null)
   const [banner8, setBanner8] = useState(null)
 
   const [thumb64, setThumb64] = useState(null)
   const [thumb8, setThumb8] = useState(null)
 
-  const [thumbnail, setThumbnail] = useState(
-    "lJovHqM9hwNjHV5JoY9NGWtt0WD-5D4gOqNL2VWW5jk",
-  )
+  const [thumbnail, setThumbnail] = useState(default_thumbnail)
   const [id, setId] = useState("")
   const [txid, setTxid] = useState("")
 
@@ -347,7 +346,7 @@ function App(a) {
                       sx={{
                         backgroundImage:
                           banner64 ??
-                          (banner ? `url(https://arweave.net/${banner})` : ""),
+                          (banner ? `url(${gateway_url}/${banner})` : ""),
                         backgroundSize: "cover",
                         backgroundPosition: "center",
                         cursor: "pointer",
@@ -424,6 +423,7 @@ function App(a) {
                       onClick={async () => {
                         if (!ok || updatingArticle) return
                         if (await badWallet(t, address)) return
+                        setUploadStats(null)
                         setUpdatingArticle(true)
                         const notebook = await new Notebook({
                           ...opt.notebook,
@@ -432,54 +432,43 @@ function App(a) {
                         let to = false
                         try {
                           let _thumb = thumbnail
+                          let thumbnail_data = null
+                          let thumbnail_type = null
                           if (thumb8) {
-                            const { id: txid, err } = await notebook.ar.post({
-                              data: new Uint8Array(thumb8.data),
-                              tags: { "Content-Type": thumb8.image.type },
-                            })
-                            if (!err) {
-                              _thumb = txid
-                              setThumbnail(_thumb)
-                              setThumb64(null)
-                              setThumb8(null)
-                            } else {
-                              err(t)
-                              setUpdatingArticle(false)
-                              return
-                            }
+                            _thumb = null
+                            thumbnail_data = thumb8.data
+                            thumbnail_type = thumb8.image.type
                           }
                           let _banner = banner
+                          let banner_data = null
+                          let banner_type = null
                           if (banner8) {
-                            const { id: txid, err } = await notebook.ar.post({
-                              data: new Uint8Array(banner8.data),
-                              tags: { "Content-Type": banner8.image.type },
-                            })
-                            if (!err) {
-                              _banner = txid
-                              setBanner(_banner)
-                              setBanner64(null)
-                              setBanner8(null)
-                            } else {
-                              err(t)
-                              setUpdatingArticle(false)
-                              return
-                            }
+                            _banner = null
+                            banner_data = banner8.data
+                            banner_type = banner8.image.type
                           }
                           if (pid === "new") {
-                            console.log(notebook)
                             const { err: _err, pid } = await notebook.create({
+                              cb: ({ i, fns }) => {
+                                setUploadStats([i, fns.length])
+                              },
                               info: {
                                 title,
                                 description: desc,
                                 thumbnail: _thumb,
                                 banner: _banner,
+                                thumbnail_data,
+                                thumbnail_type,
+                                banner_data,
+                                banner_type,
                               },
                               bazar,
                             })
-                            console.log(_err, pid)
                             if (_err) {
                               err(t)
                             } else {
+                              let stats = uploadStats
+                              setUploadStats([stats[1], stats[1]])
                               navigate(`/b/${pid}`)
                               setUpdatingArticle(false)
                             }
@@ -490,10 +479,16 @@ function App(a) {
                                 description: desc,
                                 thumbnail: _thumb,
                                 banner: _banner,
+                                thumbnail_data,
+                                thumbnail_type,
+                                banner_data,
+                                banner_type,
                               })
                             if (_err) {
                               err(t)
                             } else {
+                              let stats = uploadStats ?? [0, 0]
+                              setUploadStats([stats[1], stats[1]])
                               navigate(`/b/${pid}`)
                               setUpdatingArticle(false)
                               msg(t, "Notebook info updated!")
@@ -507,11 +502,24 @@ function App(a) {
                         setUpdatingArticle(to)
                       }}
                     >
-                      {updatingArticle
-                        ? circleNotch
-                        : pid !== "new"
-                          ? "Update Notebook Info"
-                          : "Create New Notebook"}
+                      {updatingArticle ? (
+                        <Flex align="center">
+                          {circleNotch}
+                          <Flex ml={3} align="center">
+                            {uploadStats ? (
+                              <Box>
+                                {uploadStats[0]} / {uploadStats[1]}
+                              </Box>
+                            ) : (
+                              "preparing..."
+                            )}
+                          </Flex>
+                        </Flex>
+                      ) : pid !== "new" ? (
+                        "Update Notebook Info"
+                      ) : (
+                        "Create New Notebook"
+                      )}
                     </Button>
                   </Box>
                 </Flex>

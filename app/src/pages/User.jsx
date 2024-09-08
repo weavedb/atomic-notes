@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from "react-router-dom"
-import { Notebook } from "atomic-notes"
+import { Notebook } from "aonote"
 import { Link } from "react-router-dom"
 import { useState, useEffect } from "react"
 import Header from "../components/Header"
@@ -19,6 +19,7 @@ import {
   err,
   getPFP,
   opt,
+  gateway_url,
 } from "../lib/utils"
 import dayjs from "dayjs"
 import {
@@ -219,7 +220,7 @@ function User({}) {
                         const book = await new Notebook({
                           ...opt.notebook,
                           pid: v3,
-                        }).init(arweaveWallet)
+                        }).init()
 
                         const { err: _err } = await book.addNote(v.id)
                         if (!_err) {
@@ -272,7 +273,7 @@ function User({}) {
                                   {!bmap ? null : (
                                     <Avatar
                                       mr={4}
-                                      src={`https://arweave.net/${bmap.Thumbnail}`}
+                                      src={`${gateway_url}/${bmap.Thumbnail}`}
                                       size="xl"
                                     />
                                   )}

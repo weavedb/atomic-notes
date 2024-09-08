@@ -1,4 +1,4 @@
-import { srcs, action, tag } from "./utils.js"
+import { srcs } from "./utils.js"
 import { is } from "ramda"
 import Profile from "./profile.js"
 
@@ -32,29 +32,21 @@ class Notebook {
     this.banner = banner
     this.notebook_src = notebook_src
   }
+
   async init(jwk) {
     await this.profile.init(jwk)
     return this
   }
 
   async createRegistry({ jwk } = {}) {
-    let err = null
-    let pid = null
-    if (!jwk) {
-      ;({ jwk, err } = await this.ar.checkWallet())
+    const fn = {
+      fn: "deploy",
+      args: { src: this.registry_src },
+      thsn: ({ pid }) => {
+        this.registry = pid
+      },
     }
-    if (!err) {
-      const { err: _err, pid: _pid } = await this.ao.deploy({
-        src: this.registry_src,
-      })
-      if (_err) {
-        err = _err
-      } else {
-        pid = _pid
-        this.registry = _pid
-      }
-    }
-    return { err, pid }
+    return await this.ao.pipe({ jwk, fns: [fn] })
   }
 
   async create({
@@ -62,10 +54,16 @@ class Notebook {
     info: {
       title,
       description,
-      thumbnail = this.thumbnail,
-      banner = this.banner,
+      thumbnail,
+      banner,
+      thumbnail_data,
+      thumbnail_type,
+      banner_data,
+      banner_type,
     } = {},
     bazar = false,
+    jwk,
+    cb,
   }) {
     const profileId = this.profile.id
     if (!profileId) return { err: "no ao profile id" }
@@ -83,50 +81,122 @@ class Notebook {
       tags["Thumbnail"] = thumbnail
     }
     if (banner && !/^\s*$/.test(banner)) tags["Banner"] = banner
-    let err = null
-    try {
-      const { pid, err: _err } = await this.ao.deploy({
-        tags,
-        src,
-        fills: {
-          NAME: title,
-          DESCRIPTION: description,
-          DATECREATED: date,
-          LASTUPDATE: date,
-          CREATOR: profileId,
-          BANNER: banner,
-          THUMBNAIL: thumbnail,
+    let fns = [
+      {
+        fn: "deploy",
+        args: {
+          tags,
+          src,
+          fills: {
+            NAME: title,
+            DESCRIPTION: description,
+            DATECREATED: date,
+            LASTUPDATE: date,
+            CREATOR: profileId,
+            BANNER: banner ?? "None",
+            THUMBNAIL: thumbnail ?? "None",
+          },
+        },
+        then: ({ pid }) => {
+          this.pid = pid
+        },
+      },
+      {
+        fn: this.add,
+        bind: this,
+        args: { id: profileId },
+        then: { "args.collectionId": "pid" },
+      },
+    ]
+    if (bazar) {
+      fns.push({
+        fn: this.register,
+        bind: this,
+        args: {
+          name: title,
+          description,
+          thumbnail,
+          banner,
+          date,
+          creator: profileId,
         },
       })
-      if (_err) {
-        err = _err
-      } else {
-        this.pid = pid
-        const { err: _err2, res: _res2 } = await this.add(profileId)
-        if (_err2) {
-          err = _err2
-        } else {
-          if (bazar) {
-            const { err: _err3, res: _res3 } = await this.register({
-              name: title,
-              description,
-              thumbnail,
-              banner,
-              date,
-              creator: profileId,
-              collectionId: pid,
-            })
-          }
-        }
-      }
-    } catch (e) {
-      err = e
-      console.log(e)
     }
-    return { err, pid: this.pid }
+    this.addImages({
+      fns,
+      thumbnail,
+      thumbnail_data,
+      thumbnail_type,
+      banner,
+      banner_data,
+      banner_type,
+    })
+    return await this.ao.pipe({ jwk, fns, cb })
   }
+  addImages({
+    fns,
+    thumbnail,
+    thumbnail_data,
+    thumbnail_type,
+    banner,
+    banner_data,
+    banner_type,
+  }) {
+    let images = 0
+    if (!thumbnail && thumbnail_data && thumbnail_type) {
+      images++
+      fns.unshift({
+        fn: "post",
+        args: {
+          data: new Uint8Array(thumbnail_data),
+          tags: { "Content-Type": thumbnail_type },
+        },
+        then: ({ args, id, out }) => {
+          images--
+          out.thumbnail = id
+          if (images === 0) {
+            args.fills.THUMBNAIL = id
+            args.tags.Thumbnail = id
+          }
+          if (out.banner) {
+            args.fills.BANNER = out.banner
+            args.tags.Banner = out.banner
+          }
+        },
+      })
+    }
 
-  async updateInfo({ title, description, thumbnail, banner }) {
+    if (!banner && banner_data && banner_type) {
+      images++
+      fns.unshift({
+        fn: "post",
+        args: {
+          data: new Uint8Array(banner_data),
+          tags: { "Content-Type": banner_type },
+        },
+        then: ({ args, id, out }) => {
+          images--
+          out.banner = id
+          if (images === 0) {
+            args.fills.BANNER = id
+            args.tags.Banner = id
+          }
+        },
+      })
+    }
+  }
+  async updateInfo({
+    title,
+    description,
+    jwk,
+    thumbnail,
+    thumbnail_data,
+    thumbnail_type,
+    banner,
+    banner_data,
+    banner_type,
+    cb,
+  }) {
     let info_map = {
       Name: title,
       Description: description,
@@ -138,13 +208,53 @@ class Notebook {
       if (info_map[k])
         new_info.push(`${k} = '${info_map[k].replace(/'/g, "\\'")}'`)
     }
-    if (new_info.length === 0) return { err: "empty info" }
-    return this.ao.eval({ pid: this.pid, data: new_info.join("\n") })
+    const isThumbnail = !thumbnail && thumbnail_data && thumbnail_type
+    const isBanner = !banner && banner_data && banner_type
+    if (new_info.length === 0 && !isThumbnail && !isBanner) {
+      return { err: "empty info" }
+    }
+    let fns = [
+      { fn: "eval", args: { pid: this.pid, data: new_info.join("\n") } },
+    ]
+    let images = 0
+    if (isThumbnail) {
+      images++
+      fns.unshift({
+        fn: "post",
+        args: {
+          data: new Uint8Array(thumbnail_data),
+          tags: { "Content-Type": thumbnail_type },
+        },
+        then: ({ args, id, out }) => {
+          images--
+          out.thumbnail = id
+          if (images === 0) args.data += `\nThumbnail = '${id}'`
+          if (out.banner) args.data += `\nBanner = '${out.banner}'`
+        },
+      })
+    }
+    if (isBanner) {
+      images++
+      fns.unshift({
+        fn: "post",
+        args: {
+          data: new Uint8Array(banner_data),
+          tags: { "Content-Type": banner_type },
+        },
+        then: ({ args, id, out }) => {
+          images--
+          out.banner = id
+          if (images === 0) args.data += `\nBanner = '${out.banner}'`
+        },
+      })
+    }
+    return await this.ao.pipe({ jwk, fns, cb })
   }
+
   async info(pid = this.pid) {
     const { err, out } = await this.ao.dry({
       pid,
-      action: "Info",
+      act: "Info",
       checkData: true,
       get: { data: true, json: true },
     })
@@ -154,7 +264,7 @@ class Notebook {
   async get(creator) {
     const { err, out } = await this.ao.dry({
       pid: this.registry,
-      action: "Get-Collections-By-User",
+      act: "Get-Collections-By-User",
       tags: { Creator: creator },
       checkData: true,
       get: { data: true, json: true },
@@ -162,11 +272,11 @@ class Notebook {
     return out ?? null
   }
 
-  async add(creator) {
+  async add({ id }) {
     return await this.ao.msg({
       pid: this.pid,
-      action: "Add-Collection-To-Profile",
-      tags: { ProfileProcess: creator },
+      act: "Add-Collection-To-Profile",
+      tags: { ProfileProcess: id },
       check: { Action: "Add-Collection" },
     })
   }
@@ -190,7 +300,7 @@ class Notebook {
       CollectionId: collectionId,
     }
     return await this.ao.msg({
-      action: "Add-Collection",
+      act: "Add-Collection",
       pid: this.registry,
       tags: tags,
       check: { Status: "Success" },
@@ -218,7 +328,7 @@ class Notebook {
     if (!is(Array, ids)) ids = [ids]
     return this.ao.msg({
       pid: this.pid,
-      action: "Update-Assets",
+      act: "Update-Assets",
       data: JSON.stringify({
         AssetIds: ids,
         UpdateType: remove ? "Remove" : "Add",
