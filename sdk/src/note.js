@@ -83,9 +83,9 @@ class Note {
           this.pid = pid
         },
       },
-      { fn: this.allow, bind: this },
-      { fn: this.assignData, bind: this },
-      { fn: this.add, bind: this, args: { id: creator } },
+      { fn: "allow", bind: this },
+      { fn: "assignData", bind: this },
+      { fn: "add", bind: this, args: { id: creator } },
     ]
     if (!thumbnail && thumbnail_data && thumbnail_type) {
       fns.unshift({
@@ -94,13 +94,14 @@ class Note {
           data: new Uint8Array(thumbnail_data),
           tags: { "Content-Type": thumbnail_type },
         },
-        then: ({ args, id }) => {
+        then: ({ out, args, id }) => {
+          out.thumbnail = id
           args.loads[1].fills.THUMBNAIL = id
           args.tags.Thumbnail = id
         },
       })
     }
-    return this.ao.pipe({ jwk, fns, cb })
+    return await this.ao.pipe({ jwk, fns, cb })
   }
 
   async allow() {
@@ -213,7 +214,7 @@ class Note {
   }
 
   async patches(data) {
-    const { err, out } = await this.ao.dry({
+    const { err, out, res } = await this.ao.dry({
       pid: this.pid,
       act: "Patches",
       data,

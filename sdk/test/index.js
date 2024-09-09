@@ -133,8 +133,9 @@ describe("Atomic Notes", function () {
   })
 
   it("should create a note", async () => {
+    let res = null
     note = new Note({ ...opt.note, profile })
-    ;({ pid: note_pid } = ok(
+    ;({ pid: note_pid, res } = ok(
       await note.create({
         data: v1,
         info: {
@@ -162,7 +163,6 @@ describe("Atomic Notes", function () {
         },
       }),
     ))
-
     expect((await note.info()).Name).to.eql("title")
   })
 
@@ -201,7 +201,6 @@ describe("Atomic Notes", function () {
     expect((await note.get()).data).to.eql(v1)
     expect((await note.list())[0].version).to.eql("0.0.1")
     ok(await note.update(v2, "0.0.2"))
-    return
     expect((await note.get()).data).to.eql(v2)
     expect((await note.list())[1].version).to.eql("0.0.2")
   })
