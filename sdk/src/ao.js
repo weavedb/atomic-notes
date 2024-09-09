@@ -349,17 +349,16 @@ class AO {
         message: mid,
         signer: this.toSigner(jwk),
       })
-      const _res = await this.result({ process: pid, message: mid })
-      if (!_res) err = "something went wrong"
-      res = _res.Messages[0]
+      res = await this.result({ process: pid, message: mid })
+      if (!res) err = "something went wrong"
       for (const k in check ?? {}) {
-        if (!searchTag(_res, k, check[k])) {
+        if (!searchTag(res, k, check[k])) {
           err = "something went wrong"
           break
         }
       }
       if (checkData) {
-        if (!isData(checkData, _res)) err = "something went wrong"
+        if (!isData(checkData, res)) err = "something went wrong"
       }
       if (!err && get) out = getTagVal(get, res)
     } catch (e) {
@@ -419,11 +418,7 @@ class AO {
   async eval({ pid, jwk, data }) {
     const fns = [
       {
-        args: {
-          pid,
-          data,
-          act: "Eval",
-        },
+        args: { pid, data, act: "Eval" },
         err: ({ res }) => typeof res?.Output?.data !== "object",
       },
     ]
