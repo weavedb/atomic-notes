@@ -69,7 +69,7 @@ body, html, #root{
         ) : (
           <Link to="/">
             <Flex align="center">
-              <Image src={ao} mr={2} />
+              <Image src="/icon.png" mr={2} h="30px" />
               <Box as="span">Atomic Notes</Box>
             </Flex>
           </Link>

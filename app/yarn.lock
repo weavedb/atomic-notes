@@ -3027,10 +3027,10 @@ ansi-styles@^4.1.0:
   dependencies:
     color-convert "^2.0.1"
 
-aonote@^0.5.7:
-  version "0.5.7"
-  resolved "https://registry.npmjs.org/aonote/-/aonote-0.5.7.tgz"
-  integrity sha512-u1yZgcOax4Klwk1QOA63Hxha9IcATW637NLeshxkahYlWKEcWF2LBkZby3wsPPnsi2kVC4ZG5nuklO50v/2NzQ==
+aonote@^0.5.8:
+  version "0.5.8"
+  resolved "https://registry.npmjs.org/aonote/-/aonote-0.5.8.tgz"
+  integrity sha512-0aYENkj9Z98AvcAVlVYQkyVznKwCowtxDOy9fNWjRV5aY8yWuAY9IoWgGDxzP2wtB34YXqnqLL2FFDj2IovoTw==
   dependencies:
     "@babel/plugin-transform-modules-commonjs" "^7.24.8"
     "@permaweb/aoconnect" "^0.0.59"

@@ -38,7 +38,6 @@ const setup = async () => {
   const banner = readFileSync(
     resolve(import.meta.dirname, `../assets/banner.png`),
   )
-
   const ar = new AR(arweave)
   await ar.gen("10")
   const src = new Src({ ar })
