@@ -199,7 +199,7 @@ function App(a) {
         </Flex>
       ) : (
         <>
-          <Flex minH="100%" direction="column" pt="60px">
+          <Flex minH="100%" direction="column" pt="60px" px={3}>
             <>
               <Flex justify="center" flex={1} mt={6}>
                 <Flex direction="column" h="100%" w="100%" maxW="830px">

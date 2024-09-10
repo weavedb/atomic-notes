@@ -32,8 +32,10 @@ function App() {
         <Flex w="100%" maxW="854px" px={3} pt={4} h="100%" direction="column">
           <Flex mt={16} sx={{ ...roboto }}>
             <Flex direction="column">
-              <Box fontSize="60px">Atomic Notes</Box>
-              <Box fontSize="20px">A New Decentralized Social Primitive.</Box>
+              <Box fontSize={["40px", "50px", "60px"]}>Atomic Notes</Box>
+              <Box fontSize={["14px", "17px", "20px"]}>
+                A New Decentralized Social Primitive.
+              </Box>
               <Box>
                 <Link to="/n/new/edit">
                   <Button
@@ -68,10 +70,11 @@ function App() {
               </Box>
             </Flex>
           </Flex>
-          <Flex mt={10}>
+          <Flex mt={10} wrap="wrap">
             <Box
-              flex={1}
-              mr={4}
+              flex={[null, null, 1]}
+              mr={[0, null, 4]}
+              mb={4}
               sx={{ borderRadius: "10px" }}
               bg="#f6f6f7"
               p={4}
@@ -85,8 +88,9 @@ function App() {
               </Box>
             </Box>
             <Box
-              flex={1}
-              mx={4}
+              flex={[null, null, 1]}
+              mr={[0, null, 4]}
+              mb={4}
               sx={{ borderRadius: "10px" }}
               bg="#f6f6f7"
               p={4}
@@ -100,8 +104,9 @@ function App() {
               </Box>
             </Box>
             <Box
-              flex={1}
-              ml={4}
+              flex={[null, null, 1]}
+              mr={[0, null, 4]}
+              mb={4}
               sx={{ borderRadius: "10px" }}
               bg="#f6f6f7"
               p={4}
@@ -127,6 +132,15 @@ function App() {
                   boxSize="24px"
                   sx={{ cursor: "pointer", ":hover": { opacity: 0.75 } }}
                 />
+              </Link>
+              <Link to="https://x.com/atomic_notes" target="_blank">
+                <Flex p="2px" ml={2} align="center">
+                  <Image
+                    src="x.svg"
+                    boxSize="20px"
+                    sx={{ cursor: "pointer", ":hover": { opacity: 0.75 } }}
+                  />
+                </Flex>
               </Link>
               <Box flex={1} />
               <Flex justify="flex-end" fontSize="12px">
