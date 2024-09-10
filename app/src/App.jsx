@@ -128,7 +128,7 @@ function App() {
                 target="_blank"
               >
                 <Image
-                  src="github.svg"
+                  src="./github.svg"
                   boxSize="24px"
                   sx={{ cursor: "pointer", ":hover": { opacity: 0.75 } }}
                 />
@@ -136,7 +136,7 @@ function App() {
               <Link to="https://x.com/atomic_notes" target="_blank">
                 <Flex p="2px" ml={2} align="center">
                   <Image
-                    src="x.svg"
+                    src="./x.svg"
                     boxSize="20px"
                     sx={{ cursor: "pointer", ":hover": { opacity: 0.75 } }}
                   />

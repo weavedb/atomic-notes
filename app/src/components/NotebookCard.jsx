@@ -21,7 +21,7 @@ import {
   Avatar,
   Heading,
 } from "@chakra-ui/react"
-import { validAddress, gateway_url } from "../lib/utils"
+import { validAddress, gateway_url, getThumb } from "../lib/utils"
 import { Link } from "react-router-dom"
 import { DeleteIcon, AddIcon, EditIcon } from "@chakra-ui/icons"
 import dayjs from "dayjs"
@@ -99,16 +99,12 @@ const NotebookCard = ({
                 )}
               </Flex>
             ) : !note.thumbnail ? null : (
-              <Avatar
-                mr={4}
-                src={`${gateway_url}/${note.thumbnail}`}
-                size="xl"
-              />
+              <Avatar mr={4} src={getThumb(note)} size="xl" />
             )}
             <Flex flex="1" gap="4" alignItems="center" flexWrap="wrap">
               <Box>
                 <Heading mb={1} size="md">
-                  {note.title}
+                  {note.title}fksalfjsadlkfjs
                 </Heading>
                 <Text mb={1}>{note.description}</Text>
                 <Flex mt={2}>

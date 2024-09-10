@@ -20,6 +20,7 @@ import {
   getPFP,
   opt,
   gateway_url,
+  getThumb,
 } from "../lib/utils"
 import dayjs from "dayjs"
 import {
@@ -274,7 +275,7 @@ function User({}) {
                                   {!bmap ? null : (
                                     <Avatar
                                       mr={4}
-                                      src={`${gateway_url}/${bmap.Thumbnail}`}
+                                      src={getThumb(bmap)}
                                       size="xl"
                                     />
                                   )}

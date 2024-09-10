@@ -292,10 +292,15 @@ const err = (
 
 const getPFP = profile =>
   profile.ProfileImage === "None"
-    ? "/logo.png"
+    ? "./logo.png"
     : `${gateway_url}/${profile.ProfileImage}`
+const getThumb = book =>
+  book.Thumbnail === "None" || !book.Thumbnail === "" || !book.Thumbnail
+    ? "/logo.png"
+    : `${gateway_url}/${book.Thumbnail}`
 
 export {
+  getThumb,
   default_thumbnail,
   default_banner,
   opt,

@@ -1902,7 +1902,6 @@ function AtomicNote(a) {
                       <NoteCard
                         fileInputRef={fileInputRef2}
                         nolinks={true}
-                        note={{ title, description: desc, thumbnail }}
                         notebooks={pubmap[pub] ? [pubmap[pub]] : []}
                         profile={profile}
                         note={{
