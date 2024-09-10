@@ -201,7 +201,7 @@ const NoteCard = ({
               </Link>
               <Link
                 target="_blank"
-                to={`https://ao-bazar.arweave.dev/#/asset/${note.id}`}
+                to={`https://bazar.arweave.dev/#/asset/${note.id}`}
               >
                 <Button
                   ml={3}

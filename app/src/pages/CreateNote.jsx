@@ -1372,21 +1372,24 @@ function AtomicNote(a) {
                                   thumbnail_data = thumb8.data
                                   thumbnail_type = thumb8.image.type
                                 }
-                                const { err: _err } = await note.updateInfo({
-                                  cb: ({ i, fns }) => {
-                                    setUploadStats([i, fns.length])
-                                  },
-                                  title,
-                                  description: desc,
-                                  _thumb,
-                                })
+                                const { err: _err, out } =
+                                  await note.updateInfo({
+                                    cb: ({ i, fns }) => {
+                                      setUploadStats([i, fns.length])
+                                    },
+                                    title,
+                                    description: desc,
+                                    thumbnail_data,
+                                    thumbnail_type,
+                                  })
                                 if (_err) {
                                   err(t)
                                 } else {
                                   let stats = uploadStats ?? [0, 0]
                                   setUploadStats([stats[1], stats[1]])
+                                  console.log(out)
                                   if (thumb8) {
-                                    setThumbnail(_thumb)
+                                    setThumbnail(out.thumbnail)
                                     setThumb64(null)
                                     setThumb8(null)
                                   }
