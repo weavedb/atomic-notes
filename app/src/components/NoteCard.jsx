@@ -18,7 +18,6 @@ import {
   Image,
   Card,
   CardHeader,
-  Avatar,
   Heading,
 } from "@chakra-ui/react"
 import { validAddress, getPFP, gateway_url } from "../lib/utils"

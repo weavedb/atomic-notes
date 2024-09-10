@@ -18,6 +18,7 @@ import {
   getPFP,
   opt,
   gateway_url,
+  getThumb,
 } from "../lib/utils"
 import dayjs from "dayjs"
 import {
@@ -104,13 +105,7 @@ function User({}) {
                       <Avatar
                         mr={2}
                         name={book.Name}
-                        src={
-                          book.Thumbnail === "None" ||
-                          !book.Thumbnail === "" ||
-                          !book.Thumbnail
-                            ? "/logo.png"
-                            : `${gateway_url}/${book.Thumbnail}`
-                        }
+                        src={getThumb(book)}
                         size="xl"
                       />
                       <Box>
