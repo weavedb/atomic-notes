@@ -4,8 +4,8 @@ import { fromPairs, map, prop, includes, clone } from "ramda"
 import { AR, Profile, Notebook, Note } from "aonote"
 
 let graphql_url = "https://arweave.net/graphql"
-let default_thumbnail = "J2iOGIhRZUHx8Tg6M2pe3IfNw_-rcuWQoFQoaap7FtQ"
-let default_banner = "-0OrV2O3oII6yY4an5oDaRVcVL1YL-n8O__gHS2aDXQ"
+let default_thumbnail = "9v2GrtXpVpPWf9KBuTBdClARjjcDA3NqxFn8Kbn1f2M"
+let default_banner = "UuEwLRmuNmqLTDcKqgcxDEV1CWIR_uZ6rxzmKjODlrg"
 let gateway_url = "https://arweave.net"
 
 const genOpt = () => {

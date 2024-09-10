@@ -19,7 +19,7 @@
     "@mdxeditor/editor": "^3.8.0",
     "@permaweb/aoconnect": "^0.0.56",
     "@wooorm/starry-night": "^3.4.0",
-    "aonote": "^0.5.8",
+    "aonote": "^0.5.10",
     "arweave": "^1.15.1",
     "dayjs": "^1.11.11",
     "framer-motion": "^11.3.0",
