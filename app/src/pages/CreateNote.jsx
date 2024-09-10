@@ -608,7 +608,7 @@ function AtomicNote(a) {
         </Flex>
       ) : (
         <>
-          <Flex minH="100%" direction="column" pt="70px">
+          <Flex minH="100%" direction="column" pt="70px" px={3}>
             <>
               {tab !== "Edit" ? null : (
                 <>
@@ -2351,9 +2351,11 @@ function AtomicNote(a) {
                       <TableContainer>
                         <Table variant="simple">
                           <TableCaption>
-                            Drafts are only stored on your local computer.
-                            Download MD files if you need access from other
-                            environments.
+                            <Text sx={{ whiteSpace: "wrap" }}>
+                              Drafts are only stored on your local computer.
+                              Download MD files if you need access from other
+                              environments.
+                            </Text>
                           </TableCaption>
                           <Thead sx={{ borderBottom: "2px solid #222362" }}>
                             <Tr>
