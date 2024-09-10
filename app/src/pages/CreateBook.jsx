@@ -184,7 +184,7 @@ function App(a) {
         >
           <Flex minH="100%">
             <Spinner mr={4} />
-            Fetching Note...
+            Fetching Notebook...
           </Flex>
         </Flex>
       ) : !isCreator ? (
@@ -467,7 +467,7 @@ function App(a) {
                             if (_err) {
                               err(t)
                             } else {
-                              let stats = uploadStats
+                              let stats = uploadStats ?? [0, 0]
                               setUploadStats([stats[1], stats[1]])
                               navigate(`/b/${pid}`)
                               setUpdatingArticle(false)

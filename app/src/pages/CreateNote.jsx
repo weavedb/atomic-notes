@@ -231,6 +231,7 @@ function AtomicNote(a) {
   const [addTxid, setAddTxid] = useState(null)
   const [md, setMD] = useState("")
   const [currentMD, setCurrentMD] = useState("")
+  const [defaultMD, setDefaultMD] = useState("")
   const [currentVersion, setCurrentVersion] = useState("")
   const [selectedMD, setSelectedMD] = useState(null)
   const [selectedVersion, setSelectedVersion] = useState(null)
@@ -331,6 +332,7 @@ function AtomicNote(a) {
     const note = new Note({ ...opt.note, pid })
     const out = await note.get()
     if (out) {
+      setDefaultMD(out.data)
       setCurrentMD(await getHTML(out.data))
       setCurrentVersion(out.version)
       const list = await note.list()
@@ -439,10 +441,11 @@ function AtomicNote(a) {
           setDraftID(Date.now())
         }
       } else {
+        if (defaultMD) setMD(defaultMD)
         setDraftID(Date.now())
       }
     })()
-  }, [pid])
+  }, [pid, defaultMD])
 
   useEffect(() => {
     setTab(first)
@@ -717,7 +720,17 @@ function AtomicNote(a) {
                             setEditTitle("")
                             setEditID("")
                             setEditTxid("")
-                            setDraftID(Date.now())
+                            const id = Date.now()
+                            setDraftID(id)
+                            const _draft = {
+                              title: editTitle,
+                              txid: editTxid,
+                              id: editID,
+                              body: "",
+                              changed: false,
+                              draftID: id,
+                            }
+                            await lf.setItem(`draft-${pid}`, _draft)
                             setTimeout(() => {
                               setTab2("Markdown")
                               msg(t, "Content cleared!", null, "info")
@@ -1387,7 +1400,6 @@ function AtomicNote(a) {
                                 } else {
                                   let stats = uploadStats ?? [0, 0]
                                   setUploadStats([stats[1], stats[1]])
-                                  console.log(out)
                                   if (thumb8) {
                                     setThumbnail(out.thumbnail)
                                     setThumb64(null)

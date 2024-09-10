@@ -84,17 +84,19 @@ function User({}) {
         <Flex justify="center" pt="60px">
           <Box w="100%" maxW="854px" px={3} pt={4}>
             <>
-              <Box
-                w="100%"
-                h={["120px", "200px"]}
-                mt={4}
-                mb={8}
-                sx={{
-                  backgroundImage: `url(${gateway_url}/${book.Banner})`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                }}
-              ></Box>
+              {!book.Banner ? null : (
+                <Box
+                  w="100%"
+                  h={["120px", "200px"]}
+                  mt={4}
+                  mb={8}
+                  sx={{
+                    backgroundImage: `url(${gateway_url}/${book.Banner})`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                  }}
+                ></Box>
+              )}
               <Card variant="unstyled">
                 <CardHeader>
                   <Flex spacing="4">
@@ -102,7 +104,13 @@ function User({}) {
                       <Avatar
                         mr={2}
                         name={book.Name}
-                        src={`${gateway_url}/${book.Thumbnail}`}
+                        src={
+                          book.Thumbnail === "None" ||
+                          !book.Thumbnail === "" ||
+                          !book.Thumbnail
+                            ? "/logo.png"
+                            : `${gateway_url}/${book.Thumbnail}`
+                        }
                         size="xl"
                       />
                       <Box>
@@ -125,6 +133,30 @@ function User({}) {
                         )}
                       </Box>
                       <Box flex={1} />
+                      <Link
+                        target="_blank"
+                        to={`https://bazar.arweave.dev/#/collection/${id}`}
+                      >
+                        <Button
+                          ml={3}
+                          title="Edit"
+                          size="sm"
+                          colorScheme="gray"
+                          variant="outline"
+                          sx={{
+                            border: "1px solid #222326",
+                            ":hover": {
+                              bg: "white",
+                              opacity: 0.75,
+                            },
+                          }}
+                          onClick={e => {
+                            e.stopPropagation()
+                          }}
+                        >
+                          BazAR
+                        </Button>
+                      </Link>
                       {!isCreator ? null : (
                         <Link to={`/b/${id}/edit`}>
                           <Button
@@ -180,6 +212,7 @@ function User({}) {
                           if (!_err) {
                             let _notes = clone(notes)
                             setNotes(reject(v2 => v2.id === v.id)(_notes))
+                            msg(t, "Note removed!")
                           } else {
                             err(t, "something went wrong")
                           }

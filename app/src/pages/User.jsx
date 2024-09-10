@@ -233,6 +233,7 @@ function User({}) {
                             _bmap[v3].Assets.push(v.id)
                             setBookMap(_bmap)
                           }
+                          msg(t, "Note added!")
                         } else {
                           err(t, "something went wrong")
                         }
