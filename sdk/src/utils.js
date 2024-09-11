@@ -158,7 +158,7 @@ const srcs = {
   notelib: "XnV_WEZVaw9D_GiDPg6kydbIhErdTYm6GKlSO1pyfsI",
   notebook_src: "NKISXnq5XseLQd_u-lfO6ThBLuikLoontY47UlONrB4",
   note_src: "8ItY-41YrV5D286SpqNH2DGbVO4kWpcY5Rcs7w2SCC0",
-  asset_src: "jgqSEOv1vWrxFIgyd5AcRkU2MGeakKM_7dOmmDH3wmQ",
+  asset_src: "CT5qN5e97Fr0wJ8VVu_TRj6qPNWped52IPsJMJ2pd08",
   collection_src: "cLzVDfhmC0JAADYyFkdLQbtEMtL4VxbeGv98TADbbRk",
   bookreg: "TFWDmf8a3_nw43GCm_CuYlYoylHAjCcFGbgHfDaGcsg",
   bookreg_src: "4Bm1snpCEHIxYMDdAxiFf6ar81gKQHvElDFeDZbSnJU",

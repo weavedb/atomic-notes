@@ -90,6 +90,48 @@ class Note extends Asset {
     }
     return await this.ao.pipe({ jwk, fns, cb })
   }
+  async updateInfo({
+    title,
+    description,
+    thumbnail,
+    thumbnail_data,
+    thumbnail_type,
+    jwk,
+    cb,
+  }) {
+    let info_map = {
+      Name: title,
+      Description: description,
+      Thumbnail: thumbnail,
+    }
+    let new_info = []
+    for (const k in info_map) {
+      if (info_map[k])
+        new_info.push(`${k} = '${info_map[k].replace(/'/g, "\\'")}'`)
+    }
+    const isThumbnail = !thumbnail && thumbnail_data && thumbnail_type
+    if (new_info.length === 0 && !isThumbnail) return { err: "empty info" }
+    let fns = [
+      { fn: "eval", args: { pid: this.pid, data: new_info.join("\n") } },
+    ]
+    let images = 0
+    if (isThumbnail) {
+      images++
+      fns.unshift({
+        fn: "post",
+        args: {
+          data: new Uint8Array(thumbnail_data),
+          tags: { "Content-Type": thumbnail_type },
+        },
+        then: ({ args, id, out }) => {
+          images--
+          out.thumbnail = id
+          if (images === 0) args.data += `\nThumbnail = '${id}'`
+        },
+      })
+    }
+    return await this.ao.pipe({ jwk, fns, cb })
+  }
 
   async allow() {
     return await this.ao.msg({
