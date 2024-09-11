@@ -45,7 +45,7 @@ const setup = async () => {
   const registry_src = await src.upload("registry000")
   const profile_src = await src.upload("profile000")
   const collection_registry_src = await src.upload("collection-registry")
-  const collection = await src.upload("collection")
+  const collection = await src.upload("notebook")
   const atomic_note = await src.upload("atomic-note")
   const proxy = await src.upload("proxy")
   const wasm = await src.upload("aos-sqlite", "wasm")

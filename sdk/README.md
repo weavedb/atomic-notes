@@ -4,6 +4,8 @@
 - [AR](#ar)
 - [AO](#ao)
 - [Profile](#profile)
+- [Collection](#collection)
+- [Asset](#asset)
 - [Notebook](#notebook)
 - [Note](#note)
 
@@ -194,7 +196,7 @@ const { err, id } = await ar.bundle([
 - [deploy](#deploy)
 - [msg](#msg)
 - [dry](#dry)
-- [asign](#asgn)
+- [asgn](#asgn)
 - [load](#load)
 - [eval](#eval)
 - [spwn](#spwn)
@@ -553,18 +555,170 @@ You can create a new AO profile registry, which is useful for local testing.
 const { err, pid } = await profile.createResistry()
 ```
 
-## Notebook
+## Collection
 
 - [Instantiate](#instantiate-3)
 - [create](#create)
 - [info](#get-info2)
 - [updateInfo](#update-info)
+- [addAsset](#add-single-asset)
+- [removeAsset](#remove-single-asset)
+- [addAssets](#add-multiple-assets)
+- [removeAssets](#remove-multiple-assets)
+- [createRegistry](#createregistry)
+
+
+### Instantiate
+
+All arguments are optional. `collection.profile`, `collection.ao`, `collection.ar` will be available.
+
+```js
+const collection = await new Collection({ 
+  pid, registry, registry_src, thumbnail, banner, collection_src, profile, ar, ao
+}).init( jwk || arweaveWallet )
+```
+
+### Core Methods
+
+#### Create Collection
+
+If `bazar` is true, the newly created collection will be registered to [the Bazar collection registry](https://bazar.arweave.dev/#/collections/).
+
+```js
+const collection = new Collection({ ao })
+
+const { pid: collection_pid } = await collection.create({ 
+  info: { title, description, thumbnail, banner }, bazar
+})
+```
+
+#### Get Info
+
+```js
+const { out: info } = await collection.info()
+```
+
+#### Update Info
+
+At leadt one field is required.
+
+```js
+const { err } = await collection.updateInfo({ 
+  title, description, thumbnail, banner
+})
+```
+
+#### Add Single Asset
+
+```js
+const { err } = await collection.addAsset(asset_pid)
+```
+
+#### Remove Single Asset
+
+```js
+const { err } = await collection.removeAsset(asset_pid)
+```
+
+#### Add Multiple Assets
+
+```js
+const { err } = await collection.addAssets(asset_pids)
+```
+
+#### Remove Multiple Assets
+
+```js
+const { err } = await collection.removeAssets(asset_pids)
+```
+
+### Advanced Methods
+
+#### createRegistry
+
+You can create a new collection registry.
+
+```js
+const { err, pid } = await collection.createRegistry()
+
+```
+
+## Asset
+
+- [Instantiate](#instantiate-4)
+- [create](#create-asset)
+- [info](#get-info-1)
+- [updateInfo](#update-info-1)
+
+### Instantiate
+
+All arguments are optional. `asset.profile`, `asset.ao`, `asset.ar` will be available.
+
+```js
+const asset = await new Asset({ 
+  pid, asset_src, ar, ao, profile
+}).init( jwk || arweaveWallet)
+```
+
+### Core Methods
+
+#### Create Asset
+
+```js
+const asset = new Asset({ ao })
+
+const { pid: asset_pid } = await asset.create({
+  data,
+  content_type,
+  info: { title, description, thumbnail, banner },
+  udl: { payment, access, derivations, commercial, training },
+  token: { fraction },
+})
+
+await collection.addAsset(pid) // add to a collection
+```
+
+##### Universal Data License
+
+- payment
+  - mode : `single` | `random` | `global`
+  - recipient
+- access
+  - mode : `none` | `one-time`
+  - fee
+- derivations
+  - mode : `allowed` | `disallowed`
+  - term : `credit` | `indication` | `passthrough` | `revenue` | `monthly` | `one-time`
+  - share
+  - fee
+- commercial
+  - mode : `allowed` | `disallowed`
+  - term : `revenue` | `monthly` | `one-time`
+- training
+  - mode : `allowed` | `disallowed`
+  - term : `monthly` | `one-time`
+
+#### Get Info
+
+```js
+const { out: info } = await asset.info()
+```
+
+#### Update Info
+
+```js
+const { err } = await asset.updateInfo({ title, description, thumbnail })
+```
+
+## Notebook
+
+- [Instantiate](#instantiate-5)
 - [addNote](#add-single-note)
 - [removeNote](#remove-single-note)
 - [addNotes](#add-multiple-notes)
 - [removeNotes](#remove-multiple-notes)
-- [createRegistry](#createregistry)
 
+`Notebook` inherites everything from `Collection` with a bit of name changes in some methods.
 
 ### Instantiate
 
@@ -574,36 +728,6 @@ All arguments are optional. `notebook.profile`, `notebook.ao`, `notebook.ar` wil
 const notebook = await new Notebook({ 
   pid, registry, registry_src, thumbnail, banner, notebook_src, profile, ar, ao
 }).init( jwk || arweaveWallet )
-```
-
-### Core Methods
-
-#### Create Notebook
-
-If `bazar` is true, the newly created collection will be registered to [the Bazar collection registry](https://bazar.arweave.dev/#/collections/).
-
-```js
-const notebook = new Notebook({ ao })
-
-const { pid: notebook_pid } = await notebook.create({ 
-  info: { title, description, thumbnail, banner }, bazar
-})
-```
-
-#### Get Info
-
-```js
-const { out: info } = await notebook.info()
-```
-
-#### Update Info
-
-At leadt one field is required.
-
-```js
-const { err } = await notebook.updateInfo({ 
-  title, description, thumbnail, banner
-})
 ```
 
 #### Add Single Note
@@ -630,88 +754,30 @@ const { err } = await notebook.addNotes(note_pids)
 const { err } = await notebook.removeNotes(note_pids)
 ```
 
-### Advanced Methods
-
-#### createRegistry
-
-You can create a new notebook registry.
-
-```js
-const { err, pid } = await notebook.createRegistry()
-
-```
-
 ## Note
 
-- [Instantiate](#instantiate-4)
-- [create](#create-note)
-- [info](#get-info-1)
-- [updateInfo](#update-info-1)
-- [list](#list)
-- [get](#get-note-content-withmetadata)
+- [Instantiate](#instantiate-6)
+- [list](#list-versions)
+- [get](#get-note-content-with-metadata)
 - [update](#update-new-version)
-- [editors](#rget-editors)
+- [editors](#get-editors)
 - [addEditor](#add-editor)
 - [removeEditor](#remove-editor)
 
+`Note` inherites everything from `Asset` with some added functions specific to atomic-notes.
+
 ### Instantiate
 
-All arguments are optional. `notebook.profile`, `notebook.ao`, `notebook.ar` will be available.
+All arguments are optional. `note.profile`, `note.ao`, `note.ar` will be available.
 
 ```js
 const note = await new Note({
-  pid, proxy, render_with, note_src, notelib_src, ar, ao, profile
+  pid, note_src, notelib_src, proxy, render_with, ar, ao, profile
 }).init( jwk || arweaveWallet)
 ```
 
 ### Core Methods
 
-#### Create Note
-
-```js
-const note = new Note({ ao })
-
-const { pid: note_pid } = await note.create({
-  data,
-  info: { title, description, thumbnail, banner },
-  udl: { payment, access, derivations, commercial, training },
-  token: { fraction },
-})
-
-await notebook.addNote(pid) // add to a notebook
-```
-
-##### Universal Data License
-
-- payment
-  - mode : `single` | `random` | `global`
-  - recipient
-- access
-  - mode : `none` | `one-time`
-  - fee
-- derivations
-  - mode : `allowed` | `disallowed`
-  - term : `credit` | `indication` | `passthrough` | `revenue` | `monthly` | `one-time`
-  - share
-  - fee
-- commercial
-  - mode : `allowed` | `disallowed`
-  - term : `revenue` | `monthly` | `one-time`
-- training
-  - mode : `allowed` | `disallowed`
-  - term : `monthly` | `one-time`
-
-#### Get Info
-
-```js
-const { out: info } = await note.info()
-```
-
-#### Update Info
-
-```js
-const { err } = await note.updateInfo({ title, description, thumbnail })
-```
 
 #### List Versions
 

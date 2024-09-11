@@ -1,42 +1,29 @@
 import { srcs, wait, udl } from "./utils.js"
 import Profile from "./profile.js"
+import Asset from "./asset.js"
 
-class Note {
+class Note extends Asset {
   constructor({
     proxy = srcs.proxy,
     render_with = srcs.render,
-    note_src = srcs.note,
+    note_src = srcs.note_src,
     notelib_src = srcs.notelib,
     pid,
     profile = {},
     ao = {},
     ar = {},
   } = {}) {
+    super({ proxy, render_with, asset_src: note_src, pid, profile, ao, ar })
     this.__type__ = "note"
-    if (profile?.__type__ === "profile") {
-      this.profile = profile
-    } else {
-      let _profile = typeof profile === "object" ? profile : {}
-      if (!_profile.ao) _profile.ao = ao
-      if (!_profile.ar) _profile.ar = ar
-      this.profile = new Profile(profile)
-    }
-    this.ao = this.profile.ao
-    this.ar = this.ao.ar
-    this.render_with = render_with
-    this.note_src = note_src
     this.notelib_src = notelib_src
-    this.pid = pid
+    this.note_src = note_src
+    this.render_with = render_with
     this.proxy = proxy
-  }
-
-  async init(jwk) {
-    await this.profile.init(jwk)
-    return this
   }
 
   async create({
     jwk,
+    content_type = "text/markdown",
     src = this.note_src,
     library = this.notelib_src,
     data,
@@ -57,7 +44,7 @@ class Note {
       Type: "blog-post",
       "Asset-Type": "Atomic-Note",
       "Render-With": this.render_with,
-      "Content-Type": "text/markdown",
+      "Content-Type": content_type,
       ...udl({ payment, access, derivations, commercial, training }),
     }
     if (!/^\s*$/.test(thumbnail)) tags["Thumbnail"] = thumbnail
@@ -133,59 +120,6 @@ class Note {
     return out ?? null
   }
 
-  async info() {
-    const { err, out } = await this.ao.dry({
-      pid: this.pid,
-      act: "Info",
-      checkData: true,
-      get: { data: true, json: true },
-    })
-    return out ?? null
-  }
-
-  async updateInfo({
-    title,
-    description,
-    thumbnail,
-    thumbnail_data,
-    thumbnail_type,
-    jwk,
-    cb,
-  }) {
-    let info_map = {
-      Name: title,
-      Description: description,
-      Thumbnail: thumbnail,
-    }
-    let new_info = []
-    for (const k in info_map) {
-      if (info_map[k])
-        new_info.push(`${k} = '${info_map[k].replace(/'/g, "\\'")}'`)
-    }
-    const isThumbnail = !thumbnail && thumbnail_data && thumbnail_type
-    if (new_info.length === 0 && !isThumbnail) return { err: "empty info" }
-    let fns = [
-      { fn: "eval", args: { pid: this.pid, data: new_info.join("\n") } },
-    ]
-    let images = 0
-    if (isThumbnail) {
-      images++
-      fns.unshift({
-        fn: "post",
-        args: {
-          data: new Uint8Array(thumbnail_data),
-          tags: { "Content-Type": thumbnail_type },
-        },
-        then: ({ args, id, out }) => {
-          images--
-          out.thumbnail = id
-          if (images === 0) args.data += `\nThumbnail = '${id}'`
-        },
-      })
-    }
-    return await this.ao.pipe({ jwk, fns, cb })
-  }
-
   async list() {
     const { err, out } = await this.ao.dry({
       pid: this.pid,
@@ -231,15 +165,6 @@ class Note {
       tags: { Version: version },
       data: patches,
       checkData: "updated!",
-    })
-  }
-
-  async add({ id }) {
-    return await this.ao.msg({
-      pid: this.pid,
-      act: "Add-Asset-To-Profile",
-      tags: { ProfileProcess: id },
-      check: { Action: "Add-Uploaded-Asset" },
     })
   }
 
