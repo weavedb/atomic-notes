@@ -256,4 +256,35 @@ describe("Atomic Notes", function () {
     expect(_pr.ar.jwk).to.eql(ar.jwk)
     expect(_pr.ar.addr).to.eql(ar.addr)
   })
+
+  it("should transfer tokens", async () => {
+    const { out: balances } = await note.balances()
+    const { out: balance } = await note.balance({ target: note.profile.id })
+    expect(balance).to.eql("100")
+    expect(balances).to.eql({ [note.profile.id]: "100" })
+    ok(await note.mint({ quantity: "100" }))
+    ok(await note.transfer({ recipient: note.profile.id, quantity: "10" }))
+    const { out: balances2 } = await note.balances()
+    expect(balances2).to.eql({
+      [note.profile.id]: "110",
+      [note.ar.addr]: "90",
+    })
+    const acc = new AR()
+    await acc.gen("100")
+    const { out: balance3 } = await note.balance({ target: acc.addr })
+    expect(balance3).to.eql("0")
+    ok(
+      await note.transfer({
+        recipient: note.ar.addr,
+        quantity: "10",
+        profile: true,
+      }),
+    )
+    await wait(1000)
+    const { out: balances3 } = await note.balances()
+    expect(balances3).to.eql({
+      [note.profile.id]: "100",
+      [note.ar.addr]: "100",
+    })
+  })
 })
