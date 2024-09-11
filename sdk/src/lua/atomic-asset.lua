@@ -4,15 +4,10 @@ local base64 = require(".base64")
 local ao = require("ao")
 
 if Name ~= '<NAME>' then Name = '<NAME>' end
-if Description ~= '<DESCRIPTION>' then Description = '<DESCRIPTION>' end
-if Thumbnail ~= '<THUMBNAIL>' then Thumbnail = '<THUMBNAIL>' end
---if Collection ~= '<COLLECTION>' then Collection = '<COLLECTION>' end
 if Creator ~= '<CREATOR>' then Creator = '<CREATOR>' end
 if Ticker ~= '<TICKER>' then Ticker = '<TICKER>' end
 if Denomination ~= '<DENOMINATION>' then Denomination = '<DENOMINATION>' end
 if not Balances then Balances = { ['<CREATOR>'] = '<BALANCE>' } end
-if DateCreated ~= '<DATECREATED>' then DateCreated = '<DATECREATED>' end
-if not Collections then Collections = {} end
 
 Transferable = true
 
@@ -45,13 +40,10 @@ Handlers.add('Info', Handlers.utils.hasMatchingTag('Action', 'Info'), function(m
 		Action = 'Read-Success',
 		Data = json.encode({
 		        Name = Name,
-		        Description = Description,
 			Ticker = Ticker,
 			Denomination = Denomination,
 			Balances = Balances,
 			Transferable = Transferable,
-			Thumbnail = Thumbnail,
-			Collections = Collections
 		})
 	})
 end)
@@ -243,27 +235,4 @@ Handlers.add('Add-Asset-To-Profile', Handlers.utils.hasMatchingTag('Action', 'Ad
 			}
 		})
 	end
-end)
-
-Handlers.add('Add-To-Collection-Success', Handlers.utils.hasMatchingTag('Action', 'Add-To-Collection-Success'), function(msg)
-		local exists = false
-		for i, id in ipairs(Collections) do
-		   if id == msg.From then
-		      exists = true
-		      break
-		   end
-		end
-		
-		if not exists then
-		   table.insert(Collections, msg.From)
-		end
-end)
-
-Handlers.add('Remove-From-Collection-Success', Handlers.utils.hasMatchingTag('Action', 'Remove-From-Collection-Success'), function(msg)
-		for i, id in ipairs(Collections) do
-		   if id == msg.From then
-		      table.remove(Collections, i)
-		      break
-		   end
-		end
 end)

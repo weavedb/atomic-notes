@@ -648,7 +648,6 @@ const { err, pid } = await collection.createRegistry()
 - [Instantiate](#instantiate-4)
 - [create](#create-asset)
 - [info](#get-info-1)
-- [updateInfo](#update-info-1)
 
 ### Instantiate
 
@@ -704,10 +703,37 @@ await collection.addAsset(pid) // add to a collection
 const { out: info } = await asset.info()
 ```
 
-#### Update Info
+### Token Related Methods
+
+An atomic asset is basically an [ao Token](https://cookbook_ao.g8way.io/references/token.html).
+
+#### Balance
 
 ```js
-const { err } = await asset.updateInfo({ title, description, thumbnail })
+const { err, out: balance } = await asset.balance({ target })
+```
+
+#### Balances
+
+```js
+const { err, out: balances } = await asset.balances()
+```
+
+#### Mint
+
+```js
+const { err } = await asset.mint({ quantity })
+```
+
+#### Transfer
+
+```js
+const { err } = await asset.transfer({ recipint, quantity })
+```
+If you want to transfer token from the AO profile rather than the profile owner wallet, set `profile` to `true`. The token will be transferred from `asset.profile.id` instead of `asset.ar.addr`.
+
+```js
+const { err } = await asset.transfer({ recipint, quantity, profile:: true })
 ```
 
 ## Notebook
@@ -757,6 +783,7 @@ const { err } = await notebook.removeNotes(note_pids)
 ## Note
 
 - [Instantiate](#instantiate-6)
+- [updateInfo](#update-info-1)
 - [list](#list-versions)
 - [get](#get-note-content-with-metadata)
 - [update](#update-new-version)
@@ -778,7 +805,11 @@ const note = await new Note({
 
 ### Core Methods
 
+#### Update Info
 
+```js
+const { err } = await asset.updateInfo({ title, description, thumbnail })
+```
 #### List Versions
 
 ```js
