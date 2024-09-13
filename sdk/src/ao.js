@@ -132,7 +132,14 @@ class AO {
       } else {
         bind = v.bind ?? this
       }
+      const name =
+        (v.name ?? typeof !v.fn)
+          ? "msg"
+          : typeof v.fn === "string"
+            ? v.fn
+            : null
       const fn = typeof v.fn === "string" ? bind[v.fn] : (v.fn ?? this.msg)
+
       const _fn = fn.bind(bind)
       const _res = await _fn({ jwk, ...nextArgs })
       res.push(_res)
@@ -142,6 +149,7 @@ class AO {
       }
       if (typeof v.err === "function") {
         const _err = await v.err({
+          name,
           _,
           jwk,
           res: _res.res,
@@ -164,6 +172,7 @@ class AO {
       nextArgs = fns[i + 1]?.args ?? {}
       if (typeof v.then === "function") {
         const _ret = await v.then({
+          name,
           _,
           jwk,
           res: _res.res,
@@ -181,6 +190,7 @@ class AO {
       } else if (is(Object, v.then)) {
         for (const k in v.then) {
           copy({
+            name,
             _,
             inp: _res.out,
             out,
@@ -195,6 +205,7 @@ class AO {
       }
       if (typeof cb === "function") {
         cb({
+          name,
           fns,
           i: i + 1,
           _,
