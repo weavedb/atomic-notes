@@ -1,6 +1,6 @@
 {
   "name": "aonote",
-  "version": "0.6.5",
+  "version": "0.7.0",
   "description": "",
   "type": "module",
   "main": "dist/cjs/index.js",
@@ -8,7 +8,7 @@
   "scripts": {
     "build:cjs": "babel src --out-dir dist/cjs --config-file ./.babelrc-cjs",
     "build:esm": "babel src --out-dir dist/esm --config-file ./.babelrc-esm",
-    "build": "npm run build:cjs && npm run build:esm && node make.js && cp .npmignore dist/",
+    "build": "rm -rf dist && npm run build:cjs && cp src -rf dist/esm && node make.js && cp .npmignore dist/",
     "test": "mocha"
   },
   "engines": {

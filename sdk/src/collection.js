@@ -42,7 +42,7 @@ class Collection {
     const fn = {
       fn: "deploy",
       args: { src: this.registry_src },
-      thsn: ({ pid }) => {
+      then: ({ pid }) => {
         this.registry = pid
       },
     }

@@ -1,7 +1,9 @@
 import { expect } from "chai"
 import { AR, Notebook, Note, AO, Profile } from "../src/index.js"
-import { Src, setup, ok, fail } from "./lib/utils.js"
+import { setup, ok, fail } from "../src/test.js"
 import { wait } from "../src/utils.js"
+import { readFileSync } from "fs"
+import { resolve } from "path"
 
 const v1 = "# this is markdown 1"
 const v2 = "# this is markdown 2"
@@ -29,7 +31,10 @@ describe("Atomic Notes", function () {
   let profile_pid, notebook, notebook_pid, note, note_pid, ar2, note2
 
   before(async () => {
-    ;({ thumbnail, banner, opt, ao, ar, profile } = await setup())
+    ;({ thumbnail, banner, opt, ao, ar, profile } = await setup({
+      readFileSync,
+      resolve,
+    }))
   })
 
   it("should auto-load ArConnect wallet", async () => {
