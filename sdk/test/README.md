@@ -79,5 +79,58 @@ describe("Atomic Notes", function () {
 Run the tests.
 
 ```bash
-yarn mocha
+npm test
+```
+
+## aoNote Test Helpers
+
+The `setup` function will
+
+- generate an Arweave wallet
+- deploy Wasm modules and Lua sources to Arweave
+- deploy the AOS module
+- upload a scheduler
+- create a profile registry
+- ccreate a collection registry
+- deploy a note proxy
+
+and returns
+
+- `ar` : AR initialized by the generated wallet
+- `ao` : AO initialized by the AR
+- `profile` : Profile initialized by the AO
+- `thumbnail`: a sample thumbnail binary data
+- `banner` : a sample banner binary data
+- `opt` : parameters for AR/AO/Profile/Note/Notebook to pass to instantiate
+
+
+Use `opt` to instantiate the aoNote classes.
+
+```js
+const ar2 = new AR(opt.ar)
+const ao2 = new AO(opt.ao)
+const profile2 = new Profile(opt.profile)
+const notebook = new Notebook(opt.notebook)
+const note = new Note(opt.note)
+```
+
+If you want to initialize them with the same wallet used for the setup, use `ar.jwk` with `init`.
+
+```js
+it("should instantiate AR with the setup wallet", async () => {
+  const ar2 = await new AR(opt.ar).init(jwk)
+  expect(ar2.addr).to.eql(ar.addr)
+})
+```
+
+`ok` and `fail` can check if the function call is successful or not.
+
+```js
+it("should succeed", async () => {
+  ok(await profile.createProfile({ profile: my_profile }))
+})
+
+it("should fail", async () => {
+  fail(await profile.createProfile({ profile: {} }))
+})
 ```
