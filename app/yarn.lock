@@ -3045,10 +3045,10 @@ ansi-styles@^4.1.0:
   dependencies:
     color-convert "^2.0.1"
 
-aonote@^0.5.10:
-  version "0.5.10"
-  resolved "https://registry.npmjs.org/aonote/-/aonote-0.5.10.tgz"
-  integrity sha512-F6LSdXD649dtLR1mOetts7GJRQdO0bpSWW5uJ6rrVhyxqExinfaIl+kJM6QmRs0xrMjfafAmhRBHJ6qHmnrYTw==
+aonote@^0.7.18:
+  version "0.7.18"
+  resolved "https://registry.npmjs.org/aonote/-/aonote-0.7.18.tgz"
+  integrity sha512-hSKqjBiE/C/nnOSPheUdDS2gyRglu2vJuD/QD3rbcHp/MikHjsFl87nNub2YWmBNp3BZXpcN7k+rAXkBTepSrQ==
   dependencies:
     "@babel/plugin-transform-modules-commonjs" "^7.24.8"
     "@permaweb/aoconnect" "^0.0.59"
