@@ -64,7 +64,7 @@ describe("Atomic Notes", function () {
     ;({ thumbnail, banner, opt, ao, ar, profile } = await setup({}))
   })
   
-  it("should creat an AO profile", async () => {
+  it("should create an AO profile", async () => {
     const my_profile = {
       DisplayName: "Tomo",
       UserName: "0xtomo",

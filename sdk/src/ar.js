@@ -19,7 +19,7 @@ class AR {
   }
 
   isArConnect(jwk) {
-    return this.jwk?.walletName === "ArConnect"
+    return this.jwk?.id || this.jwk?.walletName === "ArConnect"
   }
 
   async init(jwk) {
@@ -34,13 +34,13 @@ class AR {
       const isWallet = this.isArConnect(this.jwk)
       if (isWallet) {
         try {
-          await arweaveWallet.connect([
+          await this.jwk.connect([
             "ACCESS_ADDRESS",
             "ACCESS_PUBLIC_KEY",
             "SIGN_TRANSACTION",
           ])
-          this.addr = await arweaveWallet.getActiveAddress()
-          this.pub = await arweaveWallet.getActivePublicKey()
+          this.addr = await this.jwk.getActiveAddress()
+          this.pub = await this.jwk.getActivePublicKey()
           this.isWallet = true
         } catch (e) {
           isGen = true
@@ -215,7 +215,7 @@ class AR {
     let res = null
     ;({ err, jwk } = await this.checkWallet({ jwk }))
     if (!err) {
-      if (jwk?.walletName === "ArConnect") {
+      if (this.isArConnect(jwk)) {
         tx = await jwk.sign(tx)
       } else {
         await this.arweave.transactions.sign(tx, jwk)

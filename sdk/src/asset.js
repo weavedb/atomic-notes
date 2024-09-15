@@ -1,6 +1,7 @@
 import { srcs, wait, udl } from "./utils.js"
 import Profile from "./profile.js"
 import { getTagVal } from "./utils.js"
+import { mergeLeft } from "ramda"
 
 class Asset {
   constructor({
@@ -34,6 +35,8 @@ class Asset {
     jwk,
     src = this.asset_src,
     data,
+    fills = {},
+    tags = {},
     content_type,
     info: { title, description },
     token: { fraction = "1" },
@@ -43,7 +46,7 @@ class Asset {
     const creator = this.profile.id
     if (!creator) return { err: "no ao profile id" }
     const date = Date.now()
-    let tags = {
+    let _tags = {
       Action: "Add-Uploaded-Asset",
       Title: title,
       Description: description,
@@ -52,22 +55,23 @@ class Asset {
       Type: "image",
       "Content-Type": content_type,
       ...udl({ payment, access, derivations, commercial, training }),
+      ...tags,
     }
-    if (creator) tags["Creator"] = creator
+    if (creator) _tags["Creator"] = creator
     const balance =
       typeof fraction === "number" ? Number(fraction * 1).toString() : fraction
-    const fills = {
+    const _fills = mergeLeft(fills, {
       NAME: title,
       CREATOR: creator,
       TICKER: "ATOMIC",
       DENOMINATION: "1",
       BALANCE: balance,
-    }
+    })
 
     let fns = [
       {
         fn: "deploy",
-        args: { src, fills, tags, data },
+        args: { src, fills: _fills, tags: _tags, data },
         then: ({ pid }) => {
           this.pid = pid
         },

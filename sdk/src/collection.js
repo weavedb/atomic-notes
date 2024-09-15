@@ -1,6 +1,7 @@
 import { srcs } from "./utils.js"
 import { is } from "ramda"
 import Profile from "./profile.js"
+import { mergeLeft } from "ramda"
 
 class Collection {
   constructor({
@@ -51,6 +52,7 @@ class Collection {
 
   async create({
     src = this.collection_src,
+    fills = {},
     info: {
       title,
       description,
@@ -87,7 +89,7 @@ class Collection {
         args: {
           tags,
           src,
-          fills: {
+          fills: mergeLeft(fills, {
             NAME: title,
             DESCRIPTION: description,
             DATECREATED: date,
@@ -95,7 +97,7 @@ class Collection {
             CREATOR: profileId,
             BANNER: banner ?? "None",
             THUMBNAIL: thumbnail ?? "None",
-          },
+          }),
         },
         then: ({ pid }) => {
           this.pid = pid
