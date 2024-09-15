@@ -1,5 +1,5 @@
 import { expect } from "chai"
-import { AR, Notebook, Note, AO, Profile } from "../src/index.js"
+import { Asset, AR, Notebook, Note, AO, Profile } from "../src/index.js"
 import { wait } from "../src/utils.js"
 
 import { setup, ok, fail } from "../src/helpers.js"
@@ -24,15 +24,53 @@ const prof = {
   CoverImage: "None",
 }
 
+const genUDL = recipient => {
+  return {
+    payment: { mode: "single", recipient },
+    access: { mode: "none" },
+    derivations: {
+      mode: "allowed",
+      term: "one-time",
+      fee: "0",
+    },
+    commercial: {
+      mode: "allowed",
+      term: "revenue",
+      fee: "5",
+    },
+    training: { mode: "disallowed" },
+  }
+}
+
 describe("Atomic Notes", function () {
   this.timeout(0)
   let ao, opt, profile, ar, thumbnail, banner
   let profile_pid, notebook, notebook_pid, note, note_pid, ar2, note2
 
   before(async () => {
-    ;({ thumbnail, banner, opt, ao, ar, profile } = await setup({}))
+    ;({ thumbnail, banner, opt, ao, ar, profile } = await setup({
+      //cacheDir: "../test/.cache",
+      //cache: true,
+    }))
   })
 
+  it("should upload atomic assets", async () => {
+    const asset = new Asset(opt.asset)
+    await asset.ar.gen("100")
+    const { pid: profile_pid } = ok(
+      await asset.profile.createProfile({ profile: prof }),
+    )
+    expect((await asset.profile.profile()).DisplayName).to.eql(prof.DisplayName)
+    ok(
+      await asset.create({
+        data: thumbnail,
+        content_type: "image/png",
+        info: note_tags,
+        token: { fraction: "100" },
+        udl: genUDL(asset.ar.addr),
+      }),
+    )
+  })
   it("should auto-load ArConnect wallet", async () => {
     const _jwk = ar.jwk
     const arconnect = new AR(opt.ar)
@@ -146,7 +184,7 @@ describe("Atomic Notes", function () {
         },
         token: { fraction: "100" },
         udl: {
-          payment: { mode: "single", recipient: ao.addr },
+          payment: { mode: "single", recipient: ao.ar.addr },
           access: { mode: "one-time", fee: "1.3" },
           derivations: {
             mode: "allowed",
