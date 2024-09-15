@@ -2,7 +2,7 @@ import { Profile, AR, AO, Collection, Notebook } from "./index.js"
 import { expect } from "chai"
 import { createDataItemSigner, connect } from "@permaweb/aoconnect"
 import { resolve } from "path"
-import { readFileSync } from "fs"
+import { mkdirSync, existsSync, writeFileSync, readFileSync } from "fs"
 export class Src {
   constructor({ ar, base = "./lua", readFileSync, dir, resolve }) {
     this.ar = ar
@@ -19,19 +19,36 @@ export class Src {
   }
 }
 
-export const setup = async ({ aoconnect, arweave } = {}) => {
+export const setup = async ({
+  aoconnect,
+  arweave,
+  cache = false,
+  cacheDir = ".cache",
+} = {}) => {
+  let opt = null
   console.error = () => {}
   console.warn = () => {}
-
+  const dir = resolve(import.meta.dirname)
+  const thumbnail = readFileSync(`${dir}/assets/thumbnail.png`)
+  const banner = readFileSync(resolve(`${dir}/assets/banner.png`))
+  const _cacheDir = resolve(import.meta.dirname, cacheDir)
+  const optPath = `${_cacheDir}/opt.json`
+  if (cache) {
+    if (!existsSync(_cacheDir)) mkdirSync(_cacheDir)
+    if (existsSync(optPath)) opt = JSON.parse(readFileSync(optPath, "utf8"))
+  }
+  if (opt) {
+    const ar = await new AR(opt.ar).init(opt.jwk)
+    const ao = new AO({ ...opt.ar, ar })
+    const profile = new Profile({ ...opt.profile, ao })
+    return { opt, thumbnail, banner, ar, ao, profile }
+  }
   arweave ??= { port: 4000 }
   aoconnect ??= {
     MU_URL: "http://localhost:4002",
     CU_URL: "http://localhost:4004",
     GATEWAY_URL: "http://localhost:4000",
   }
-  const dir = resolve(import.meta.dirname)
-  const thumbnail = readFileSync(`${dir}/assets/thumbnail.png`)
-  const banner = readFileSync(resolve(`${dir}/assets/banner.png`))
   const ar = new AR(arweave)
   await ar.gen("10")
   const src = new Src({ ar, readFileSync, dir })
@@ -69,7 +86,7 @@ export const setup = async ({ aoconnect, arweave } = {}) => {
   await notebook.createRegistry()
   const { id: module } = await ao.postModule({ data: await ar.data(wasm2) })
   const { pid: proxy_pid } = await ao.deploy({ src: proxy, module })
-  let opt = { ar: { ...arweave } }
+  opt = { ar: { ...arweave }, jwk: ar.jwk }
   opt.ao = { module: module_sqlite, scheduler, aoconnect, ar: opt.ar }
   opt.profile = {
     registry_src,
@@ -91,6 +108,7 @@ export const setup = async ({ aoconnect, arweave } = {}) => {
     registry_src: collection_registry_src,
     profile: opt.profile,
   }
+  if (cache) writeFileSync(optPath, JSON.stringify(opt))
   return { opt, profile, ao, ar, thumbnail, banner }
 }
 
