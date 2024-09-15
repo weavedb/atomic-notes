@@ -1,6 +1,7 @@
 import { srcs, wait, udl } from "./utils.js"
 import Profile from "./profile.js"
 import Asset from "./asset.js"
+import { mergeLeft } from "ramda"
 
 class Note extends Asset {
   constructor({
@@ -27,6 +28,8 @@ class Note extends Asset {
     src = this.note_src,
     library = this.notelib_src,
     data,
+    fills = {},
+    tags = {},
     info: { title, description, thumbnail, thumbnail_data, thumbnail_type },
     token: { fraction = "1" },
     udl: { payment, access, derivations, commercial, training },
@@ -35,7 +38,7 @@ class Note extends Asset {
     const creator = this.profile.id
     if (!creator) return { err: "no ao profile id" }
     const date = Date.now()
-    let tags = {
+    let _tags = {
       Action: "Add-Uploaded-Asset",
       Title: title,
       Description: description,
@@ -46,12 +49,13 @@ class Note extends Asset {
       "Render-With": this.render_with,
       "Content-Type": content_type,
       ...udl({ payment, access, derivations, commercial, training }),
+      ...tags,
     }
-    if (!/^\s*$/.test(thumbnail)) tags["Thumbnail"] = thumbnail
+    if (!/^\s*$/.test(thumbnail)) _tags["Thumbnail"] = thumbnail
     if (creator) tags["Creator"] = creator
     const balance =
       typeof fraction === "number" ? Number(fraction * 1).toString() : fraction
-    const fills = {
+    const _fills = mergeLeft(fills, {
       NAME: title,
       CREATOR: creator,
       TICKER: "ATOMIC",
@@ -60,12 +64,16 @@ class Note extends Asset {
       THUMBNAIL: thumbnail ?? "None",
       DATECREATED: date,
       BALANCE: balance,
-    }
+    })
 
     let fns = [
       {
         fn: "deploy",
-        args: { loads: [{ src: library }, { src, fills }], tags, data },
+        args: {
+          loads: [{ src: library }, { src, fills: _fills }],
+          tags: _tags,
+          data,
+        },
         then: ({ pid }) => {
           this.pid = pid
         },

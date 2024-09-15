@@ -40,7 +40,9 @@ export const setup = async ({ aoconnect, arweave } = {}) => {
   const profile_src = await src.upload("profile000")
   const collection_registry_src = await src.upload("collection-registry")
   const notebook_src = await src.upload("notebook")
+  const collection_src = await src.upload("collection")
   const note_src = await src.upload("atomic-note")
+  const asset_src = await src.upload("atomic-asset")
   const proxy = await src.upload("proxy")
   const wasm = await src.upload("aos-sqlite", "wasm")
   const wasm2 = await src.upload("aos", "wasm")
@@ -67,17 +69,27 @@ export const setup = async ({ aoconnect, arweave } = {}) => {
   await notebook.createRegistry()
   const { id: module } = await ao.postModule({ data: await ar.data(wasm2) })
   const { pid: proxy_pid } = await ao.deploy({ src: proxy, module })
-
-  let opt = {
-    ar: { ...arweave },
-    profile: { registry_src, registry: profile.registry, profile_src },
-    ao: { module: module_sqlite, scheduler, aoconnect },
-    note: { proxy: proxy_pid, note_src, notelib_src },
-    notebook: {
-      notebook_src,
-      registry: notebook.registry,
-      registry_src: collection_registry_src,
-    },
+  let opt = { ar: { ...arweave } }
+  opt.ao = { module: module_sqlite, scheduler, aoconnect, ar: opt.ar }
+  opt.profile = {
+    registry_src,
+    registry: profile.registry,
+    profile_src,
+    ao: opt.ao,
+  }
+  opt.note = { proxy: proxy_pid, note_src, notelib_src, profile: opt.profile }
+  opt.notebook = {
+    notebook_src,
+    registry: notebook.registry,
+    registry_src: collection_registry_src,
+    profile: opt.profile,
+  }
+  opt.asset = { asset_src, profile: opt.profile }
+  opt.collection = {
+    collection_src,
+    registry: notebook.registry,
+    registry_src: collection_registry_src,
+    profile: opt.profile,
   }
   return { opt, profile, ao, ar, thumbnail, banner }
 }
