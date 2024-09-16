@@ -81,9 +81,10 @@ const udl = ({ payment, access, derivations, commercial, training }) => {
     Currency: "xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10",
   }
   tags["Payment-Mode"] = paymentsMap[payment.mode]
-  if (payment === "single") tags.push(tag("Payment-Address", payment.recipient))
+  if (payment.mode === "single")
+    tags.push(tag("Payment-Address", payment.recipient))
   let _access = accessesMap[access.mode]
-  if (access === "one-time") _access += "-" + access.fee
+  if (access.mode === "one-time") _access += "-" + access.fee
   tags["Access-Fee"] = _access
 
   let _derivations = allowsMap[derivations.mode]
