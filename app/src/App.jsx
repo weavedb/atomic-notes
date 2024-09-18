@@ -16,7 +16,7 @@ function App() {
   const [profile, setProfile] = useState(null)
   const [init, setInit] = useState(false)
   const t = useToast()
-
+  const boxW = ["100%", null, "50%", 1 / 3]
   useEffect(() => getAddr({ setAddress, setInit, t }), [])
   useEffect(
     () => getProf({ address, setProfile, setInit, setAddress, t }),
@@ -71,7 +71,7 @@ function App() {
             </Flex>
           </Flex>
           <Flex mt={10} wrap="wrap">
-            <Box w={[1 / 3]}>
+            <Box w={boxW}>
               <Box
                 mr={[0, null, 4]}
                 mb={4}
@@ -94,7 +94,7 @@ function App() {
                 </Box>
               </Box>
             </Box>
-            <Box w={[1 / 3]}>
+            <Box w={boxW}>
               <Box
                 mr={[0, null, 4]}
                 mb={4}
@@ -111,7 +111,7 @@ function App() {
                 </Box>
               </Box>
             </Box>
-            <Box w={[1 / 3]}>
+            <Box w={boxW}>
               <Box
                 mr={[0, null, 4]}
                 mb={4}
@@ -128,7 +128,7 @@ function App() {
                 </Box>
               </Box>
             </Box>
-            <Box w={[1 / 3]}>
+            <Box w={boxW}>
               <Box
                 mr={[0, null, 4]}
                 mb={4}
@@ -145,7 +145,7 @@ function App() {
                 </Box>
               </Box>
             </Box>
-            <Box w={[1 / 3]}>
+            <Box w={boxW}>
               <Box
                 mr={[0, null, 4]}
                 mb={4}
@@ -167,7 +167,7 @@ function App() {
                 </Box>
               </Box>
             </Box>
-            <Box w={[1 / 3]}>
+            <Box w={boxW}>
               <Box
                 mr={[0, null, 4]}
                 mb={4}
