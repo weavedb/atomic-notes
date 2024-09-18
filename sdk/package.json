@@ -1,6 +1,6 @@
 {
   "name": "aonote",
-  "version": "0.7.25",
+  "version": "0.7.27",
   "description": "",
   "type": "module",
   "main": "dist/cjs/index.js",

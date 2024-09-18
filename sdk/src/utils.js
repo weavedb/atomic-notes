@@ -81,8 +81,7 @@ const udl = ({ payment, access, derivations, commercial, training }) => {
     Currency: "xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10",
   }
   tags["Payment-Mode"] = paymentsMap[payment.mode]
-  if (payment.mode === "single")
-    tags.push(tag("Payment-Address", payment.recipient))
+  if (payment.mode === "single") tags["Payment-Address"] = payment.recipient
   let _access = accessesMap[access.mode]
   if (access.mode === "one-time") _access += "-" + access.fee
   tags["Access-Fee"] = _access
@@ -102,7 +101,7 @@ const udl = ({ payment, access, derivations, commercial, training }) => {
   }
   tags["Derivations"] = _derivations
   let _commercial = allowsMap[commercial.mode]
-  if (commercial === "allowed") {
+  if (commercial.mode === "allowed") {
     if (commercial.term === "revenue") {
       _commercial += `-${ctMap[commercial.term].split(" ").join("-")}-${commercial.share}`
     } else {
@@ -111,7 +110,7 @@ const udl = ({ payment, access, derivations, commercial, training }) => {
   }
   tags["Commercial-Use"] = _commercial
   let _training = allowsMap[training.mode]
-  if (training === "allowed") {
+  if (training.mode === "allowed") {
     _training += `-${ttMap[training.term].split(" ").join("-")}-${training.fee}`
   }
   tags["Data-Model-Training"] = _training
