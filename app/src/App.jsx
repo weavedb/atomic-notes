@@ -71,52 +71,118 @@ function App() {
             </Flex>
           </Flex>
           <Flex mt={10} wrap="wrap">
-            <Box
-              flex={[null, null, 1]}
-              mr={[0, null, 4]}
-              mb={4}
-              sx={{ borderRadius: "10px" }}
-              bg="#f6f6f7"
-              p={4}
-            >
-              <Box mb={2} sx={{ ...roboto }}>
-                Atomic Assets
-              </Box>
-              <Box fontWeight="normal" fontSize="15px">
-                Data, licenses and smart contracts are all stored together on
-                Arweave as tradable atomic assets on UCMs like BazAR.
-              </Box>
-            </Box>
-            <Box
-              flex={[null, null, 1]}
-              mr={[0, null, 4]}
-              mb={4}
-              sx={{ borderRadius: "10px" }}
-              bg="#f6f6f7"
-              p={4}
-            >
-              <Box mb={2} sx={{ ...roboto }}>
-                Universal Data Lisence
-              </Box>
-              <Box fontWeight="normal" fontSize="15px">
-                Profit sharing and royalty distribution are to be automated by
-                Universal Content Marketplaces with onchain UDLs.
+            <Box w={[1 / 3]}>
+              <Box
+                mr={[0, null, 4]}
+                mb={4}
+                sx={{ borderRadius: "10px" }}
+                bg="#f6f6f7"
+                p={4}
+              >
+                <Box mb={2} sx={{ ...roboto }}>
+                  Atomic Assets
+                </Box>
+                <Box fontWeight="normal" fontSize="15px">
+                  Data, licenses and smart contracts are all stored together on
+                  Arweave as tradable atomic assets on UCMs like{" "}
+                  <Link target="_blank" to="http://bazar.arweave.dev">
+                    <Box as="u" mr={2}>
+                      BazAR
+                    </Box>
+                  </Link>
+                  .
+                </Box>
               </Box>
             </Box>
-            <Box
-              flex={[null, null, 1]}
-              mr={[0, null, 4]}
-              mb={4}
-              sx={{ borderRadius: "10px" }}
-              bg="#f6f6f7"
-              p={4}
-            >
-              <Box mb={2} sx={{ ...roboto }}>
-                Editable Notes on AO
+            <Box w={[1 / 3]}>
+              <Box
+                mr={[0, null, 4]}
+                mb={4}
+                sx={{ borderRadius: "10px" }}
+                bg="#f6f6f7"
+                p={4}
+              >
+                <Box mb={2} sx={{ ...roboto }}>
+                  Universal Data License
+                </Box>
+                <Box fontWeight="normal" fontSize="15px">
+                  Profit sharing and royalty distribution are to be automated by
+                  Universal Content Marketplaces with onchain UDLs.
+                </Box>
               </Box>
-              <Box fontWeight="normal" fontSize="15px">
-                AO enables delta updates on permanent data, co-authoring, and
-                semantic version control with AO processes / smart contracts.
+            </Box>
+            <Box w={[1 / 3]}>
+              <Box
+                mr={[0, null, 4]}
+                mb={4}
+                sx={{ borderRadius: "10px" }}
+                bg="#f6f6f7"
+                p={4}
+              >
+                <Box mb={2} sx={{ ...roboto }}>
+                  Editable Notes on AO
+                </Box>
+                <Box fontWeight="normal" fontSize="15px">
+                  AO enables delta updates on permanent data, co-authoring, and
+                  semantic version control with AO processes / smart contracts.
+                </Box>
+              </Box>
+            </Box>
+            <Box w={[1 / 3]}>
+              <Box
+                mr={[0, null, 4]}
+                mb={4}
+                sx={{ borderRadius: "10px" }}
+                bg="#f6f6f7"
+                p={4}
+              >
+                <Box mb={2} sx={{ ...roboto }}>
+                  Built for Developers
+                </Box>
+                <Box fontWeight="normal" fontSize="15px">
+                  Atomic notes introduce a new social primitive built with a
+                  developer-first approach, providing an SDK and APIs.
+                </Box>
+              </Box>
+            </Box>
+            <Box w={[1 / 3]}>
+              <Box
+                mr={[0, null, 4]}
+                mb={4}
+                sx={{ borderRadius: "10px" }}
+                bg="#f6f6f7"
+                p={4}
+              >
+                <Box mb={2} sx={{ ...roboto }}>
+                  ArNS Integration
+                </Box>
+                <Box fontWeight="normal" fontSize="15px">
+                  <Link target="_blank" to="http://arns.app">
+                    <Box as="u" mr={2}>
+                      ArNS
+                    </Box>
+                  </Link>
+                  domains provide censorship-resistant access to your content
+                  through thousands of decentralized gateways.
+                </Box>
+              </Box>
+            </Box>
+            <Box w={[1 / 3]}>
+              <Box
+                mr={[0, null, 4]}
+                mb={4}
+                sx={{ borderRadius: "10px" }}
+                bg="#f6f6f7"
+                p={4}
+              >
+                <Box mb={2} sx={{ ...roboto }}>
+                  Atomic Timelines
+                </Box>
+                <Box fontWeight="normal" fontSize="15px">
+                  Atomic Timelines are horizontally scalable social timelines
+                  built with Atomic Notes, distributing rewards to content
+                  creators.
+                </Box>
               </Box>
             </Box>
           </Flex>

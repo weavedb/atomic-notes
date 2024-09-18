@@ -1927,7 +1927,26 @@ function AtomicNote(a) {
                         }}
                       />
                       <Flex mb={6}>
-                        {activeStep === 0 ? null : (
+                        {activeStep === 0 ? (
+                          <Button
+                            mr={4}
+                            mt={5}
+                            w="100%"
+                            sx={{
+                              borderRadius: "3px",
+                              cursor: "pointer",
+                              border: "1px solid #222326",
+                              ":hover": { bg: "#f6f6f7" },
+                              bg: "white",
+                            }}
+                            onClick={async () => {
+                              setTab("Edit")
+                            }}
+                            leftIcon={<ArrowLeftIcon ml={2} />}
+                          >
+                            Edit Note
+                          </Button>
+                        ) : (
                           <Button
                             mt={5}
                             mr={4}
@@ -1949,28 +1968,30 @@ function AtomicNote(a) {
                           </Button>
                         )}
                         {tab3 !== "License" ? (
-                          <Button
-                            ml={activeStep === 0 ? 0 : 4}
-                            mt={5}
-                            w="100%"
-                            sx={{
-                              opacity: oks[activeStep] ? 1 : 0.5,
-                              borderRadius: "3px",
-                              cursor: oks[activeStep] ? "pointer" : "default",
-                              border: "1px solid #222326",
-                              ":hover": { bg: "#f6f6f7" },
-                              bg: "white",
-                            }}
-                            onClick={async () => {
-                              if (oks[activeStep]) {
-                                setActiveStep(activeStep + 1)
-                                setTab3(tabs3[activeStep + 1])
-                              }
-                            }}
-                            rightIcon={<ArrowRightIcon ml={2} />}
-                          >
-                            Next Step
-                          </Button>
+                          <>
+                            <Button
+                              ml={4}
+                              mt={5}
+                              w="100%"
+                              sx={{
+                                opacity: oks[activeStep] ? 1 : 0.5,
+                                borderRadius: "3px",
+                                cursor: oks[activeStep] ? "pointer" : "default",
+                                border: "1px solid #222326",
+                                ":hover": { bg: "#f6f6f7" },
+                                bg: "white",
+                              }}
+                              onClick={async () => {
+                                if (oks[activeStep]) {
+                                  setActiveStep(activeStep + 1)
+                                  setTab3(tabs3[activeStep + 1])
+                                }
+                              }}
+                              rightIcon={<ArrowRightIcon ml={2} />}
+                            >
+                              Next Step
+                            </Button>
+                          </>
                         ) : (
                           <Button
                             ml={4}

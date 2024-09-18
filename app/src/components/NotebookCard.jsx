@@ -104,7 +104,7 @@ const NotebookCard = ({
             <Flex flex="1" gap="4" alignItems="center" flexWrap="wrap">
               <Box>
                 <Heading mb={1} size="md">
-                  {note.title}fksalfjsadlkfjs
+                  {note.title}
                 </Heading>
                 <Text mb={1}>{note.description}</Text>
                 <Flex mt={2}>
