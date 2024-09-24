@@ -8,7 +8,7 @@ class Note extends Asset {
     proxy = srcs.proxy,
     render_with = srcs.render,
     note_src = srcs.note_src,
-    notelib_src = srcs.notelib,
+    notelib_mid = srcs.notelib_mid,
     pid,
     profile = {},
     ao = {},
@@ -16,17 +16,17 @@ class Note extends Asset {
   } = {}) {
     super({ proxy, render_with, asset_src: note_src, pid, profile, ao, ar })
     this.__type__ = "note"
-    this.notelib_src = notelib_src
     this.note_src = note_src
     this.render_with = render_with
     this.proxy = proxy
+    this.notelib_mid = notelib_mid
   }
 
   async create({
     jwk,
     content_type = "text/markdown",
     src = this.note_src,
-    library = this.notelib_src,
+    src_data,
     data,
     fills = {},
     tags = {},
@@ -52,10 +52,10 @@ class Note extends Asset {
       ...tags,
     }
     if (!/^\s*$/.test(thumbnail)) _tags["Thumbnail"] = thumbnail
-    if (creator) tags["Creator"] = creator
+    if (creator) _tags["Creator"] = creator
     const balance =
       typeof fraction === "number" ? Number(fraction * 1).toString() : fraction
-    const _fills = mergeLeft(fills, {
+    fills = mergeLeft(fills, {
       NAME: title,
       CREATOR: creator,
       TICKER: "ATOMIC",
@@ -64,19 +64,21 @@ class Note extends Asset {
       THUMBNAIL: thumbnail ?? "None",
       DATECREATED: date,
       BALANCE: balance,
+      LIBRARY: this.notelib_mid,
     })
-
     let fns = [
       {
         fn: "deploy",
-        args: {
-          loads: [{ src: library }, { src, fills: _fills }],
-          tags: _tags,
-          data,
-        },
-        then: ({ pid }) => {
+        args: { src_data, src, fills, tags: _tags, data },
+        then: ({ pid, args }) => {
           this.pid = pid
+          args.pid = pid
         },
+      },
+      {
+        fn: "asgn",
+        args: { mid: this.notelib_mid },
+        err: ({ args, res }) => typeof res?.Output?.data !== "object",
       },
       { fn: "allow", bind: this },
       { fn: "assignData", bind: this },
@@ -91,13 +93,14 @@ class Note extends Asset {
         },
         then: ({ out, args, id }) => {
           out.thumbnail = id
-          args.loads[1].fills.THUMBNAIL = id
+          args.fills.THUMBNAIL = id
           args.tags.Thumbnail = id
         },
       })
     }
     return await this.ao.pipe({ jwk, fns, cb })
   }
+
   async updateInfo({
     title,
     description,

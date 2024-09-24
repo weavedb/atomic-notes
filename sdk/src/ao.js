@@ -430,16 +430,18 @@ class AO {
     const fns = [
       {
         args: { pid, data, act: "Eval" },
-        err: ({ res }) => typeof res?.Output?.data !== "object",
+        err: ({ res }) => {
+          return typeof res?.Output?.data !== "object"
+        },
       },
     ]
     return await this.pipe({ jwk, fns })
   }
 
-  async transform({ src, fills }) {
+  async transform({ src, data, fills }) {
     let err = null
     let out = null
-    let _data = await this.ar.data(src, true)
+    let _data = data ?? (await this.ar.data(src, true))
     if (!_data) {
       err = "data doesn't exist"
     } else {
@@ -456,11 +458,11 @@ class AO {
     return { err, out }
   }
 
-  async load({ src, fills, pid, jwk }) {
+  async load({ src, data, fills, pid, jwk }) {
     let fns = [
       {
         fn: this.transform,
-        args: { src, fills },
+        args: { src, fills, data },
         then: { "args.data": "inp" },
       },
       { fn: this.eval, args: { pid } },
@@ -478,12 +480,13 @@ class AO {
       attempts -= 1
       if (attempts === 0) err = "timeout"
     }
-    return { err }
+    return { err, pid }
   }
 
   async deploy({
     loads,
     src,
+    src_data,
     fills = {},
     module = this.module,
     scheduler = this.scheduler,
@@ -499,7 +502,7 @@ class AO {
       },
       { fn: this.wait, then: { "args.pid": "pid" } },
     ]
-    for (const v of !loads ? [{ src, fills }] : loads) {
+    for (const v of !loads ? [{ data: src_data, src, fills }] : loads) {
       fns.push({ fn: this.load, args: v, then: { "args.pid": "pid" } })
     }
     return await this.pipe({ jwk, fns })

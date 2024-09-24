@@ -44,11 +44,11 @@ const genUDL = recipient => {
 
 describe("Atomic Notes", function () {
   this.timeout(0)
-  let ao, opt, profile, ar, thumbnail, banner
+  let ao, opt, profile, ar, thumbnail, banner, src
   let profile_pid, notebook, notebook_pid, note, note_pid, ar2, note2
 
   before(async () => {
-    ;({ thumbnail, banner, opt, ao, ar, profile } = await setup({
+    ;({ thumbnail, banner, opt, ao, ar, profile, src } = await setup({
       //cacheDir: "../test/.cache",
       //cache: true,
     }))
@@ -174,8 +174,10 @@ describe("Atomic Notes", function () {
   it("should create a note", async () => {
     let res = null
     note = new Note({ ...opt.note, profile })
+    const src_data = src.data("atomic-note")
     ;({ pid: note_pid, res } = ok(
       await note.create({
+        src_data,
         data: v1,
         info: {
           ...note_tags,

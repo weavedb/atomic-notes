@@ -21,7 +21,7 @@ function Article(a) {
   const [error, setError] = useState(false)
   const [md, setMD] = useState(null)
   const [note, setNote] = useState(null)
-  const [user, setuser] = useState(null)
+  const [user, setUser] = useState(null)
   const [initNote, setInitNote] = useState(false)
   const [pubmap, setPubmap] = useState({})
   useEffect(() => getAddr({ setAddress, setInit, t }), [])
@@ -62,7 +62,7 @@ function Article(a) {
           try {
             const creator = tags((await getNotes([id]))[0]?.tags).Creator
             const _prof = new Profile(opt.profile)
-            setuser(await _prof.profile({ id: creator }))
+            setUser(await _prof.profile({ id: creator }))
           } catch (e) {}
           const text = _article
           const starryNight = await createStarryNight(common)
