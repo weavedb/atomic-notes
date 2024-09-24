@@ -112,6 +112,7 @@ import {
   getProfileId,
   getAoProfile,
   getAoProfiles,
+  note_src_data,
 } from "../lib/utils"
 import { circleNotch } from "../lib/svgs.jsx"
 
@@ -2031,6 +2032,7 @@ function AtomicNote(a) {
                                   _fraction = Number(fraction).toString()
                                 }
                                 const { err: _err, pid } = await note.create({
+                                  src_data: note_src_data,
                                   cb: ({ i, fns }) => {
                                     setUploadStats([i, fns.length])
                                   },

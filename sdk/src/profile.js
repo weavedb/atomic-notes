@@ -19,6 +19,8 @@ class Profile {
     registry = srcs.registry,
     registry_src = srcs.registry_src,
     profile_src = srcs.profile,
+    module,
+    scheduler,
     ar = {},
     ao = {},
   } = {}) {
@@ -34,6 +36,8 @@ class Profile {
     this.profile_src = profile_src
     this.registry_src = registry_src
     this.registry = registry
+    this.module = module
+    this.scheduler = scheduler
   }
 
   async init(jwk) {
@@ -168,7 +172,12 @@ class Profile {
     const fns = [
       {
         fn: this.ao.deploy,
-        args: { src: profile_src, fills: { REGISTRY: registry } },
+        args: {
+          src: profile_src,
+          fills: { REGISTRY: registry },
+          module: this.module,
+          scheduler: this.scheduler,
+        },
         then: ({ pid, args }) => {
           this.id = pid
           args.id = pid
