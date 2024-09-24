@@ -376,7 +376,7 @@ const { err } = await ao.wait({ pid })
 
 ### Function Piping
 
-Most functions return in the format of `{ err, res, out, pid, mid, id }`, and these function can be chained with `pipe`, which makes executing multiple messages a brreeze.
+Most functions return in the format of `{ err, res, out, pid, mid, id }`, and these function can be chained with `pipe`, which makes executing multiple messages a breeze.
 
 For example, following is how `deploy` uses `pipe` internally. The execusion will be immediately aborted if any of the functions in `fns` produces an error.
 
@@ -398,7 +398,7 @@ const { err, res, out, pid } = await this.pipe({ jwk, fns })
 If the function comes from other instances rather than `AO`, use `bind`.
 
 ```js
-const fns = [{ fn: "post", bind: this.ao, args: { data, tags }}]
+const fns = [{ fn: "post", bind: this.ar, args: { data, tags }}]
 ```
 
 #### then
