@@ -29,6 +29,7 @@
     "marked": "^13.0.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-helmet": "^6.1.0",
     "react-router-dom": "^6.24.1",
     "vite-plugin-node-polyfills": "^0.22.0"
   },

@@ -41,7 +41,7 @@ export const setup = async ({
   }
   if (opt) {
     const ar = await new AR(opt.ar).init(opt.jwk)
-    const ao = new AO({ ...opt.ar, ar })
+    const ao = new AO({ ...opt.ao, ar })
     const profile = new Profile({ ...opt.profile, ao })
     return { opt, thumbnail, banner, ar, ao, profile }
   }
@@ -126,7 +126,6 @@ export const setup = async ({
   await ao.wait({ pid })
   const { mid } = await ao.load({ src: notelib_src, pid })
   opt.note.notelib_mid = mid
-
   return { opt, profile, ao, ar, thumbnail, banner, src }
 }
 

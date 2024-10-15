@@ -10,6 +10,7 @@ import { Link } from "react-router-dom"
 import Header from "../components/Header"
 import NoteCard from "../components/NoteCard"
 import { msg, err, getNotes, tags, getAddr, getProf, opt } from "../lib/utils"
+import { Helmet } from "react-helmet"
 
 function Article(a) {
   const { id } = useParams()
@@ -110,6 +111,34 @@ function Article(a) {
       <Header
         {...{ address, setAddress, profile, setProfile, init, setInit, t }}
       />
+      {!note ? null : (
+        <Helmet>
+          <title>
+            {note.title}
+            {!user ? "" : ` | ${user.DisplayName}`}
+          </title>
+          <meta name="description" content={note.description} />
+          <meta name="twitter:card" content="summary_large_image" />
+          <meta
+            name="twitter:title"
+            content={`${note.title}${!user ? "" : ` | ${user.DisplayName}`}`}
+          />
+          <meta name="twitter:description" content={note.description} />
+          <meta
+            name="twitter:image"
+            content={`https://arweave.net/${note.thumbnail}`}
+          />
+          <meta
+            property="og:title"
+            content={`${note.title}${!user ? "" : ` | ${user.DisplayName}`}`}
+          />
+          <meta name="og:description" content={note.description} />
+          <meta
+            name="og:image"
+            content={`https://arweave.net/${note.thumbnail}`}
+          />
+        </Helmet>
+      )}
       <Flex
         minH="100%"
         direction="column"
