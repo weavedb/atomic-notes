@@ -53,7 +53,6 @@ describe("Atomic Notes", function () {
       //cache: true,
     }))
   })
-
   it("should upload atomic assets", async () => {
     const asset = new Asset(opt.asset)
     await asset.ar.gen("100")

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Notebook } from "aonote"
 import Header from "../components/Header"
 import NoteCard from "../components/NoteCard"
+import { Helmet } from "react-helmet"
 import {
   getInfo,
   getNotes,
@@ -39,6 +40,7 @@ import {
   useToast,
 } from "@chakra-ui/react"
 import { o, sortBy, map, pluck, fromPairs, clone, reject } from "ramda"
+
 function User({}) {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -81,6 +83,35 @@ function User({}) {
       <Header
         {...{ address, setAddress, profile, setProfile, init, setInit, t }}
       />
+      {!book ? null : (
+        <Helmet>
+          <title>
+            {book.Name}
+            {!user ? "" : ` | ${user.DisplayName}`}
+          </title>
+          <meta name="description" content={book.Description} />
+          <meta name="twitter:card" content="summary_large_image" />
+          <meta
+            name="twitter:title"
+            content={`${book.Name}${!user ? "" : ` | ${user.DisplayName}`}`}
+          />
+          <meta name="twitter:description" content={book.Description} />
+          <meta
+            name="twitter:image"
+            content={`https://arweave.net/${book.Thumbnail}`}
+          />
+          <meta
+            property="og:title"
+            content={`${book.Name}${!user ? "" : ` | ${user.DisplayName}`}`}
+          />
+          <meta name="og:description" content={book.Description} />
+          <meta
+            name="og:image"
+            content={`https://arweave.net/${book.Thumbnail}`}
+          />
+        </Helmet>
+      )}
+
       {!book ? null : (
         <Flex justify="center" pt="60px">
           <Box w="100%" maxW="854px" px={3} pt={4}>
