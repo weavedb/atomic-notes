@@ -11,10 +11,7 @@ const v4 = "# this is markdown 4"
 const v5 = "# this is markdown 5"
 const v6 = "# this is markdown 6"
 
-const note_tags = {
-  title: "title",
-  description: "desc",
-}
+const note_tags = { title: "title", description: "desc" }
 
 const prof = {
   DisplayName: "Atom",
@@ -28,16 +25,8 @@ const genUDL = recipient => {
   return {
     payment: { mode: "single", recipient },
     access: { mode: "none" },
-    derivations: {
-      mode: "allowed",
-      term: "one-time",
-      fee: "0",
-    },
-    commercial: {
-      mode: "allowed",
-      term: "revenue",
-      fee: "5",
-    },
+    derivations: { mode: "allowed", term: "one-time", fee: "0" },
+    commercial: { mode: "allowed", term: "revenue", fee: "5" },
     training: { mode: "disallowed" },
   }
 }

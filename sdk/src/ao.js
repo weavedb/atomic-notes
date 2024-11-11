@@ -1,3 +1,6 @@
+import * as WarpArBundles from "warp-arbundles"
+const pkg = WarpArBundles.default ? WarpArBundles.default : WarpArBundles
+const { createData, ArweaveSigner } = pkg
 import AR from "./ar.js"
 import {
   createDataItemSigner,
@@ -21,6 +24,18 @@ import {
   getTagVal,
   srcs,
 } from "./utils.js"
+
+function createDataItemSigner2(wallet) {
+  const signer = async ({ data, tags, target, anchor }) => {
+    const signer = new ArweaveSigner(wallet)
+    const dataItem = createData(data, signer, { tags, target, anchor })
+    return dataItem.sign(signer).then(async () => ({
+      id: await dataItem.id,
+      raw: await dataItem.getRaw(),
+    }))
+  }
+  return signer
+}
 
 class AO {
   constructor({
@@ -61,7 +76,9 @@ class AO {
   }
 
   toSigner(wallet) {
-    if (wallet.test) {
+    if (wallet?.n && typeof window !== "undefined") {
+      return createDataItemSigner2(wallet)
+    } else if (wallet.test) {
       return createDataItemSigner(wallet.jwk)
     } else {
       return createDataItemSigner(wallet)
