@@ -168,6 +168,7 @@ const srcs = {
   proxy: "0uboI80S6vMxJD9Yn41Wdwnp9uAHEi4XLGQhBrp3qSQ",
   render: "yXXAop3Yxm8QlZRzP46oRxZjCBp88YTpoSTPlTr4TcQ",
   module: "cNlipBptaF9JeFAf4wUmpi43EojNanIBos3EfNrEOWo",
+  module_sqlite: "ghSkge2sIUD_F00ym5sEimC63BDBuBrq4b5OcwxOjiw",
   scheduler: "_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA",
   registry: "SNy4m-DrqxWl01YqGM4sxI8qCni-58re8uuJLvZPypY",
   profile: "uEtSHyK9yDBABomez6ts3LI_8ULvO-rANSgDN_9OzEc",

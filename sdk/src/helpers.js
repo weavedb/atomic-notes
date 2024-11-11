@@ -91,7 +91,7 @@ export const setup = async ({
   })
   const { pid: proxy_pid } = await ao.deploy({ src: proxy, module })
 
-  opt = { ar: { ...arweave }, jwk: ar.jwk }
+  opt = { ar: { ...arweave }, jwk: ar.jwk, module_sqlite }
   opt.ao = { module: module_sqlite, scheduler, aoconnect, ar: opt.ar }
   opt.profile = {
     module: module_sqlite,
