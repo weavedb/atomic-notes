@@ -169,6 +169,7 @@ const srcs = {
   render: "yXXAop3Yxm8QlZRzP46oRxZjCBp88YTpoSTPlTr4TcQ",
   module: "cNlipBptaF9JeFAf4wUmpi43EojNanIBos3EfNrEOWo",
   module_sqlite: "ghSkge2sIUD_F00ym5sEimC63BDBuBrq4b5OcwxOjiw",
+  module_aos2: "Do_Uc2Sju_ffp6Ev0AnLVdPtot15rvMjP-a9VVaA5fM",
   scheduler: "_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA",
   registry: "SNy4m-DrqxWl01YqGM4sxI8qCni-58re8uuJLvZPypY",
   profile: "uEtSHyK9yDBABomez6ts3LI_8ULvO-rANSgDN_9OzEc",

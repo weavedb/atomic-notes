@@ -39,8 +39,28 @@ describe("Atomic Notes", function () {
   before(async () => {
     ;({ thumbnail, banner, opt, ao, ar, profile, src } = await setup({
       //cacheDir: "../test/.cache",
-      //cache: true,
+      cache: true,
     }))
+  })
+  it.only("should spawn aos2.0", async () => {
+    const aos2_src = await src.upload("aos2")
+    const _ao = new AO(opt.ao)
+    const { pid } = ok(await ao.spwn({ module: opt.modules.aos2 }))
+    ok(await ao.wait({ pid }))
+    const { err, mid } = ok(await ao.load({ src: aos2_src, pid }))
+    const { res } = await ao.msg({
+      pid,
+      act: "Print",
+      get: { data: true },
+    })
+    expect(res.Output.data).to.eql("Hello World!")
+
+    const { out } = await ao.msg({
+      pid,
+      act: "Get",
+      get: { data: true },
+    })
+    console.log(out)
   })
   it("should upload atomic assets", async () => {
     const asset = new Asset(opt.asset)

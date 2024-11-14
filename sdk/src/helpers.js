@@ -41,9 +41,10 @@ export const setup = async ({
   }
   if (opt) {
     const ar = await new AR(opt.ar).init(opt.jwk)
+    const src = new Src({ ar, readFileSync, dir })
     const ao = new AO({ ...opt.ao, ar })
     const profile = new Profile({ ...opt.profile, ao })
-    return { opt, thumbnail, banner, ar, ao, profile }
+    return { opt, thumbnail, banner, ar, ao, profile, src }
   }
   arweave ??= { port: 4000 }
   aoconnect ??= {
@@ -65,7 +66,13 @@ export const setup = async ({
   const proxy = await src.upload("proxy")
   const wasm = await src.upload("aos-sqlite", "wasm")
   const wasm2 = await src.upload("aos", "wasm")
+  const wasm_aos2 = await src.upload("aos2_0_1", "wasm")
   const ao = new AO({ aoconnect, ar })
+
+  const { id: module_aos2 } = await ao.postModule({
+    data: await ar.data(wasm_aos2),
+  })
+
   const { id: module_sqlite } = await ao.postModule({
     data: await ar.data(wasm),
     overwrite: true,
@@ -118,7 +125,13 @@ export const setup = async ({
     registry_src: collection_registry_src,
     profile: opt.profile,
   }
-  if (cache) writeFileSync(optPath, JSON.stringify(opt))
+  opt.modules = {
+    aos2: module_aos2,
+    aos1: module,
+    sqlite: module_sqlite,
+  }
+
+  writeFileSync(optPath, JSON.stringify(opt))
 
   const { pid } = await ao.spwn({
     tags: { Library: "Atomic-Notes", Version: "1.0.0" },

@@ -1,6 +1,6 @@
 {
   "name": "aonote",
-  "version": "0.8.3",
+  "version": "0.8.5",
   "description": "",
   "type": "module",
   "main": "dist/cjs/index.js",
@@ -17,7 +17,7 @@
   "license": "MIT",
   "dependencies": {
     "@babel/plugin-transform-modules-commonjs": "^7.24.8",
-    "@permaweb/aoconnect": "^0.0.59",
+    "@permaweb/aoconnect": "^0.0.61",
     "arbundles": "^0.11.1",
     "arweave": "^1.15.1",
     "ramda": "^0.30.1",

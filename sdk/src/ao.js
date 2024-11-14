@@ -448,7 +448,13 @@ class AO {
       {
         args: { pid, data, act: "Eval" },
         err: ({ res }) => {
-          return typeof res?.Output?.data !== "object"
+          return (
+            typeof res?.Output?.data !== "object" &&
+            !(
+              typeof res?.Output?.prompt === "string" &&
+              /aos\-/.test(res?.Output?.prompt)
+            )
+          )
         },
       },
     ]
