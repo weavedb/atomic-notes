@@ -73,6 +73,12 @@ const query = txid => `query {
   }
 }`
 
+const queries = to => `query {
+  transactions (recipients: ["${to}"]){
+    edges { node { id recipient tags { name value } owner { address } } }
+  }
+}`
+
 const isLocalhost = v => includes(v, ["localhost", "127.0.0.1"])
 
 const udl = ({ payment, access, derivations, commercial, training }) => {
@@ -185,6 +191,7 @@ export {
   getTagVal,
   isData,
   query,
+  queries,
   getTag,
   tagEq,
   searchTag,

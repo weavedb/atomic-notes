@@ -1,7 +1,7 @@
 import { expect } from "chai"
 import { Asset, AR, Notebook, Note, AO, Profile } from "../src/index.js"
 import { wait } from "../src/utils.js"
-
+import { o, map, indexBy, prop } from "ramda"
 import { setup, ok, fail } from "../src/helpers.js"
 
 const v1 = "# this is markdown 1"
@@ -43,24 +43,66 @@ describe("Atomic Notes", function () {
   })
 
   it.only("should spawn aos2.0", async () => {
-    const { pid } = ok(await ao2.deploy({ src_data: await src.data("aos2") }))
-    const { res } = ok(
+    const { pid: pid3 } = ok(
+      await ao2.deploy({
+        src_data: await src.data("aos2"),
+      }),
+    )
+
+    const { pid } = ok(
+      await ao2.deploy({
+        src_data: await src.data("aos2"),
+      }),
+    )
+    const { pid: pid2 } = ok(
+      await ao2.deploy({
+        src_data: await src.data("aos2"),
+      }),
+    )
+
+    const ar2 = new AR(opt.ar)
+    await ar2.gen()
+    const {
+      mid,
+      out: out2,
+      res,
+    } = ok(
       await ao2.msg({
         pid,
         act: "Print",
+        tags: { Addr: pid2, Addr2: pid3 },
         get: { data: true },
+        checkData: "Alice2 printed!",
       }),
     )
+    expect(out2).to.equal("Alice2 printed!")
     expect(res.Output.data).to.eql("Hello World!")
+    const { out } = await ao2.dry({
+      pid: pid2,
+      act: "Get",
+      get: { data: true },
+    })
+    expect(out).to.eql("Bob3")
+    const { out: out3 } = await ao2.dry({
+      pid: pid2,
+      act: "Get2",
+      get: { data: true },
+    })
 
-    const { out } = ok(
-      await ao2.msg({
+    expect(out3).to.eql("Alice3")
+    const {
+      results,
+      out: out4,
+      res: res4,
+    } = ok(
+      await ao2.dry({
         pid,
-        act: "Get",
+        act: "Print",
+        tags: { Addr: pid2, Addr2: pid3 },
         get: { data: true },
       }),
     )
-    expect(out).to.eql("Bob")
+    return
   })
 
   it("should upload atomic assets", async () => {

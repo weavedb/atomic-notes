@@ -1,6 +1,6 @@
 import Arweave from "arweave"
 import { ArweaveSigner, bundleAndSignData, createData } from "arbundles"
-import { tag, query, isLocalhost } from "./utils.js"
+import { tag, query, queries, isLocalhost } from "./utils.js"
 import { is } from "ramda"
 
 class AR {
@@ -237,6 +237,18 @@ class AR {
       },
     ).then(r => r.json())
     return json.data.transactions.edges.map(v => v.node)[0] ?? null
+  }
+
+  async txs(to) {
+    const json = await fetch(
+      `${this.protocol}://${this.host}:${this.port}/graphql`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: queries(to) }),
+      },
+    ).then(r => r.json())
+    return json.data.transactions.edges.map(v => v.node)
   }
 
   async data(txid, string = false) {
