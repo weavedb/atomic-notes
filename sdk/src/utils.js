@@ -155,24 +155,29 @@ const getTagVal = (get, res) => {
 }
 
 const srcs = {
-  notelib_mid: "ls7QnjCPXDeAF6w7mA0cNAwv9hY7r-W1T31X1iEJMJU",
+  module: "cNlipBptaF9JeFAf4wUmpi43EojNanIBos3EfNrEOWo",
+  module_sqlite: "ghSkge2sIUD_F00ym5sEimC63BDBuBrq4b5OcwxOjiw",
+  module_aos2: "Do_Uc2Sju_ffp6Ev0AnLVdPtot15rvMjP-a9VVaA5fM",
+
   notelib_src: "h35YJqJ0ve_2pxO5uV1tKTQ44k9WpTBOzk5lGpYcEWs",
   note_src: "6BrngB9N_ujSka4BmsZ2HuRbbqePQFkNXQ-tATp03ZU",
   notebook_src: "NKISXnq5XseLQd_u-lfO6ThBLuikLoontY47UlONrB4",
   asset_src: "CT5qN5e97Fr0wJ8VVu_TRj6qPNWped52IPsJMJ2pd08",
   collection_src: "cLzVDfhmC0JAADYyFkdLQbtEMtL4VxbeGv98TADbbRk",
-  bookreg: "TFWDmf8a3_nw43GCm_CuYlYoylHAjCcFGbgHfDaGcsg",
   bookreg_src: "4Bm1snpCEHIxYMDdAxiFf6ar81gKQHvElDFeDZbSnJU",
+  registry_src: "kBk-wRbK5aIZVqDJEzWhjYb5gnydHafrFG3wgItBvuI",
+
+  scheduler: "_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA",
+  authority: "fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY",
+
+  notelib_mid: "ls7QnjCPXDeAF6w7mA0cNAwv9hY7r-W1T31X1iEJMJU",
+  bookreg: "TFWDmf8a3_nw43GCm_CuYlYoylHAjCcFGbgHfDaGcsg",
   thumb: "9v2GrtXpVpPWf9KBuTBdClARjjcDA3NqxFn8Kbn1f2M",
   banner: "UuEwLRmuNmqLTDcKqgcxDEV1CWIR_uZ6rxzmKjODlrg",
   proxy: "0uboI80S6vMxJD9Yn41Wdwnp9uAHEi4XLGQhBrp3qSQ",
   render: "yXXAop3Yxm8QlZRzP46oRxZjCBp88YTpoSTPlTr4TcQ",
-  module: "cNlipBptaF9JeFAf4wUmpi43EojNanIBos3EfNrEOWo",
-  module_sqlite: "ghSkge2sIUD_F00ym5sEimC63BDBuBrq4b5OcwxOjiw",
-  scheduler: "_GQ33BkPtZrqxA84vM8Zk-N2aO0toNNu_C-l-rawrBA",
   registry: "SNy4m-DrqxWl01YqGM4sxI8qCni-58re8uuJLvZPypY",
   profile: "uEtSHyK9yDBABomez6ts3LI_8ULvO-rANSgDN_9OzEc",
-  registry_src: "kBk-wRbK5aIZVqDJEzWhjYb5gnydHafrFG3wgItBvuI",
 }
 
 export {

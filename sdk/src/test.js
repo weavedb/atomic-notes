@@ -22,7 +22,6 @@ export class Src {
 export const setup = async ({ aoconnect, arweave } = {}) => {
   console.error = () => {}
   console.warn = () => {}
-
   arweave ??= { port: 4000 }
   aoconnect ??= {
     MU_URL: "http://localhost:4002",

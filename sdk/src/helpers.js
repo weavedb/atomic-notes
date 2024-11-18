@@ -3,6 +3,13 @@ import { expect } from "chai"
 import { createDataItemSigner, connect } from "@permaweb/aoconnect"
 import { resolve } from "path"
 import { mkdirSync, existsSync, writeFileSync, readFileSync } from "fs"
+import yargs from "yargs"
+const {
+  reset = false,
+  cache = false,
+  auth = null,
+} = yargs(process.argv.slice(2)).argv
+
 export class Src {
   constructor({ ar, base = "./lua", readFileSync, dir, resolve }) {
     this.ar = ar
@@ -24,7 +31,6 @@ export class Src {
 export const setup = async ({
   aoconnect,
   arweave,
-  cache = false,
   cacheDir = ".cache",
 } = {}) => {
   let opt = null
@@ -35,15 +41,26 @@ export const setup = async ({
   const banner = readFileSync(resolve(`${dir}/assets/banner.png`))
   const _cacheDir = resolve(import.meta.dirname, cacheDir)
   const optPath = `${_cacheDir}/opt.json`
-  if (cache) {
-    if (!existsSync(_cacheDir)) mkdirSync(_cacheDir)
-    if (existsSync(optPath)) opt = JSON.parse(readFileSync(optPath, "utf8"))
+  if (cache && !reset) {
+    try {
+      if (existsSync(optPath)) {
+        opt = JSON.parse(readFileSync(optPath, "utf8"))
+      } else {
+        console.log("cache doesn't exist:", optPath)
+      }
+    } catch (e) {
+      console.log(e)
+    }
   }
   if (opt) {
     const ar = await new AR(opt.ar).init(opt.jwk)
-    const ao = new AO({ ...opt.ao, ar })
-    const profile = new Profile({ ...opt.profile, ao })
-    return { opt, thumbnail, banner, ar, ao, profile }
+    const src = new Src({ ar, readFileSync, dir })
+    const ao = await new AO(opt.ao).init(opt.jwk)
+    const ao2 = await new AO(opt.ao2).init(opt.jwk)
+    const profile = await new Profile({ ...opt.profile, ao }).init(opt.jwk)
+    console.log("cache:\t", optPath)
+    console.log("addr:\t", ar.addr)
+    return { opt, thumbnail, banner, ar, ao2, ao, profile, src }
   }
   arweave ??= { port: 4000 }
   aoconnect ??= {
@@ -65,7 +82,13 @@ export const setup = async ({
   const proxy = await src.upload("proxy")
   const wasm = await src.upload("aos-sqlite", "wasm")
   const wasm2 = await src.upload("aos", "wasm")
-  const ao = new AO({ aoconnect, ar })
+  const wasm_aos2 = await src.upload("aos2_0_1", "wasm")
+  const ao = new AO({ aoconnect, ar, authority: auth })
+
+  const { id: module_aos2 } = await ao.postModule({
+    data: await ar.data(wasm_aos2),
+  })
+
   const { id: module_sqlite } = await ao.postModule({
     data: await ar.data(wasm),
     overwrite: true,
@@ -92,7 +115,21 @@ export const setup = async ({
   const { pid: proxy_pid } = await ao.deploy({ src: proxy, module })
 
   opt = { ar: { ...arweave }, jwk: ar.jwk, module_sqlite }
-  opt.ao = { module: module_sqlite, scheduler, aoconnect, ar: opt.ar }
+  opt.ao = {
+    module: module_sqlite,
+    scheduler,
+    aoconnect,
+    ar: opt.ar,
+    authority: auth,
+  }
+  opt.ao2 = {
+    module: module_aos2,
+    scheduler,
+    aoconnect,
+    ar: opt.ar,
+    authority: auth,
+  }
+  if (auth) opt.ao.authority = auth
   opt.profile = {
     module: module_sqlite,
     registry_src,
@@ -118,7 +155,23 @@ export const setup = async ({
     registry_src: collection_registry_src,
     profile: opt.profile,
   }
-  if (cache) writeFileSync(optPath, JSON.stringify(opt))
+  opt.modules = {
+    aos2: module_aos2,
+    aos1: module,
+    sqlite: module_sqlite,
+  }
+  const ao2 = await new AO({
+    aoconnect,
+    ar,
+    authority: auth,
+    module: module_aos2,
+    scheduler,
+  }).init(ar.jwk)
+
+  if (cache) {
+    if (!existsSync(_cacheDir)) mkdirSync(_cacheDir)
+    writeFileSync(optPath, JSON.stringify(opt))
+  }
 
   const { pid } = await ao.spwn({
     tags: { Library: "Atomic-Notes", Version: "1.0.0" },
@@ -126,7 +179,8 @@ export const setup = async ({
   await ao.wait({ pid })
   const { mid } = await ao.load({ src: notelib_src, pid })
   opt.note.notelib_mid = mid
-  return { opt, profile, ao, ar, thumbnail, banner, src }
+  opt.authority = auth
+  return { opt, profile, ao, ar, thumbnail, banner, src, ao2 }
 }
 
 export const ok = obj => {
