@@ -352,16 +352,20 @@ class AO {
       })
       const _res = await this.result({ process: pid, message: mid })
       res = _res
-      for (const k in check ?? {}) {
-        if (!searchTag(_res, k, check[k])) {
-          err = "something went wrong"
-          break
+      if (_res.Error) {
+        err = _res.Error
+      } else {
+        for (const k in check ?? {}) {
+          if (!searchTag(_res, k, check[k])) {
+            err = "something went wrong"
+            break
+          }
         }
+        if (checkData) {
+          if (!isData(checkData, _res)) err = "something went wrong"
+        }
+        if (!err && get) out = getTagVal(get, res)
       }
-      if (checkData) {
-        if (!isData(checkData, _res)) err = "something went wrong"
-      }
-      if (!err && get) out = getTagVal(get, res)
     } catch (e) {
       err = e
     }
@@ -383,16 +387,20 @@ class AO {
       })
       res = await this.result({ process: pid, message: mid })
       if (!res) err = "something went wrong"
-      for (const k in check ?? {}) {
-        if (!searchTag(res, k, check[k])) {
-          err = "something went wrong"
-          break
+      if (res.Error) {
+        err = res.Error
+      } else {
+        for (const k in check ?? {}) {
+          if (!searchTag(res, k, check[k])) {
+            err = "something went wrong"
+            break
+          }
         }
+        if (checkData) {
+          if (!isData(checkData, res)) err = "something went wrong"
+        }
+        if (!err && get) out = getTagVal(get, res)
       }
-      if (checkData) {
-        if (!isData(checkData, res)) err = "something went wrong"
-      }
-      if (!err && get) out = getTagVal(get, res)
     } catch (e) {
       err = e
     }

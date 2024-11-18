@@ -43,24 +43,26 @@ describe("Atomic Notes", function () {
   })
 
   it.only("should spawn aos2.0", async () => {
-    const aos2_src = await src.upload("aos2")
-    const { pid } = ok(await ao2.spwn())
-    ok(await ao2.wait({ pid }))
-    const { err, mid } = ok(await ao2.load({ src: aos2_src, pid }))
-    const { res } = await ao2.msg({
-      pid,
-      act: "Print",
-      get: { data: true },
-    })
+    const { pid } = ok(await ao2.deploy({ src_data: await src.data("aos2") }))
+    const { res } = ok(
+      await ao2.msg({
+        pid,
+        act: "Print",
+        get: { data: true },
+      }),
+    )
     expect(res.Output.data).to.eql("Hello World!")
 
-    const { out } = await ao2.msg({
-      pid,
-      act: "Get",
-      get: { data: true },
-    })
+    const { out } = ok(
+      await ao2.msg({
+        pid,
+        act: "Get",
+        get: { data: true },
+      }),
+    )
     expect(out).to.eql("Bob")
   })
+
   it("should upload atomic assets", async () => {
     const asset = new Asset(opt.asset)
     await asset.ar.gen("100")
@@ -78,6 +80,7 @@ describe("Atomic Notes", function () {
       }),
     )
   })
+
   it("should auto-load ArConnect wallet", async () => {
     const _jwk = ar.jwk
     const arconnect = new AR(opt.ar)
