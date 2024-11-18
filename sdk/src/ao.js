@@ -39,6 +39,7 @@ function createDataItemSigner2(wallet) {
 
 class AO {
   constructor({
+    authority = srcs.authority,
     module = srcs.module,
     scheduler = srcs.scheduler,
     aoconnect,
@@ -287,6 +288,7 @@ class AO {
     jwk,
     tags = {},
     data,
+    auth,
   } = {}) {
     let err = null
     ;({ jwk, err } = await this.ar.checkWallet({ jwk }))
@@ -302,6 +304,8 @@ class AO {
           _tags.push(tag(k, tags[k]))
         }
       }
+      if (auth) _tags.Authority = auth
+      if (!_tags.Authority && this.authority) _tags.Authority = this.authority
       pid = await this.spawn({
         module,
         scheduler,

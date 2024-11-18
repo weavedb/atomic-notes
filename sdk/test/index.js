@@ -33,34 +33,33 @@ const genUDL = recipient => {
 
 describe("Atomic Notes", function () {
   this.timeout(0)
-  let ao, opt, profile, ar, thumbnail, banner, src
+  let ao, ao2, opt, profile, ar, thumbnail, banner, src
   let profile_pid, notebook, notebook_pid, note, note_pid, ar2, note2
 
   before(async () => {
-    ;({ thumbnail, banner, opt, ao, ar, profile, src } = await setup({
-      //cacheDir: "../test/.cache",
-      cache: true,
+    ;({ thumbnail, banner, opt, ao, ao2, ar, profile, src } = await setup({
+      cacheDir: "../test/.cache",
     }))
   })
+
   it.only("should spawn aos2.0", async () => {
     const aos2_src = await src.upload("aos2")
-    const _ao = new AO(opt.ao)
-    const { pid } = ok(await ao.spwn({ module: opt.modules.aos2 }))
-    ok(await ao.wait({ pid }))
-    const { err, mid } = ok(await ao.load({ src: aos2_src, pid }))
-    const { res } = await ao.msg({
+    const { pid } = ok(await ao2.spwn())
+    ok(await ao2.wait({ pid }))
+    const { err, mid } = ok(await ao2.load({ src: aos2_src, pid }))
+    const { res } = await ao2.msg({
       pid,
       act: "Print",
       get: { data: true },
     })
     expect(res.Output.data).to.eql("Hello World!")
 
-    const { out } = await ao.msg({
+    const { out } = await ao2.msg({
       pid,
       act: "Get",
       get: { data: true },
     })
-    console.log(out)
+    expect(out).to.eql("Bob")
   })
   it("should upload atomic assets", async () => {
     const asset = new Asset(opt.asset)

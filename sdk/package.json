@@ -7,7 +7,7 @@
   "module": "dist/src/index.js",
   "scripts": {
     "build:cjs": "babel src --out-dir dist/cjs --config-file ./.babelrc-cjs && rm dist/cjs/test.js",
-    "build": "rm -rf dist && npm run build:cjs && cp src -rf dist/esm && cp -rf src dist/test && node make.js && cp .npmignore dist/ && rm -rf dist/esm/lua dist/esm/assets dist/esm/helpers.js dist/cjs/helpers.js",
+    "build": "rm -rf dist && npm run build:cjs && cp src -rf dist/esm && cp -rf src dist/test && node make.js && cp .npmignore dist/",
     "test": "mocha"
   },
   "engines": {
@@ -28,6 +28,7 @@
     "@babel/core": "^7.25.2",
     "@babel/preset-env": "^7.25.3",
     "chai": "^5.1.1",
-    "mocha": "^10.7.3"
+    "mocha": "^10.7.3",
+    "yargs": "^17.7.2"
   }
 }
