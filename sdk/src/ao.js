@@ -19,6 +19,7 @@ import {
   wait,
   isLocalhost,
   tag,
+  ltags,
   action,
   isData,
   getTagVal,
@@ -69,6 +70,7 @@ class AO {
     }
     this.module = module
     this.scheduler = scheduler
+    this.authority = authority
   }
 
   async init(jwk) {
@@ -297,6 +299,8 @@ class AO {
     let pid = null
     try {
       let _tags = []
+      if (auth) tags.Authority = auth
+      if (!tags.Authority && this.authority) tags.Authority = this.authority
       for (const k in tags) {
         if (is(Array)(tags[k])) {
           for (const v of tags[k]) _tags.push(tag(k, v))
@@ -304,8 +308,6 @@ class AO {
           _tags.push(tag(k, tags[k]))
         }
       }
-      if (auth) _tags.Authority = auth
-      if (!_tags.Authority && this.authority) _tags.Authority = this.authority
       pid = await this.spawn({
         module,
         scheduler,
@@ -328,6 +330,7 @@ class AO {
     check,
     checkData,
     get,
+    timeout = 10000,
   }) {
     let err = null
     ;({ jwk, err } = await this.ar.checkWallet({ jwk }))
@@ -343,6 +346,8 @@ class AO {
         _tags.push(tag(k, tags[k]))
       }
     }
+    let results = []
+    let start = Date.now()
     try {
       mid = await this.message({
         process: pid,
@@ -350,26 +355,76 @@ class AO {
         tags: _tags,
         data,
       })
-      const _res = await this.result({ process: pid, message: mid })
-      res = _res
-      if (_res.Error) {
-        err = _res.Error
-      } else {
-        for (const k in check ?? {}) {
-          if (!searchTag(_res, k, check[k])) {
-            err = "something went wrong"
-            break
+      const getRef = async ref => {
+        await wait(1000)
+        let ex = false
+        const txs = await this.ar.txs(pid)
+        for (const v2 of txs) {
+          const _ltags2 = ltags(v2.tags)
+          if (_ltags2.type === "Message" && _ltags2["x-reference"] === ref) {
+            ex = true
           }
         }
-        if (checkData) {
-          if (!isData(checkData, _res)) err = "something went wrong"
-        }
-        if (!err && get) out = getTagVal(get, res)
+        return ex ? txs : Date.now() - start < timeout ? await getRef(ref) : []
       }
+      let isOK = false
+      const getResult = async mid => {
+        const res = await this.result({ process: pid, message: mid })
+        results.push({ mid, res })
+        let err = null
+        let out = null
+        let ok = true
+        if (res.Error) {
+          err = res.Error
+        } else {
+          for (const k in check ?? {}) {
+            if (!searchTag(res, k, check[k])) ok = false
+          }
+          if (checkData) {
+            if (!isData(checkData, res)) ok = false
+          }
+          if (ok) isOK = true
+          if (isOK && !err && get) out = getTagVal(get, res)
+        }
+        if (!out && !err) {
+          for (const v of res.Messages) {
+            const _ltags = ltags(v.Tags)
+            if (_ltags.type === "Message" && _ltags.reference) {
+              const txs = await getRef(_ltags.reference)
+              for (const v2 of txs) {
+                const _ltags2 = ltags(v2.tags)
+                if (
+                  _ltags2.type === "Message" &&
+                  _ltags2["x-reference"] === _ltags.reference
+                ) {
+                  const {
+                    res: _res,
+                    out: _out,
+                    err: _err,
+                    ok: _ok,
+                  } = await getResult(v2.id)
+                  if (_err) {
+                    err = _err
+                    break
+                  }
+                  if (_out) {
+                    out = _out
+                    break
+                  }
+                }
+              }
+              if (out) break
+            }
+          }
+        }
+        return { res, out, err }
+      }
+      ;({ res, out, err } = await getResult(mid))
+      if (!isOK && !err) err = "something went wrong!"
     } catch (e) {
       err = e
     }
-    return { mid, res, err, out }
+    return { mid, res, err, out, results }
   }
 
   async asgn({ pid, mid, jwk, check, checkData, get }) {
