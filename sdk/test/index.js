@@ -44,20 +44,12 @@ describe("Atomic Notes", function () {
 
   it.only("should spawn aos2.0", async () => {
     const { pid: pid3 } = ok(
-      await ao2.deploy({
-        src_data: await src.data("aos2"),
-      }),
+      await ao2.deploy({ src_data: await src.data("aos2") }),
     )
 
-    const { pid } = ok(
-      await ao2.deploy({
-        src_data: await src.data("aos2"),
-      }),
-    )
+    const { pid } = ok(await ao2.deploy({ src_data: await src.data("aos2") }))
     const { pid: pid2 } = ok(
-      await ao2.deploy({
-        src_data: await src.data("aos2"),
-      }),
+      await ao2.deploy({ src_data: await src.data("aos2") }),
     )
 
     const ar2 = new AR(opt.ar)
@@ -72,22 +64,28 @@ describe("Atomic Notes", function () {
         act: "Print",
         tags: { Addr: pid2, Addr2: pid3 },
         get: { obj: { to: "To", print: { data: true } } },
-        checkData: "Alice2 printed!",
+        check: [
+          /printed/,
+          /Bob/,
+          /Alice/,
+          { To2: pid3, To: true, Origin: true },
+        ],
       }),
     )
     expect(out2).to.eql({ print: "Bob2 printed!", to: pid2 })
     expect(res.Output.data).to.eql("Hello World!")
-    return
     const { out } = await ao2.dry({
       pid: pid2,
       act: "Get",
       get: { data: true },
+      check: true,
     })
     expect(out).to.eql("Bob3")
     const { out: out3 } = await ao2.dry({
       pid: pid2,
       act: "Get2",
       get: { data: true },
+      check: true,
     })
     expect(out3).to.eql("Alice3")
   })

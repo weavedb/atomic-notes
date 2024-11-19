@@ -12,10 +12,11 @@ import {
   dryrun,
 } from "@permaweb/aoconnect"
 
-import { concat, is, mergeLeft, o, uniqBy, prop, isNil } from "ramda"
+import { concat, is, mergeLeft, o, uniqBy, prop, isNil, includes } from "ramda"
 
 import {
   searchTag,
+  checkTag,
   wait,
   isLocalhost,
   tag,
@@ -25,6 +26,11 @@ import {
   getTagVal,
   srcs,
   buildTags,
+  isRegExp,
+  mergeChecks,
+  isCheckComplete,
+  mergeOut,
+  isOutComplete,
 } from "./utils.js"
 
 function createDataItemSigner2(wallet) {
@@ -328,8 +334,7 @@ class AO {
     data,
     act = "Eval",
     tags = {},
-    check,
-    checkData,
+    check = [],
     get,
     timeout = 10000,
   }) {
@@ -371,29 +376,8 @@ class AO {
 
       let isOK = false
       let cache = []
-      const mergeOut = (out, out2, get) => {
-        if (get.obj) {
-          for (const k in out2 ?? {}) {
-            if (isNil(out?.[k])) {
-              if (!out) out = {}
-              out[k] = out2[k]
-            }
-          }
-          return out
-        } else {
-          return out2
-        }
-      }
+      let checks = []
 
-      const isOutComplete = (out, get) => {
-        if (isNil(out)) return false
-        if (get.obj) {
-          for (const k in out ?? {}) {
-            if (isNil(out[k])) return false
-          }
-        }
-        return true
-      }
       const getResult = async mid => {
         const res = await this.result({ process: pid, message: mid })
         results.push({ mid, res })
@@ -401,14 +385,23 @@ class AO {
         if (res.Error) {
           err = res.Error
         } else {
-          let ok = true
-          for (const k in check ?? {}) {
-            if (!searchTag(res, k, check[k])) ok = false
+          if (!is(Array, check)) check = [check]
+          let i = 0
+          for (const v of check) {
+            let _checks = checks[i] ?? null
+            if (isRegExp(v) || includes(typeof v)(["string", "boolean"])) {
+              _checks = mergeChecks(_checks, isData(v, res), v)
+            } else {
+              const checks2 = {}
+              for (const k in v ?? {}) {
+                checks2[k] = checkTag(res, k, v[k])
+              }
+              _checks = mergeChecks(_checks, checks2, v)
+            }
+            checks[i] = _checks
+            i++
           }
-          if (checkData) {
-            if (!isData(checkData, res)) ok = false
-          }
-          if (ok) isOK = true
+          if (isCheckComplete(checks, check)) isOK = true
           if (get && !isOutComplete(out, get)) {
             out = mergeOut(out, getTagVal(get, res), get)
           }
@@ -443,7 +436,6 @@ class AO {
                     err = _err
                     break
                   }
-                  // need inteligent merge!!
                   if (!isOutComplete(out, get) && _out)
                     out = mergeOut(out, _out, get)
                   if (isOutComplete(out, get) && isOK) break
@@ -463,7 +455,7 @@ class AO {
     return { mid, res, err, out, results }
   }
 
-  async asgn({ pid, mid, jwk, check, checkData, get }) {
+  async asgn({ pid, mid, jwk, check, get }) {
     let err = null
     ;({ jwk, err } = await this.ar.checkWallet({ jwk }))
     if (err) return { err }
@@ -481,15 +473,24 @@ class AO {
       if (res.Error) {
         err = res.Error
       } else {
-        for (const k in check ?? {}) {
-          if (!searchTag(res, k, check[k])) {
-            err = "something went wrong"
-            break
+        let checks = []
+        if (!is(Array, check)) check = [check]
+        let i = 0
+        for (const v of check) {
+          let _checks = checks[i] ?? null
+          if (isRegExp(v) || includes(typeof v)(["string", "boolean"])) {
+            _checks = mergeChecks(_checks, isData(v, res), v)
+          } else {
+            const checks2 = {}
+            for (const k in v ?? {}) {
+              checks2[k] = checkTag(res, k, v[k])
+            }
+            _checks = mergeChecks(_checks, checks2, v)
           }
+          checks[i] = _checks
+          i++
         }
-        if (checkData) {
-          if (!isData(checkData, res)) err = "something went wrong"
-        }
+        if (!isCheckComplete(checks, check)) err = "something went wrong"
         if (!err && get) out = getTagVal(get, res)
       }
     } catch (e) {
@@ -505,7 +506,6 @@ class AO {
     act = "Eval",
     tags = {},
     check,
-    checkData,
     get,
     timeout = 10000,
   }) {
@@ -523,15 +523,25 @@ class AO {
         data,
       })
       res = _res
-      for (const k in check ?? {}) {
-        if (!searchTag(_res, k, check[k])) {
-          err = "something went wrong"
-          break
+
+      let checks = []
+      if (!is(Array, check)) check = [check]
+      let i = 0
+      for (const v of check) {
+        let _checks = checks[i] ?? null
+        if (isRegExp(v) || includes(typeof v)(["string", "boolean"])) {
+          _checks = mergeChecks(_checks, isData(v, res), v)
+        } else {
+          const checks2 = {}
+          for (const k in v ?? {}) {
+            checks2[k] = checkTag(res, k, v[k])
+          }
+          _checks = mergeChecks(_checks, checks2, v)
         }
+        checks[i] = _checks
+        i++
       }
-      if (checkData) {
-        if (!isData(checkData, _res)) err = "something went wrong"
-      }
+      if (!isCheckComplete(checks, check)) err = "something went wrong"
       if (!err && get) out = getTagVal(get, res)
     } catch (e) {
       err = e
