@@ -124,14 +124,10 @@ const udl = ({ payment, access, derivations, commercial, training }) => {
 }
 
 const isData = (data, res) => {
-  let exists = false
   for (const v of res.Messages ?? []) {
-    if (data === true || v.Data === data) {
-      exists = true
-      break
-    }
+    if (data === true || v.Data === data) return true
   }
-  return exists
+  return false
 }
 
 const getTagVal = (get, res) => {
