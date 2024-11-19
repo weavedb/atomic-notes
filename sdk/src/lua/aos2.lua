@@ -8,11 +8,11 @@ Handlers.add(
     local name = Send({Target = msg.Addr, Action = "Get", Tags = { Origin = msg.From, To = msg.Addr, ID = "1" } }).receive().Data
     local name2 = Send({Target = msg.Addr2, Action = "Get2", Tags = { Origin = msg.From, To = msg.Addr } }).receive().Data
     local name3 = Send({Target = msg.Addr, Action = "Get", Tags = { Origin = msg.From, To = msg.Addr, ID = "3" } }).receive().Data
+    msg.reply({ Data = name3 .. " printed!"})
     local name4 = Send({Target = msg.Addr2, Action = "Get2", Tags = { Origin = msg.From, To = msg.Addr } }).receive().Data
     msg.reply({ Data = name4 .. " printed!"})
   end
 )
-
 
 Handlers.add(
   "Get",

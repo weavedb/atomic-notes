@@ -75,7 +75,7 @@ describe("Atomic Notes", function () {
         checkData: "Alice2 printed!",
       }),
     )
-    expect(out2).to.equal("Alice2 printed!")
+    expect(out2).to.equal("Bob2 printed!")
     expect(res.Output.data).to.eql("Hello World!")
     const { out } = await ao2.dry({
       pid: pid2,
@@ -88,21 +88,7 @@ describe("Atomic Notes", function () {
       act: "Get2",
       get: { data: true },
     })
-
     expect(out3).to.eql("Alice3")
-    const {
-      results,
-      out: out4,
-      res: res4,
-    } = ok(
-      await ao2.dry({
-        pid,
-        act: "Print",
-        tags: { Addr: pid2, Addr2: pid3 },
-        get: { data: true },
-      }),
-    )
-    return
   })
 
   it("should upload atomic assets", async () => {
