@@ -48,11 +48,24 @@ function createDataItemSigner2(wallet) {
 class AO {
   constructor({
     authority = srcs.authority,
-    module = srcs.module,
+    module,
+    module_type = "aos2",
     scheduler = srcs.scheduler,
     aoconnect,
     ar = {},
   } = {}) {
+    if (!module) {
+      switch (module_type) {
+        case "sqlite":
+          module = srcs.module_sqlite
+          break
+        case "aos2":
+          module = srcs.module_aos2
+          break
+        default:
+          module = srcs.module
+      }
+    }
     this.__type__ = "ao"
     if (ar?.__type__ === "ar") {
       this.ar = ar
