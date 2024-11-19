@@ -12,7 +12,7 @@ import {
   dryrun,
 } from "@permaweb/aoconnect"
 
-import { concat, is, mergeLeft, o, uniqBy, prop } from "ramda"
+import { concat, is, mergeLeft, o, uniqBy, prop, isNil } from "ramda"
 
 import {
   searchTag,
@@ -350,6 +350,7 @@ class AO {
         tags: _tags,
         data,
       })
+
       const exRef = (ref, txs) => {
         for (const v2 of txs ?? []) {
           const t = ltags(v2.tags)
@@ -357,6 +358,7 @@ class AO {
         }
         return false
       }
+
       const getRef = async (ref, txs = []) => {
         let ex = exRef(ref, txs)
         if (!ex) {
@@ -369,15 +371,37 @@ class AO {
 
       let isOK = false
       let cache = []
+      const mergeOut = (out, out2, get) => {
+        if (get.obj) {
+          for (const k in out2 ?? {}) {
+            if (isNil(out?.[k])) {
+              if (!out) out = {}
+              out[k] = out2[k]
+            }
+          }
+          return out
+        } else {
+          return out2
+        }
+      }
+
+      const isOutComplete = (out, get) => {
+        if (isNil(out)) return false
+        if (get.obj) {
+          for (const k in out ?? {}) {
+            if (isNil(out[k])) return false
+          }
+        }
+        return true
+      }
       const getResult = async mid => {
         const res = await this.result({ process: pid, message: mid })
         results.push({ mid, res })
         let err = null
-        let out = null
-        let ok = true
         if (res.Error) {
           err = res.Error
         } else {
+          let ok = true
           for (const k in check ?? {}) {
             if (!searchTag(res, k, check[k])) ok = false
           }
@@ -385,9 +409,11 @@ class AO {
             if (!isData(checkData, res)) ok = false
           }
           if (ok) isOK = true
-          if (get) out = getTagVal(get, res)
+          if (get && !isOutComplete(out, get)) {
+            out = mergeOut(out, getTagVal(get, res), get)
+          }
         }
-        if ((!out || !isOK) && !err) {
+        if ((!isOutComplete(out, get) || !isOK) && !err) {
           let refs = []
           for (const v of res.Messages) {
             const _ltags = ltags(v.Tags)
@@ -395,6 +421,7 @@ class AO {
               refs.push(_ltags.reference)
             }
           }
+
           for (const v of res.Messages) {
             const _ltags = ltags(v.Tags)
             if (_ltags.type === "Message" && _ltags.reference) {
@@ -416,18 +443,19 @@ class AO {
                     err = _err
                     break
                   }
-                  if (!out && _out) out = _out
-
-                  if (out && isOK) break
+                  // need inteligent merge!!
+                  if (!isOutComplete(out, get) && _out)
+                    out = mergeOut(out, _out, get)
+                  if (isOutComplete(out, get) && isOK) break
                 }
               }
-              if (out && isOK) break
+              if (isOutComplete(out, get) && isOK) break
             }
           }
         }
-        return { res, out, err }
+        return { res, err }
       }
-      ;({ res, out, err } = await getResult(mid))
+      ;({ res, err } = await getResult(mid))
       if (!isOK && !err) err = "something went wrong!"
     } catch (e) {
       err = e

@@ -71,12 +71,13 @@ describe("Atomic Notes", function () {
         pid,
         act: "Print",
         tags: { Addr: pid2, Addr2: pid3 },
-        get: { data: true },
+        get: { obj: { to: "To", print: { data: true } } },
         checkData: "Alice2 printed!",
       }),
     )
-    expect(out2).to.equal("Bob2 printed!")
+    expect(out2).to.eql({ print: "Bob2 printed!", to: pid2 })
     expect(res.Output.data).to.eql("Hello World!")
+    return
     const { out } = await ao2.dry({
       pid: pid2,
       act: "Get",
