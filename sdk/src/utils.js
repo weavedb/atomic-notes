@@ -1,4 +1,4 @@
-import { includes, fromPairs, map } from "ramda"
+import { is, includes, fromPairs, map } from "ramda"
 
 const allows = [
   { key: "allowed", val: "Allowed" },
@@ -186,7 +186,20 @@ const srcs = {
   profile: "uEtSHyK9yDBABomez6ts3LI_8ULvO-rANSgDN_9OzEc",
 }
 
+const buildTags = (act, tags) => {
+  let _tags = [action(act)]
+  for (const k in tags) {
+    if (is(Array)(tags[k])) {
+      for (const v of tags[k]) _tags.push(tag(k, v))
+    } else {
+      _tags.push(tag(k, tags[k]))
+    }
+  }
+  return _tags
+}
+
 export {
+  buildTags,
   srcs,
   getTagVal,
   isData,

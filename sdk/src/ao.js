@@ -24,6 +24,7 @@ import {
   isData,
   getTagVal,
   srcs,
+  buildTags,
 } from "./utils.js"
 
 function createDataItemSigner2(wallet) {
@@ -335,17 +336,11 @@ class AO {
     let err = null
     ;({ jwk, err } = await this.ar.checkWallet({ jwk }))
     if (err) return { err }
+
     let mid = null
     let res = null
     let out = null
-    let _tags = [action(act)]
-    for (const k in tags) {
-      if (is(Array)(tags[k])) {
-        for (const v of tags[k]) _tags.push(tag(k, v))
-      } else {
-        _tags.push(tag(k, tags[k]))
-      }
-    }
+    let _tags = buildTags(act, tags)
     let results = []
     let start = Date.now()
     try {
@@ -384,9 +379,16 @@ class AO {
             if (!isData(checkData, res)) ok = false
           }
           if (ok) isOK = true
-          if (isOK && !err && get) out = getTagVal(get, res)
+          if (get) out = getTagVal(get, res)
         }
-        if (!out && !err) {
+        if ((!out || !isOK) && !err) {
+          let refs = []
+          for (const v of res.Messages) {
+            const _ltags = ltags(v.Tags)
+            if (_ltags.type === "Message" && _ltags.reference) {
+              refs.push(_ltags.reference)
+            }
+          }
           for (const v of res.Messages) {
             const _ltags = ltags(v.Tags)
             if (_ltags.type === "Message" && _ltags.reference) {
@@ -407,13 +409,12 @@ class AO {
                     err = _err
                     break
                   }
-                  if (_out) {
-                    out = _out
-                    break
-                  }
+                  if (!out && _out) out = _out
+
+                  if (out && isOK) break
                 }
               }
-              if (out) break
+              if (out && isOK) break
             }
           }
         }
@@ -471,21 +472,14 @@ class AO {
     check,
     checkData,
     get,
+    timeout = 10000,
   }) {
     let err = null
     ;({ jwk, err } = await this.ar.checkWallet({ jwk }))
     if (err) return { err }
-
-    let res
-    let _tags = [action(act)]
+    let res = null
     let out = null
-    for (const k in tags) {
-      if (is(Array)(tags[k])) {
-        for (const v of tags[k]) _tags.push(tag(k, v))
-      } else {
-        _tags.push(tag(k, tags[k]))
-      }
-    }
+    let _tags = buildTags(act, tags)
     try {
       const _res = await this.dryrun({
         process: pid,
