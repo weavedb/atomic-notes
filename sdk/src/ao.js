@@ -12,7 +12,7 @@ import {
   dryrun,
 } from "@permaweb/aoconnect"
 
-import { is, mergeLeft } from "ramda"
+import { concat, is, mergeLeft, o, uniqBy, prop } from "ramda"
 
 import {
   searchTag,
@@ -350,19 +350,25 @@ class AO {
         tags: _tags,
         data,
       })
-      const getRef = async ref => {
-        await wait(1000)
-        let ex = false
-        const txs = await this.ar.txs(pid)
-        for (const v2 of txs) {
-          const _ltags2 = ltags(v2.tags)
-          if (_ltags2.type === "Message" && _ltags2["x-reference"] === ref) {
-            ex = true
-          }
+      const exRef = (ref, txs) => {
+        for (const v2 of txs ?? []) {
+          const t = ltags(v2.tags)
+          if (t.type === "Message" && t["x-reference"] === ref) return true
+        }
+        return false
+      }
+      const getRef = async (ref, txs = []) => {
+        let ex = exRef(ref, txs)
+        if (!ex) {
+          await wait(1000)
+          txs = await this.ar.txs(pid)
+          ex = exRef(ref, txs)
         }
         return ex ? txs : Date.now() - start < timeout ? await getRef(ref) : []
       }
+
       let isOK = false
+      let cache = []
       const getResult = async mid => {
         const res = await this.result({ process: pid, message: mid })
         results.push({ mid, res })
@@ -392,7 +398,8 @@ class AO {
           for (const v of res.Messages) {
             const _ltags = ltags(v.Tags)
             if (_ltags.type === "Message" && _ltags.reference) {
-              const txs = await getRef(_ltags.reference)
+              const txs = await getRef(_ltags.reference, cache)
+              cache = o(uniqBy(prop("id")), concat(cache))(txs)
               for (const v2 of txs) {
                 const _ltags2 = ltags(v2.tags)
                 if (
