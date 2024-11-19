@@ -1,4 +1,4 @@
-import { is, includes, fromPairs, map } from "ramda"
+import { is, includes, fromPairs, map, isNil } from "ramda"
 
 const allows = [
   { key: "allowed", val: "Allowed" },
@@ -47,6 +47,8 @@ const ltags = tags => fromPairs(map(v => [v.name.toLowerCase(), v.value])(tags))
 
 const validAddress = addr => /^[a-zA-Z0-9_-]{43}$/.test(addr)
 
+const isRegExp = obj => obj instanceof RegExp
+
 const getTag = (_tags, name) => {
   return tags(_tags)[name] ?? null
 }
@@ -55,6 +57,12 @@ const tagEq = (tags, name, val = null) => {
   const tag = getTag(tags, name)
   if (val === true) {
     return tag !== null
+  } else if (isRegExp(val)) {
+    let ok = false
+    try {
+      ok = val.test(tag)
+    } catch (e) {}
+    return ok
   } else {
     return tag === val
   }
@@ -65,6 +73,28 @@ const searchTag = (res, name, val) => {
     if (tagEq(v.Tags || {}, name, val)) return v
   }
   return null
+}
+
+const checkTag = (res, name, val) => {
+  for (let v of res.Messages || []) {
+    if (tagEq(v.Tags || {}, name, val)) return true
+  }
+  return false
+}
+
+const isData = (data, res) => {
+  for (const v of res.Messages ?? []) {
+    if (isRegExp(data)) {
+      let ok = false
+      try {
+        ok = data.test(v.Data)
+      } catch (e) {}
+      return ok
+    } else {
+      if (data === true || v.Data === data) return true
+    }
+  }
+  return false
 }
 
 const query = txid => `query {
@@ -121,13 +151,6 @@ const udl = ({ payment, access, derivations, commercial, training }) => {
   }
   tags["Data-Model-Training"] = _training
   return tags
-}
-
-const isData = (data, res) => {
-  for (const v of res.Messages ?? []) {
-    if (data === true || v.Data === data) return true
-  }
-  return false
 }
 
 const getTagVal = (get, res) => {
@@ -194,7 +217,66 @@ const buildTags = (act, tags) => {
   return _tags
 }
 
+const mergeOut = (out, out2, get) => {
+  if (get.obj) {
+    for (const k in out2 ?? {}) {
+      if (isNil(out?.[k])) {
+        if (!out) out = {}
+        out[k] = out2[k]
+      }
+    }
+    return out
+  } else {
+    return out2
+  }
+}
+
+const mergeChecks = (check1, check2, check) => {
+  if (!isRegExp(check) && !includes(typeof check)(["string", "boolean"])) {
+    for (const k in check2 ?? {}) {
+      if (!check1) check1 = {}
+      check1[k] = check1[k] || check2[k]
+    }
+    return check1
+  } else {
+    return check1 || check2
+  }
+}
+
+const isOutComplete = (out, get) => {
+  if (isNil(out)) return false
+  if (get.obj) {
+    for (const k in out ?? {}) {
+      if (isNil(out[k])) return false
+    }
+  }
+  return true
+}
+
+const isCheckComplete = (checks, check) => {
+  let i = 0
+  for (const v of checks) {
+    if (
+      isRegExp(check[i]) ||
+      includes(typeof check[i])(["string", "boolean"])
+    ) {
+      if (!v) return false
+    } else {
+      for (const k in v) {
+        if (!v[k]) return false
+      }
+    }
+    i++
+  }
+  return true
+}
+
 export {
+  mergeChecks,
+  isCheckComplete,
+  mergeOut,
+  isOutComplete,
+  isRegExp,
   buildTags,
   srcs,
   getTagVal,
@@ -204,6 +286,7 @@ export {
   getTag,
   tagEq,
   searchTag,
+  checkTag,
   validAddress,
   ltags,
   tags,
