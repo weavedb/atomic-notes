@@ -41,8 +41,41 @@ describe("Atomic Notes", function () {
       cacheDir: "../test/.cache",
     }))
   })
+  it.skip("should deploy aos2.0 with On-Boot", async () => {
+    const ao2 = new AO() // mainnet
+    const { pid } = ok(
+      await ao2.deploy({
+        src_data: await src.data("aos2"),
+        boot: true,
+      }),
+    )
+    ok(await ao2.wait({ pid }))
+    const { out } = await ao2.dry({
+      pid,
+      act: "Get",
+      get: { data: true },
+      check: true,
+    })
+    expect(out).to.eql("Bob1")
+  })
 
-  it.only("should spawn aos2.0", async () => {
+  it.skip("should spawn aos2.0 with On-Boot", async () => {
+    const ao2 = new AO() // mainnet
+    const { pid } = ok(
+      await ao2.spwn({
+        boot: "Y0FZa1vyn-Azx0o48odlw8UJxVT5XmggZqJa8Jw9RW8",
+      }),
+    )
+    ok(await ao2.wait({ pid }))
+    const { out } = await ao2.dry({
+      pid,
+      act: "Get",
+      get: { data: true },
+      check: true,
+    })
+    expect(out).to.eql("Bob")
+  })
+  it("should spawn aos2.0", async () => {
     const { pid: pid3 } = ok(
       await ao2.deploy({ src_data: await src.data("aos2") }),
     )
