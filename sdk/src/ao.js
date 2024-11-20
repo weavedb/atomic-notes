@@ -7,6 +7,7 @@ import {
   connect,
   assign,
   result,
+  results,
   message,
   spawn,
   dryrun,
@@ -75,15 +76,18 @@ class AO {
     }
 
     if (aoconnect) {
-      const { assign, result, message, spawn, dryrun } = connect(aoconnect)
+      const { results, assign, result, message, spawn, dryrun } =
+        connect(aoconnect)
       this.assign = assign
       this.result = result
+      this.results = results
       this.message = message
       this.spawn = spawn
       this.dryrun = dryrun
     } else {
       this.assign = assign
       this.result = result
+      this.results = results
       this.message = message
       this.spawn = spawn
       this.dryrun = dryrun
@@ -272,7 +276,7 @@ class AO {
       "Module-Format": "wasm64-unknown-emscripten-draft_2024_02_15",
       "Input-Encoding": "JSON-V1",
       "Output-Encoding": "JSON-V1",
-      "Memory-Limit": "500-mb",
+      "Memory-Limit": "1-gb",
       "Compute-Limit": "9000000000000",
     })
 
@@ -305,6 +309,7 @@ class AO {
   }
 
   async spwn({
+    boot,
     module = this.module,
     scheduler = this.scheduler,
     jwk,
@@ -319,6 +324,7 @@ class AO {
     let pid = null
     try {
       let _tags = []
+      if (boot) tags["On-Boot"] = boot
       if (auth) tags.Authority = auth
       if (!tags.Authority && this.authority) tags.Authority = this.authority
       for (const k in tags) {
@@ -626,6 +632,7 @@ class AO {
   }
 
   async deploy({
+    boot,
     loads,
     src,
     src_data,
@@ -636,16 +643,38 @@ class AO {
     tags = {},
     data,
   }) {
-    let fns = [
-      {
-        fn: this.spwn,
-        args: { module, scheduler, tags, data },
-        then: { "args.pid": "pid" },
-      },
-      { fn: this.wait, then: { "args.pid": "pid" } },
-    ]
+    let isBoot = false
+    let fns = []
+    if (boot === true && !data) {
+      isBoot = true
+      fns = [
+        {
+          fn: this.transform,
+          args: { src, fills, data: src_data },
+          then: { "args.data": "inp" },
+        },
+        {
+          fn: this.spwn,
+          args: { boot: "Data", module, scheduler, tags },
+          then: { "args.pid": "pid" },
+        },
+      ]
+    } else {
+      fns = [
+        {
+          fn: this.spwn,
+          args: { boot, module, scheduler, tags, data },
+          then: { "args.pid": "pid" },
+        },
+      ]
+    }
+    fns.push({ fn: this.wait, then: { "args.pid": "pid" } })
+    let i = 0
     for (const v of !loads ? [{ data: src_data, src, fills }] : loads) {
-      fns.push({ fn: this.load, args: v, then: { "args.pid": "pid" } })
+      if (!isBoot || i !== 0) {
+        fns.push({ fn: this.load, args: v, then: { "args.pid": "pid" } })
+      }
+      i++
     }
     return await this.pipe({ jwk, fns })
   }
