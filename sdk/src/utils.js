@@ -160,10 +160,10 @@ const getTagVal = (get, res) => {
     for (const k in get.obj ?? {}) out[k] = getTagVal(get.obj[k], res)
   } else {
     for (const v of res.Messages ?? []) {
-      if (typeof get === "object" && get.data) {
+      if ((typeof get === "object" && get.data) || typeof get === "boolean") {
         if (v.Data) out = v.Data
         try {
-          if (get.json) out = JSON.parse(out)
+          if (get.json || get === true) out = JSON.parse(out)
         } catch (e) {}
       } else if (typeof get === "object" && typeof get.name === "string") {
         out = getTag(v.Tags ?? [], get.name)

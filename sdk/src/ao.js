@@ -421,7 +421,7 @@ class AO {
             i++
           }
           if (isCheckComplete(checks, check)) isOK = true
-          if (get && !isOutComplete(out, get)) {
+          if (!isNil(get) && !isOutComplete(out, get)) {
             out = mergeOut(out, getTagVal(get, res), get)
           }
         }
@@ -510,7 +510,7 @@ class AO {
           i++
         }
         if (!isCheckComplete(checks, check)) err = "something went wrong"
-        if (!err && get) out = getTagVal(get, res)
+        if (!err && !isNil(get)) out = getTagVal(get, res)
       }
     } catch (e) {
       err = e
@@ -561,7 +561,7 @@ class AO {
         i++
       }
       if (!isCheckComplete(checks, check)) err = "something went wrong"
-      if (!err && get) out = getTagVal(get, res)
+      if (!err && !isNil(get)) out = getTagVal(get, res)
     } catch (e) {
       err = e
     }
