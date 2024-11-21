@@ -85,42 +85,30 @@ describe("Atomic Notes", function () {
     const { pid: pid2 } = ok(
       await ao2.deploy({ src_data: await src.data("aos2") }),
     )
-
     const ar2 = new AR(opt.ar)
     await ar2.gen()
-    const {
-      mid,
-      out: out2,
-      res,
-    } = ok(
-      await ao2.msg({
-        pid,
-        act: "Print",
-        tags: { Addr: pid2, Addr2: pid3 },
-        get: { obj: { to: "To", print: false } },
-        check: [
-          /printed/,
-          /Bob/,
-          /Alice/,
-          { To2: pid3, To: true, Origin: true },
-        ],
-      }),
+    const a = ao2.p(pid)
+    const a2 = ao2.p(pid2)
+    const { out: out2, res } = ok(
+      await a.msg(
+        "Print",
+        { Addr: pid2, Addr2: pid3 },
+        {
+          get: { obj: { to: "To", print: false } },
+          check: [
+            /printed/,
+            /Bob/,
+            /Alice/,
+            { To2: pid3, To: true, Origin: true },
+          ],
+        },
+      ),
     )
     expect(out2).to.eql({ print: "Bob2 printed!", to: pid2 })
     expect(res.Output.data).to.eql("Hello World!")
-    const { out } = await ao2.dry({
-      pid: pid2,
-      act: "Get",
-      get: false,
-      check: true,
-    })
+    const out = await a2.d("Get", null, { get: false, check: true })
     expect(out).to.eql("Bob3")
-    const { out: out3 } = await ao2.dry({
-      pid: pid2,
-      act: "Get2",
-      get: false,
-      check: true,
-    })
+    const out3 = await a2.d("Get2", null, { get: false, check: true })
     expect(out3).to.eql("Alice3")
   })
 
