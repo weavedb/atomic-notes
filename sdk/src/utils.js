@@ -290,7 +290,29 @@ const isCheckComplete = (checks, check) => {
   return true
 }
 
+function isJSON(obj) {
+  if (obj === null || obj === undefined) return false
+  if (
+    typeof obj !== "object" ||
+    obj instanceof Buffer ||
+    obj instanceof ArrayBuffer ||
+    Array.isArray(obj)
+  ) {
+    return false
+  }
+
+  try {
+    const str = JSON.stringify(obj)
+    const parsed = JSON.parse(str)
+    return typeof parsed === "object" && parsed !== null
+  } catch (e) {
+    return false
+  }
+}
+const jsonToStr = obj => (isJSON(obj) ? JSON.stringify(obj) : obj)
+
 export {
+  jsonToStr,
   mergeChecks,
   isCheckComplete,
   mergeOut,
@@ -314,4 +336,5 @@ export {
   tag,
   isLocalhost,
   udl,
+  isJSON,
 }

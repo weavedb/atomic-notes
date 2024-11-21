@@ -32,6 +32,7 @@ import {
   isCheckComplete,
   mergeOut,
   isOutComplete,
+  jsonToStr,
 } from "./utils.js"
 
 function createDataItemSigner2(wallet) {
@@ -339,7 +340,7 @@ class AO {
         scheduler,
         signer: this.toSigner(jwk),
         tags: _tags,
-        data,
+        data: jsonToStr(data),
       })
     } catch (e) {
       err = e
@@ -372,7 +373,7 @@ class AO {
         process: pid,
         signer: this.toSigner(jwk),
         tags: _tags,
-        data,
+        data: jsonToStr(data),
       })
 
       const exRef = (ref, txs) => {
@@ -539,7 +540,7 @@ class AO {
         process: pid,
         signer: this.toSigner(jwk),
         tags: _tags,
-        data,
+        data: jsonToStr(data),
       })
       res = _res
 
