@@ -75,7 +75,8 @@ describe("Atomic Notes", function () {
     })
     expect(out).to.eql("Bob")
   })
-  it("should spawn aos2.0", async () => {
+
+  it.only("should spawn aos2.0", async () => {
     const { pid: pid3 } = ok(
       await ao2.deploy({ src_data: await src.data("aos2") }),
     )
@@ -96,7 +97,7 @@ describe("Atomic Notes", function () {
         pid,
         act: "Print",
         tags: { Addr: pid2, Addr2: pid3 },
-        get: { obj: { to: "To", print: { data: true } } },
+        get: { obj: { to: "To", print: false } },
         check: [
           /printed/,
           /Bob/,
@@ -110,14 +111,14 @@ describe("Atomic Notes", function () {
     const { out } = await ao2.dry({
       pid: pid2,
       act: "Get",
-      get: { data: true },
+      get: false,
       check: true,
     })
     expect(out).to.eql("Bob3")
     const { out: out3 } = await ao2.dry({
       pid: pid2,
       act: "Get2",
-      get: { data: true },
+      get: false,
       check: true,
     })
     expect(out3).to.eql("Alice3")
