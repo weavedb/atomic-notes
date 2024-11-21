@@ -678,6 +678,32 @@ class AO {
     }
     return await this.pipe({ jwk, fns })
   }
+  p(pid) {
+    return new Process(pid, this)
+  }
+}
+
+class Process {
+  constructor(pid, ao) {
+    this.ao = ao
+    this.pid = pid
+  }
+  async msg(act, tags, opts) {
+    return await this.ao.msg({ pid: this.pid, act, tags, ...opts })
+  }
+  async dry(act, tags, opts) {
+    return await this.ao.dry({ pid: this.pid, act, tags, ...opts })
+  }
+  async m(...opt) {
+    const res = await this.msg(...opt)
+    if (res.err) throw Error(res.err)
+    return res.out
+  }
+  async d(...opt) {
+    const res = await this.dry(...opt)
+    if (res.err) throw Error(res.err)
+    return res.out
+  }
 }
 
 export default AO
