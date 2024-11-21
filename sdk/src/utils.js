@@ -1,4 +1,4 @@
-import { is, includes, fromPairs, map, isNil } from "ramda"
+import { clone, is, includes, fromPairs, map, isNil } from "ramda"
 
 const allows = [
   { key: "allowed", val: "Allowed" },
@@ -63,9 +63,7 @@ const tagEq = (tags, name, val = null) => {
       ok = val.test(tag)
     } catch (e) {}
     return ok
-  } else {
-    return tag === val
-  }
+  } else return tag === val
 }
 
 const searchTag = (res, name, val) => {
@@ -85,11 +83,9 @@ const checkTag = (res, name, val) => {
 const isData = (data, res) => {
   for (const v of res.Messages ?? []) {
     if (isRegExp(data)) {
-      let ok = false
       try {
-        ok = data.test(v.Data)
+        if (data.test(v.Data)) return true
       } catch (e) {}
-      return ok
     } else {
       if (data === true || v.Data === data) return true
     }
@@ -152,31 +148,58 @@ const udl = ({ payment, access, derivations, commercial, training }) => {
   tags["Data-Model-Training"] = _training
   return tags
 }
+const modGet = get => {
+  let _get = clone(get)
+  if (is(Array, get)) {
+    _get = { obj: {} }
+    for (const v of get) {
+      if (typeof v === "string") _get.obj[v] = v
+      else if (is(Array, v)) _get.obj[v[0]] = v[1]
+      else if (is(Object, v)) for (const k in v) _get.obj[k] = v[k]
+    }
+  } else if (
+    is(Object, get) &&
+    isNil(get.data) &&
+    isNil(get.json) &&
+    isNil(get.name) &&
+    isNil(get.obj)
+  ) {
+    _get = { obj: get }
+  }
+  return _get
+}
 
-const getTagVal = (get, res) => {
+const _getTagVal = (get, res) => {
   let out = null
-  if (typeof get === "object" && get.obj) {
+  const _get = modGet(get)
+  if (typeof _get === "object" && _get.obj) {
     out = {}
-    for (const k in get.obj ?? {}) out[k] = getTagVal(get.obj[k], res)
+    for (const k in _get.obj ?? {}) out[k] = _getTagVal(_get.obj[k], res)
   } else {
     for (const v of res.Messages ?? []) {
-      if ((typeof get === "object" && get.data) || typeof get === "boolean") {
+      if (
+        (typeof _get === "object" && _get.data) ||
+        typeof _get === "boolean"
+      ) {
         if (v.Data) out = v.Data
         try {
-          if (get.json || get === true) out = JSON.parse(out)
+          if (_get.json || _get === true) out = JSON.parse(out)
         } catch (e) {}
-      } else if (typeof get === "object" && typeof get.name === "string") {
-        out = getTag(v.Tags ?? [], get.name)
+      } else if (typeof _get === "object" && typeof _get.name === "string") {
+        out = getTag(v.Tags ?? [], _get.name)
         try {
-          if (get.json) out = JSON.parse(out)
+          if (_get.json) out = JSON.parse(out)
         } catch (e) {}
-      } else {
-        out = getTag(v.Tags ?? [], get)
-      }
+      } else out = getTag(v.Tags ?? [], _get)
       if (out) break
     }
   }
   return out
+}
+
+const getTagVal = (get, res) => {
+  const _get = modGet(get)
+  return _getTagVal(_get, res)
 }
 
 const srcs = {
@@ -210,15 +233,14 @@ const buildTags = (act, tags) => {
   for (const k in tags) {
     if (is(Array)(tags[k])) {
       for (const v of tags[k]) _tags.push(tag(k, v))
-    } else {
-      _tags.push(tag(k, tags[k]))
-    }
+    } else _tags.push(tag(k, tags[k]))
   }
   return _tags
 }
 
 const mergeOut = (out, out2, get) => {
-  if (get.obj) {
+  const _get = modGet(get)
+  if (_get.obj) {
     for (const k in out2 ?? {}) {
       if (isNil(out?.[k])) {
         if (!out) out = {}
@@ -226,9 +248,7 @@ const mergeOut = (out, out2, get) => {
       }
     }
     return out
-  } else {
-    return out2
-  }
+  } else return out2
 }
 
 const mergeChecks = (check1, check2, check) => {
@@ -238,14 +258,13 @@ const mergeChecks = (check1, check2, check) => {
       check1[k] = check1[k] || check2[k]
     }
     return check1
-  } else {
-    return check1 || check2
-  }
+  } else return check1 || check2
 }
 
 const isOutComplete = (out, get) => {
   if (isNil(out)) return false
-  if (get.obj) {
+  const _get = modGet(get)
+  if (_get.obj) {
     for (const k in out ?? {}) {
       if (isNil(out[k])) return false
     }

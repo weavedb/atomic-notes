@@ -94,7 +94,7 @@ describe("Atomic Notes", function () {
         "Print",
         { Addr: pid2, Addr2: pid3 },
         {
-          get: { obj: { to: "To", print: false } },
+          get: ["To", { print: false }],
           check: [
             /printed/,
             /Bob/,
@@ -104,7 +104,7 @@ describe("Atomic Notes", function () {
         },
       ),
     )
-    expect(out2).to.eql({ print: "Bob2 printed!", to: pid2 })
+    expect(out2).to.eql({ print: "Bob2 printed!", To: pid2 })
     expect(res.Output.data).to.eql("Hello World!")
     const out = await a2.d("Get", null, { get: false, check: true })
     expect(out).to.eql("Bob3")
