@@ -640,7 +640,7 @@ class AO {
       i++
     }
     let result = await this.pipe({ jwk, fns })
-    if (result.pid) result.p = this.p(result.p)
+    if (result.pid) result.p = this.p(result.pid)
     return result
   }
   p(pid) {
