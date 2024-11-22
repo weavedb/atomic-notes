@@ -187,8 +187,8 @@ class AR {
     if (err) return { err }
     else {
       let tx = await this.arweave.createTransaction({ data: data })
-      let _tags = buildTags(tags)
-      for (const v of _tags) tx.addTag(v.namek, v.value)
+      let _tags = buildTags(null, tags)
+      for (const v of _tags) tx.addTag(v.name, v.value)
       return this.postTx(tx, jwk)
     }
   }
