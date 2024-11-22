@@ -78,7 +78,6 @@ describe("Atomic Notes", function () {
 
   it.only("should spawn aos2.0", async () => {
     const { pid: pid3 } = ok(await ao2.deploy({ src_data: src.data("aos2") }))
-
     const { pid } = ok(await ao2.deploy({ src_data: src.data("aos2") }))
     const { pid: pid2 } = ok(await ao2.deploy({ src_data: src.data("aos2") }))
     const ar2 = new AR(opt.ar)
