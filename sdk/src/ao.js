@@ -677,7 +677,9 @@ class AO {
       }
       i++
     }
-    return await this.pipe({ jwk, fns })
+    let result = await this.pipe({ jwk, fns })
+    if (result.pid) result.p = this.p(result.p)
+    return result
   }
   p(pid) {
     return new Process(pid, this)

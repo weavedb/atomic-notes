@@ -11,14 +11,13 @@ const {
 } = yargs(process.argv.slice(2)).argv
 
 export class Src {
-  constructor({ ar, base = "./lua", readFileSync, dir, resolve }) {
+  constructor({ ar, dir }) {
     this.ar = ar
-    this.base = base
-    this.dir = dir
+    this.dir = dir ?? resolve(import.meta.dirname)
   }
   data(file, ext = "lua") {
     return readFileSync(
-      `${this.dir}/${this.base}/${file}.${ext}`,
+      `${this.dir}/${file}.${ext}`,
       ext === "wasm" ? null : "utf8",
     )
   }
@@ -38,9 +37,9 @@ export const setup = async ({
   let opt = null
   console.error = () => {}
   console.warn = () => {}
-  const dir = resolve(import.meta.dirname)
-  const thumbnail = readFileSync(`${dir}/assets/thumbnail.png`)
-  const banner = readFileSync(resolve(`${dir}/assets/banner.png`))
+  const dir = resolve(import.meta.dirname, "lua")
+  const thumbnail = readFileSync(`${dir}/../assets/thumbnail.png`)
+  const banner = readFileSync(resolve(`${dir}/../assets/banner.png`))
   const _cacheDir = resolve(import.meta.dirname, cacheDir)
   const optPath = `${_cacheDir}/opt.json`
   if (cache && !reset) {
