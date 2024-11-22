@@ -45,7 +45,7 @@ describe("Atomic Notes", function () {
     const ao2 = new AO() // mainnet
     const { pid } = ok(
       await ao2.deploy({
-        src_data: await src.data("aos2"),
+        src_data: src.data("aos2"),
         boot: true,
       }),
     )
@@ -77,14 +77,10 @@ describe("Atomic Notes", function () {
   })
 
   it.only("should spawn aos2.0", async () => {
-    const { pid: pid3 } = ok(
-      await ao2.deploy({ src_data: await src.data("aos2") }),
-    )
+    const { pid: pid3 } = ok(await ao2.deploy({ src_data: src.data("aos2") }))
 
-    const { pid } = ok(await ao2.deploy({ src_data: await src.data("aos2") }))
-    const { pid: pid2 } = ok(
-      await ao2.deploy({ src_data: await src.data("aos2") }),
-    )
+    const { pid } = ok(await ao2.deploy({ src_data: src.data("aos2") }))
+    const { pid: pid2 } = ok(await ao2.deploy({ src_data: src.data("aos2") }))
     const ar2 = new AR(opt.ar)
     await ar2.gen()
     const a = ao2.p(pid)
