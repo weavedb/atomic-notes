@@ -38,7 +38,7 @@ const tTerms = [
 const ttMap = fromPairs(tTerms.map(({ key, val }) => [key, val]))
 
 const action = value => tag("Action", value)
-const tag = (name, value) => ({ name, value })
+const tag = (name, value) => ({ name, value: jsonToStr(value) })
 
 const wait = ms => new Promise(res => setTimeout(() => res(), ms))
 
@@ -229,11 +229,11 @@ const srcs = {
 }
 
 const buildTags = (act, tags) => {
-  let _tags = [action(act)]
+  let _tags = []
+  if (act) _tags.push(action(act))
   for (const k in tags) {
-    if (is(Array)(tags[k])) {
-      for (const v of tags[k]) _tags.push(tag(k, v))
-    } else _tags.push(tag(k, tags[k]))
+    if (is(Array)(tags[k])) for (const v of tags[k]) _tags.push(tag(k, v))
+    else _tags.push(tag(k, tags[k]))
   }
   return _tags
 }
@@ -304,12 +304,13 @@ function isJSON(obj) {
   try {
     const str = JSON.stringify(obj)
     const parsed = JSON.parse(str)
-    return typeof parsed === "object" && parsed !== null
+    const isjson = typeof parsed === "object" && parsed !== null
+    return isjson ? str : false
   } catch (e) {
     return false
   }
 }
-const jsonToStr = obj => (isJSON(obj) ? JSON.stringify(obj) : obj)
+const jsonToStr = obj => isJSON(obj) || obj
 
 export {
   jsonToStr,
