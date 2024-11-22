@@ -648,13 +648,21 @@ class AO {
   }
 }
 
-const getParams = (tags, opts = {}) => {
+const getParams = (tags, opts) => {
   let _tags = tags
   let _opts = opts
-  if (!isNil(tags?.get) || !isNil(tags?.check)) {
+
+  if (
+    (!isNil(tags?.get) ||
+      !isNil(tags?.check) ||
+      is(Boolean, tags) ||
+      is(String, tags)) &&
+    isNil(opts)
+  ) {
     _opts = tags
     _tags = null
   }
+
   if (isNil(_opts)) _opts = { get: true }
   else if (is(Boolean, _opts) || is(String, _opts)) _opts = { get: _opts }
   return { _tags, _opts }
