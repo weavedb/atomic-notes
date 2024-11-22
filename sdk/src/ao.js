@@ -69,9 +69,9 @@ class AO {
       }
     }
     this.__type__ = "ao"
-    if (ar?.__type__ === "ar") {
-      this.ar = ar
-    } else {
+
+    if (ar?.__type__ === "ar") this.ar = ar
+    else {
       let _ar = typeof ar === "object" ? ar : {}
       this.ar = new AR(ar)
     }
@@ -114,23 +114,14 @@ class AO {
   }
 
   async pipe({ jwk, fns = [], cb }) {
-    let out = {}
-    let res = []
+    let [_, out, res, i] = [{}, {}, [], 0]
     let nextArgs = fns[0].args ?? {}
-    let i = 0
-    let err = null
-    let pid = null
-    let mid = null
-    let id = null
-    let _ = {}
-    let ret = null
+    let [ret, err, pid, mid, id] = [null, null, null, null, null]
     if (!jwk) fns.unshift({ fn: "checkWallet" })
     const copy = ({ _, inp, out, args, from, to, pid, mid, id }) => {
       const _from = from.split(".")
       const _to = to.split(".")
-      let target = null
-      let field = null
-      let val = null
+      let [field, val, target] = [null, null, null]
       if (_to[0] === "_") {
         target = _
         field = _to.slice(1).join(".")
@@ -144,23 +135,16 @@ class AO {
         target = out
         field = _to.join(".")
       }
-      if (from === "inp") {
-        val = inp
-      } else if (from === "mid") {
-        val = mid
-      } else if (from === "id") {
-        val = id
-      } else if (from === "pid") {
-        val = pid
-      } else if (_from[0] === "args") {
-        val = args[_from.slice(1).join(".")] ?? null
-      } else if (_from[0] === "out") {
-        val = out[_from.slice(1).join(".")] ?? null
-      } else if (_from[0] === "inp") {
-        val = inp[_from.slice(1).join(".")] ?? null
-      } else {
-        val = inp[from] ?? null
-      }
+
+      if (from === "inp") val = inp
+      else if (from === "mid") val = mid
+      else if (from === "id") val = id
+      else if (from === "pid") val = pid
+      else if (_from[0] === "args") val = args[_from.slice(1).join(".")] ?? null
+      else if (_from[0] === "out") val = out[_from.slice(1).join(".")] ?? null
+      else if (_from[0] === "inp") val = inp[_from.slice(1).join(".")] ?? null
+      else val = inp[from] ?? null
+
       if (target) target[field] = val
     }
     const binds = {
@@ -172,11 +156,9 @@ class AO {
     }
     for (let v of fns) {
       let bind = null
-      if (typeof v.fn === "string" && !v.bind) {
-        bind = binds[v.fn] ?? this
-      } else {
-        bind = v.bind ?? this
-      }
+      if (typeof v.fn === "string" && !v.bind) bind = binds[v.fn] ?? this
+      else bind = v.bind ?? this
+
       const name =
         (v.name ?? typeof !v.fn)
           ? "msg"
@@ -321,20 +303,12 @@ class AO {
     let err = null
     ;({ jwk, err } = await this.ar.checkWallet({ jwk }))
     if (err) return { err }
-
     let pid = null
     try {
-      let _tags = []
       if (boot) tags["On-Boot"] = boot
       if (auth) tags.Authority = auth
       if (!tags.Authority && this.authority) tags.Authority = this.authority
-      for (const k in tags) {
-        if (is(Array)(tags[k])) {
-          for (const v of tags[k]) _tags.push(tag(k, v))
-        } else {
-          _tags.push(tag(k, tags[k]))
-        }
-      }
+      let _tags = buildTags(null, tags)
       pid = await this.spawn({
         module,
         scheduler,
@@ -361,12 +335,8 @@ class AO {
     let err = null
     ;({ jwk, err } = await this.ar.checkWallet({ jwk }))
     if (err) return { err }
-
-    let mid = null
-    let res = null
-    let out = null
+    let [res, out, mid, results] = [null, null, null, []]
     let _tags = buildTags(act, tags)
-    let results = []
     let start = Date.now()
     try {
       mid = await this.message({
@@ -394,17 +364,13 @@ class AO {
         return ex ? txs : Date.now() - start < timeout ? await getRef(ref) : []
       }
 
-      let isOK = false
-      let cache = []
-      let checks = []
-
+      let [cache, checks, isOK] = [[], [], false]
       const getResult = async mid => {
         const res = await this.result({ process: pid, message: mid })
         results.push({ mid, res })
         let err = null
-        if (res.Error) {
-          err = res.Error
-        } else {
+        if (res.Error) err = res.Error
+        else {
           if (!is(Array, check)) check = [check]
           let i = 0
           for (const v of check) {
@@ -480,8 +446,7 @@ class AO {
     ;({ jwk, err } = await this.ar.checkWallet({ jwk }))
     if (err) return { err }
 
-    let res = null
-    let out = null
+    let [res, out] = [null, null]
     try {
       mid = await this.assign({
         process: pid,
@@ -490,9 +455,9 @@ class AO {
       })
       res = await this.result({ process: pid, message: mid })
       if (!res) err = "something went wrong"
-      if (res.Error) {
-        err = res.Error
-      } else {
+
+      if (res.Error) err = res.Error
+      else {
         let checks = []
         if (!is(Array, check)) check = [check]
         let i = 0
@@ -532,8 +497,7 @@ class AO {
     let err = null
     ;({ jwk, err } = await this.ar.checkWallet({ jwk }))
     if (err) return { err }
-    let res = null
-    let out = null
+    let [res, out] = [null, null]
     let _tags = buildTags(act, tags)
     try {
       const _res = await this.dryrun({
@@ -588,12 +552,11 @@ class AO {
   }
 
   async transform({ src, data, fills }) {
-    let err = null
-    let out = null
+    let [err, out] = [null, null]
     let _data = data ?? (await this.ar.data(src, true))
-    if (!_data) {
-      err = "data doesn't exist"
-    } else {
+
+    if (!_data) err = "data doesn't exist"
+    else {
       for (const k in fills ?? {}) {
         let text = fills[k]
         if (typeof text === "number") text = Number(text).toString()
@@ -644,8 +607,7 @@ class AO {
     tags = {},
     data,
   }) {
-    let isBoot = false
-    let fns = []
+    let [fns, isBoot] = [[], false]
     if (boot === true && !data) {
       isBoot = true
       fns = [

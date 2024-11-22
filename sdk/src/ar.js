@@ -1,6 +1,6 @@
 import Arweave from "arweave"
 import { ArweaveSigner, bundleAndSignData, createData } from "arbundles"
-import { tag, query, queries, isLocalhost } from "./utils.js"
+import { buildTags, tag, query, queries, isLocalhost } from "./utils.js"
 import { is } from "ramda"
 
 class AR {
@@ -24,12 +24,9 @@ class AR {
 
   async init(jwk) {
     let isGen = false
-    if (!jwk && typeof window === "object" && window.arweaveWallet) {
-      jwk = window.arweaveWallet
-    }
-    if (!jwk) {
-      isGen = true
-    } else {
+    if (!jwk && typeof window === "object") jwk = window.arweaveWallet
+    if (!jwk) isGen = true
+    else {
       this.jwk = jwk
       const isWallet = this.isArConnect(this.jwk)
       if (isWallet) {
@@ -52,9 +49,7 @@ class AR {
     }
     if (isGen) {
       this.isWallet = false
-      this.addr = null
-      this.pub = null
-      this.jwk = null
+      this.addr = this.pub = this.jwk = null
       await this.gen("100")
     }
     return this
@@ -66,9 +61,7 @@ class AR {
 
   async checkWallet({ jwk } = {}) {
     if (jwk) return { err: null, jwk }
-    let err = null
-    let addr = null
-    let pub = null
+    let [err, addr, pub] = [null, null, null]
     let existWallet = typeof window === "object" && window.arweaveWallet
     let isJwkWallet = this.isArConnect(this.jwk)
     if (!this.jwk) {
@@ -91,9 +84,8 @@ class AR {
       ])
       const _addr = await arweaveWallet.getActiveAddress()
       if (_addr) {
-        if (this.addr && this.addr !== _addr) {
-          err = "the wrong wallet"
-        } else {
+        if (this.addr && this.addr !== _addr) err = "the wrong wallet"
+        else {
           addr = _addr
           pub = await arweaveWallet.getActivePublicKey()
           jwk = arweaveWallet
@@ -130,9 +122,8 @@ class AR {
 
   async toAddr(jwk) {
     ;({ jwk } = await this.checkWallet({ jwk }))
-    if (this.isArConnect(jwk)) {
-      return await jwk.getActiveAddress()
-    } else {
+    if (this.isArConnect(jwk)) return await jwk.getActiveAddress()
+    else {
       return await this.arweave.wallets.jwkToAddress(jwk)
     }
   }
@@ -156,9 +147,8 @@ class AR {
   async transfer(ar, target, jwk) {
     let err = null
     ;({ jwk, err } = await this.checkWallet({ jwk }))
-    if (err) {
-      return { err }
-    } else {
+    if (err) return { err }
+    else {
       let tx = await this.arweave.createTransaction({
         target,
         quantity: this.toWinston(ar),
@@ -170,9 +160,8 @@ class AR {
   async bundle(_items, jwk) {
     let err = null
     ;({ jwk, err } = await this.checkWallet({ jwk }))
-    if (err) {
-      return { err }
-    } else {
+    if (err) return { err }
+    else {
       const signer = new ArweaveSigner(jwk)
       const items = _items.map(v => {
         let tags = []
@@ -195,29 +184,21 @@ class AR {
   async post({ data = "1984", tags = {}, jwk }) {
     let err = null
     ;({ err, jwk } = await this.checkWallet({ jwk }))
-    if (err) {
-      return { err }
-    } else {
+    if (err) return { err }
+    else {
       let tx = await this.arweave.createTransaction({ data: data })
-      for (const k in tags) {
-        if (is(Array)(tags[k])) {
-          for (const v of tags[k]) tx.addTag(k, v)
-        } else {
-          tx.addTag(k, tags[k])
-        }
-      }
+      let _tags = buildTags(tags)
+      for (const v of _tags) tx.addTag(v.namek, v.value)
       return this.postTx(tx, jwk)
     }
   }
 
   async postTx(tx, jwk) {
-    let err = null
-    let res = null
+    let [res, err] = [null, null]
     ;({ err, jwk } = await this.checkWallet({ jwk }))
     if (!err) {
-      if (this.isArConnect(jwk)) {
-        tx = await jwk.sign(tx)
-      } else {
+      if (this.isArConnect(jwk)) tx = await jwk.sign(tx)
+      else {
         await this.arweave.transactions.sign(tx, jwk)
       }
       res = await this.arweave.transactions.post(tx)
