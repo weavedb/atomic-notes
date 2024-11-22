@@ -49,9 +49,7 @@ const validAddress = addr => /^[a-zA-Z0-9_-]{43}$/.test(addr)
 
 const isRegExp = obj => obj instanceof RegExp
 
-const getTag = (_tags, name) => {
-  return tags(_tags)[name] ?? null
-}
+const getTag = (_tags, name) => tags(_tags)[name] ?? null
 
 const tagEq = (tags, name, val = null) => {
   const tag = getTag(tags, name)
