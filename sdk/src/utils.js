@@ -308,7 +308,8 @@ function isJSON(obj) {
     return false
   }
 }
-const jsonToStr = obj => isJSON(obj) || obj
+const jsonToStr = obj =>
+  isJSON(obj) || (is(Number, obj) ? Number(obj).toString() : obj)
 
 export {
   jsonToStr,
