@@ -648,16 +648,30 @@ class AO {
   }
 }
 
+const getParams = (tags, opts = {}) => {
+  let _tags = tags
+  let _opts = opts
+  if (!isNil(tags?.get) || !isNil(tags?.check)) {
+    _opts = tags
+    _tags = null
+  }
+  if (isNil(_opts)) _opts = { get: true }
+  else if (is(Boolean, _opts) || is(String, _opts)) _opts = { get: _opts }
+  return { _tags, _opts }
+}
+
 class Process {
   constructor(pid, ao) {
     this.ao = ao
     this.pid = pid
   }
   async msg(act, tags, opts) {
-    return await this.ao.msg({ pid: this.pid, act, tags, ...opts })
+    const { _tags, _opts } = getParams(tags, opts)
+    return await this.ao.msg({ pid: this.pid, act, tags: _tags, ..._opts })
   }
   async dry(act, tags, opts) {
-    return await this.ao.dry({ pid: this.pid, act, tags, ...opts })
+    const { _tags, _opts } = getParams(tags, opts)
+    return await this.ao.dry({ pid: this.pid, act, tags: _tags, ..._opts })
   }
   async m(...opt) {
     const res = await this.msg(...opt)
