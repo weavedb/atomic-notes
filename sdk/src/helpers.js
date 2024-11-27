@@ -1,19 +1,26 @@
 import { Note, Profile, AR, AO, Collection, Notebook } from "./index.js"
-import { expect } from "chai"
+import assert from "assert"
 import { createDataItemSigner, connect } from "@permaweb/aoconnect"
-import { resolve } from "path"
+import { dirname as _dirname, resolve } from "path"
 import { mkdirSync, existsSync, writeFileSync, readFileSync } from "fs"
 import yargs from "yargs"
+
 let {
   reset = false,
   cache = false,
   auth = null,
 } = yargs(process.argv.slice(2)).argv
 
+const dirname = async () =>
+  typeof __dirname != "undefined"
+    ? __dirname
+    : (await import("./dirname.js")).default
+
 export class Src {
   constructor({ ar, dir }) {
     this.ar = ar
-    this.dir = dir ?? resolve(import.meta.dirname)
+    this.dir = dir
+    if (!dir) dirname.then(v => (this.dir = v))
   }
   data(file, ext = "lua") {
     return readFileSync(
@@ -37,10 +44,10 @@ export const setup = async ({
   let opt = null
   console.error = () => {}
   console.warn = () => {}
-  const dir = resolve(import.meta.dirname, "lua")
+  const dir = resolve(await dirname(), "lua")
   const thumbnail = readFileSync(`${dir}/../assets/thumbnail.png`)
   const banner = readFileSync(resolve(`${dir}/../assets/banner.png`))
-  const _cacheDir = resolve(import.meta.dirname, cacheDir)
+  const _cacheDir = resolve(await dirname(), cacheDir)
   const optPath = `${_cacheDir}/opt.json`
   if (cache && !reset) {
     try {
@@ -219,12 +226,12 @@ export const setup = async ({
 
 export const ok = obj => {
   if (obj.err) console.log(obj.err)
-  expect(obj.err).to.eql(null)
+  assert.equal(obj.err, null)
   return obj
 }
 
 export const fail = obj => {
   if (!obj.err) console.log(obj.res)
-  expect(obj.err).to.not.eql(null)
+  assert.notEqual(obj.err, null)
   return obj
 }
