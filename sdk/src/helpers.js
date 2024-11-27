@@ -4,7 +4,7 @@ import { createDataItemSigner, connect } from "@permaweb/aoconnect"
 import { resolve } from "path"
 import { mkdirSync, existsSync, writeFileSync, readFileSync } from "fs"
 import yargs from "yargs"
-const {
+let {
   reset = false,
   cache = false,
   auth = null,
@@ -78,6 +78,9 @@ export const setup = async ({
   await ar.gen("10")
   const src = new Src({ ar, readFileSync, dir })
   opt = { ar: { ...arweave }, jwk: ar.jwk }
+  if (!auth && /localhost/.test(aoconnect?.CU_URL ?? "")) {
+    auth = (await fetch(aoconnect.CU_URL).then(r => r.json())).address
+  }
 
   // ao
   const wasm = await src.upload("aos-sqlite", "wasm")
