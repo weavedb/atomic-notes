@@ -38,6 +38,7 @@ describe("Atomic Notes", function () {
 
   before(async () => {
     ;({ thumbnail, banner, opt, ao, ao2, ar, profile, src } = await setup({
+      aoconnect: { local: true },
       cacheDir: "../test/.cache",
     }))
   })
@@ -84,7 +85,11 @@ describe("Atomic Notes", function () {
     await ar2.gen()
     const a = ao2.p(pid)
     const a2 = ao2.p(pid2)
-    const { out: out2, res } = ok(
+    const {
+      mid,
+      out: out2,
+      res,
+    } = ok(
       await a.msg(
         "Print",
         { Addr: pid2, Addr2: pid3 },
@@ -105,6 +110,7 @@ describe("Atomic Notes", function () {
     expect(out).to.eql("Bob3")
     const out3 = await a2.d("Get2", null, { get: false, check: true })
     expect(out3).to.eql("Alice3")
+    await ao.asgn({ pid: pid2, mid })
   })
 
   it("should upload atomic assets", async () => {

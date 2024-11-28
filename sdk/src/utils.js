@@ -146,6 +146,7 @@ const udl = ({ payment, access, derivations, commercial, training }) => {
   tags["Data-Model-Training"] = _training
   return tags
 }
+
 const modGet = get => {
   let _get = clone(get)
   if (is(Array, get)) {
@@ -308,6 +309,7 @@ function isJSON(obj) {
     return false
   }
 }
+
 const jsonToStr = obj =>
   isJSON(obj) || (is(Number, obj) ? Number(obj).toString() : obj)
 
