@@ -13,7 +13,17 @@ import {
   dryrun,
 } from "@permaweb/aoconnect"
 
-import { concat, is, mergeLeft, o, uniqBy, prop, isNil, includes } from "ramda"
+import {
+  concat,
+  is,
+  mergeLeft,
+  o,
+  uniqBy,
+  prop,
+  isNil,
+  includes,
+  map,
+} from "ramda"
 
 import {
   searchTag,
@@ -77,14 +87,18 @@ class AO {
     }
 
     if (aoconnect) {
-      const { results, assign, result, message, spawn, dryrun } =
-        connect(aoconnect)
-      this.assign = assign
-      this.result = result
-      this.results = results
-      this.message = message
-      this.spawn = spawn
-      this.dryrun = dryrun
+      if (aoconnect.local) {
+        this.local = true
+      } else {
+        const { results, assign, result, message, spawn, dryrun } =
+          connect(aoconnect)
+        this.assign = assign
+        this.result = result
+        this.results = results
+        this.message = message
+        this.spawn = spawn
+        this.dryrun = dryrun
+      }
     } else {
       this.assign = assign
       this.result = result
@@ -99,6 +113,18 @@ class AO {
   }
 
   async init(jwk) {
+    if (this.local) {
+      const v = await import("./aolocal.js")
+      const { results, assign, result, message, spawn, dryrun, txs } =
+        v.connect()
+      this.assign = assign
+      this.result = result
+      this.results = results
+      this.message = message
+      this.spawn = spawn
+      this.dryrun = dryrun
+      this.ar.txs = txs
+    }
     await this.ar.init(jwk)
     return this
   }
@@ -357,11 +383,15 @@ class AO {
       const getRef = async (ref, txs = []) => {
         let ex = exRef(ref, txs)
         if (!ex) {
-          await wait(1000)
+          if (!this.local) await wait(1000)
           txs = await this.ar.txs(pid)
           ex = exRef(ref, txs)
         }
-        return ex ? txs : Date.now() - start < timeout ? await getRef(ref) : []
+        if (ex) return txs
+        if (this.local) await wait(1)
+        return Date.now() - start < (this.local ? timeout / 1000 : timeout)
+          ? await getRef(ref)
+          : []
       }
 
       let [cache, checks, isOK] = [[], [], false]
