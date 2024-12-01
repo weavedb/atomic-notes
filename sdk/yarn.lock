@@ -3068,6 +3068,19 @@ vlq@^2.0.4:
   resolved "https://registry.yarnpkg.com/vlq/-/vlq-2.0.4.tgz#6057b85729245b9829e3cc7755f95b228d4fe041"
   integrity sha512-aodjPa2wPQFkra1G8CzJBTHXhgk3EVSwxSWXNPr1fgdFLUb8kvLV1iEb6rFgasIsjP82HWI6dsb5Io26DDnasA==
 
+wao@^0.2.2:
+  version "0.2.2"
+  resolved "https://registry.yarnpkg.com/wao/-/wao-0.2.2.tgz#b4e93fcfdfa7158b8f76d2bf617877a1417c7636"
+  integrity sha512-16cEb/Pk2svGMahM85/cbyHtXRE48TGi0KFvJX7tqV37oS0/MDBhrjF3+CJWdA2BlujdL8efXY8mG8sJFVzvqg==
+  dependencies:
+    "@babel/plugin-transform-modules-commonjs" "^7.24.8"
+    "@permaweb/ao-loader" "^0.0.43"
+    "@permaweb/aoconnect" "^0.0.61"
+    arbundles "^0.11.1"
+    arweave "^1.15.1"
+    base64url "^3.0.1"
+    ramda "^0.30.1"
+
 warp-arbundles@^1.0.4:
   version "1.0.4"
   resolved "https://registry.yarnpkg.com/warp-arbundles/-/warp-arbundles-1.0.4.tgz#10c0cd662ab41b0dabad9159c7110f43425cc5cc"

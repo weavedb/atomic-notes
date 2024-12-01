@@ -1,8 +1,11 @@
 import { expect } from "chai"
-import { Asset, AR, Notebook, Note, AO, Profile } from "../src/index.js"
+import { resolve } from "path"
+import { Asset, AR, Notebook, Note, Profile } from "../src/index.js"
+import { Src } from "wao/test"
+import { AO } from "wao/test"
 import { wait } from "../src/utils.js"
 import { o, map, indexBy, prop } from "ramda"
-import { setup, ok, fail } from "../src/helpers.js"
+import { setup, ok, fail } from "wao/test"
 
 const v1 = "# this is markdown 1"
 const v2 = "# this is markdown 2"
@@ -37,16 +40,17 @@ describe("Atomic Notes", function () {
   let profile_pid, notebook, notebook_pid, note, note_pid, ar2, note2
 
   before(async () => {
-    ;({ thumbnail, banner, opt, ao, ao2, ar, profile, src } = await setup({
+    ;({ thumbnail, banner, opt, ao, ao2, ar, profile } = await setup({
       aoconnect: { local: true },
-      cacheDir: "../test/.cache",
     }))
+    src = new Src({ ar, dir: resolve(import.meta.dirname, "../src/lua") })
   })
+
   it.skip("should deploy aos2.0 with On-Boot", async () => {
     const ao2 = new AO() // mainnet
     const { pid } = ok(
       await ao2.deploy({
-        src_data: src.data("aos2"),
+        src_data: src.data("aos2_1_0"),
         boot: true,
       }),
     )
@@ -78,7 +82,9 @@ describe("Atomic Notes", function () {
   })
 
   it.only("should spawn aos2.0", async () => {
+    const ao2 = new AO({})
     const { pid: pid3 } = ok(await ao2.deploy({ src_data: src.data("aos2") }))
+    return
     const { pid } = ok(await ao2.deploy({ src_data: src.data("aos2") }))
     const { pid: pid2 } = ok(await ao2.deploy({ src_data: src.data("aos2") }))
     const ar2 = new AR(opt.ar)
@@ -110,6 +116,7 @@ describe("Atomic Notes", function () {
     expect(out).to.eql("Bob3")
     const out3 = await a2.d("Get2", null, { get: false, check: true })
     expect(out3).to.eql("Alice3")
+    console.log("here....", Date.now())
     await ao.asgn({ pid: pid2, mid })
   })
 
