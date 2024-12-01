@@ -1,4 +1,4 @@
-import AO from "./ao.js"
+import { AO } from "wao"
 import { map, prop, assoc } from "ramda"
 
 import {
