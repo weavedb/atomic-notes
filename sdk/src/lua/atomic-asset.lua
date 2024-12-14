@@ -60,7 +60,7 @@ Handlers.add('Transfer', Handlers.utils.hasMatchingTag('Action', 'Transfer'), fu
 		Quantity = msg.Tags.Quantity
 	}
 
-	if checkValidAddress(data.Recipient) and checkValidAmount(data.Quantity) then
+	if checkValidAddress(data.Recipient) and checkValidAmount(data.Quantity) and bint(data.Quantity) <= bint(Balances[msg.From]) then 
 		-- Transfer is valid, calculate balances
 		if not Balances[data.Recipient] then
 			Balances[data.Recipient] = '0'
